@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase/client';
+import { createClient } from '@/lib/supabase/client';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -71,6 +71,28 @@ interface User {
   }[];
 }
 
+interface SubOwnerResponse {
+  sub_owners: Array<{
+    id: string;
+    profile: {
+      id: string;
+      email: string;
+      full_name: string | null;
+      created_at: string;
+    };
+    permissions: Array<{
+      table: {
+        id: string;
+        name: string;
+      };
+      can_get: boolean;
+      can_put: boolean;
+      can_post: boolean;
+      can_delete: boolean;
+    }> | null;
+  }>;
+}
+
 const formSchema = z.object({
   email: z.string().email(),
   full_name: z.string().optional(),
@@ -87,6 +109,7 @@ export default function UsersPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [open, setOpen] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -111,51 +134,46 @@ export default function UsersPage() {
 
   const fetchUsers = async () => {
     try {
+      const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
-      // Get owner ID
-      const { data: ownerData } = await supabase
+      // Get all sub-owners and their data in a single query
+      const { data, error: subOwnersError } = await supabase
         .from('owners')
-        .select('id')
-        .eq('profile_id', user.id)
-        .single();
-
-      if (!ownerData) throw new Error('Not an owner');
-
-      // Get users
-      const { data: subOwners, error: subOwnersError } = await supabase
-        .from('sub_owners')
         .select(`
-          id,
-          profile:profiles(
+          sub_owners(
             id,
-            email,
-            full_name,
-            created_at
-          ),
-          permissions:sub_owner_permissions(
-            table:tables(
+            profile:profiles(
               id,
-              name
+              email,
+              full_name,
+              created_at
             ),
-            can_get,
-            can_put,
-            can_post,
-            can_delete
+            permissions:sub_owner_permissions(
+              table:tables(
+                id,
+                name
+              ),
+              can_get,
+              can_put,
+              can_post,
+              can_delete
+            )
           )
         `)
-        .eq('owner_id', ownerData.id);
+        .eq('profile_id', user.id)
+        .single();
 
       if (subOwnersError) throw subOwnersError;
 
       // Transform the data
-      const formattedUsers = (subOwners as unknown as SubOwner[]).map(so => ({
+      const formattedUsers = (data as unknown as SubOwnerResponse)?.sub_owners.map(so => ({
         id: so.profile.id,
         email: so.profile.email,
         full_name: so.profile.full_name || undefined,
         created_at: so.profile.created_at,
-        tables: so.permissions.map(p => ({
+        tables: so.permissions?.map(p => ({
           id: p.table.id,
           name: p.table.name,
           permissions: {
@@ -164,8 +182,8 @@ export default function UsersPage() {
             can_post: p.can_post,
             can_delete: p.can_delete,
           },
-        })),
-      }));
+        })) || [],
+      })) || [];
 
       setUsers(formattedUsers);
     } catch (err) {
@@ -177,67 +195,56 @@ export default function UsersPage() {
   };
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
-    setError(null);
+    setError('');
+    setLoading(true);
 
     try {
+      const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
-      // Get owner ID
-      const { data: ownerData } = await supabase
+      // Get owner's ID first
+      const { data: ownerData, error: ownerError } = await supabase
         .from('owners')
         .select('id')
         .eq('profile_id', user.id)
         .single();
 
-      if (!ownerData) throw new Error('Not an owner');
+      if (ownerError || !ownerData) throw ownerError || new Error('Owner not found');
 
-      // Create new user
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: values.email,
-        password: values.password,
-        options: {
-          data: {
-            full_name: values.full_name,
-          },
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
+      // Create user through our API endpoint
+      const response = await fetch('/api/users', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
         },
+        body: JSON.stringify({
+          email: values.email,
+          password: values.password,
+          full_name: values.full_name,
+          owner_id: ownerData.id,
+        }),
       });
 
-      if (authError) throw authError;
-      if (!authData.user) throw new Error('Failed to create user');
+      const data = await response.json();
 
-      // Create profile with upsert
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .upsert({
-          id: authData.user.id,
-          email: values.email,
-          full_name: values.full_name,
-          role: 'sub_owner',
-        }, {
-          onConflict: 'id',
-          ignoreDuplicates: false,
-        });
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to create user');
+      }
 
-      if (profileError) throw profileError;
-
-      // Create sub_owner record
-      const { error: subOwnerError } = await supabase
-        .from('sub_owners')
-        .insert({
-          profile_id: authData.user.id,
-          owner_id: ownerData.id,
-        });
-
-      if (subOwnerError) throw subOwnerError;
-
-      // Reset form and refresh data
+      // Refresh the users list
+      await fetchUsers();
+      
+      // Reset form and close dialog
       form.reset();
-      fetchUsers();
+      setOpen(false);
     } catch (err: any) {
-      console.error('Error:', err);
-      setError(err.message || 'Failed to create user');
+      console.error('Error creating user:', err);
+      setError(err.message);
+      // Keep the dialog open when there's an error
+      return;
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -245,9 +252,17 @@ export default function UsersPage() {
     if (!confirm('Are you sure you want to delete this user?')) return;
 
     try {
-      const { error } = await supabase.auth.admin.deleteUser(id);
-      if (error) throw error;
+      const supabase = createClient();
+      
+      // Delete the profile (this will cascade to delete sub_owner and permissions records)
+      const { error: deleteError } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('id', id);
 
+      if (deleteError) throw deleteError;
+
+      // Update local state
       setUsers(prev => prev.filter(user => user.id !== id));
     } catch (err: any) {
       console.error('Error:', err);
@@ -270,6 +285,7 @@ export default function UsersPage() {
     if (!selectedUserId) return;
 
     try {
+      const supabase = createClient();
       const { error: profileError } = await supabase
         .from('profiles')
         .update({

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { supabase } from '@/lib/supabase/client';
+import { createClient } from '@/lib/supabase/client';
 import { RefreshCcw, ExternalLink, MoreVertical } from 'lucide-react';
 import {
   DropdownMenu,
@@ -13,7 +13,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { useRouter } from 'next/navigation';
 
 interface ActivityLog {
   id: string;
@@ -27,7 +28,7 @@ interface ActivityLog {
 interface Table {
   id: string;
   name: string;
-  type: 'exp' | 'merchant' | 'item';
+  type: string;
   owner_id: string;
   permissions?: {
     can_get: boolean;
@@ -45,10 +46,83 @@ interface SubOwnerPermission {
   can_put: boolean;
   can_post: boolean;
   can_delete: boolean;
-  profile?: {
+  profile: {
     email: string;
-    full_name?: string;
+    full_name: string;
   };
+}
+
+interface SubOwnerPermissionWithTable {
+  id: string;
+  can_get: boolean;
+  can_put: boolean;
+  can_post: boolean;
+  can_delete: boolean;
+  table: {
+    id: string;
+    name: string;
+    type: string;
+    owner_id: string;
+  };
+}
+
+type DatabaseSubOwnerPermission = {
+  can_get: boolean;
+  can_put: boolean;
+  can_post: boolean;
+  can_delete: boolean;
+  table: {
+    id: string;
+    name: string;
+    type: string;
+    owner_id: string;
+  };
+}
+
+interface OwnerTableResponse {
+  id: string;
+  can_get: boolean;
+  can_put: boolean;
+  can_post: boolean;
+  can_delete: boolean;
+  table: {
+    id: string;
+    name: string;
+    type: string;
+    owner_id: string;
+  } | null;
+}
+
+interface PermissionResponse {
+  id: string;
+  table_id: string;
+  sub_owner_id: string;
+  can_get: boolean;
+  can_put: boolean;
+  can_post: boolean;
+  can_delete: boolean;
+  sub_owner: {
+    profile: {
+      email: string;
+      full_name: string | null;
+    };
+  };
+}
+
+interface DatabaseTable {
+  id: string;
+  name: string;
+  type: string;
+  owner_id: string;
+}
+
+interface DatabasePermission {
+  id: string;
+  can_get: boolean;
+  can_put: boolean;
+  can_post: boolean;
+  can_delete: boolean;
+  table: DatabaseTable;
 }
 
 // Add test data for activity logs
@@ -199,9 +273,11 @@ export default function TablesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedTable, setSelectedTable] = useState<Table | null>(null);
+  const [isManageDialogOpen, setIsManageDialogOpen] = useState(false);
   const [subAccounts, setSubAccounts] = useState<SubOwnerPermission[]>([]);
   const [userRole, setUserRole] = useState<'owner' | 'sub_owner' | null>(null);
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
+  const router = useRouter();
 
   useEffect(() => {
     fetchUserAndTables();
@@ -221,77 +297,49 @@ export default function TablesPage() {
   }, [selectedTable]);
 
   const fetchUserAndTables = async () => {
+    const supabase = createClient();
     try {
       setLoading(true);
       setError(null);
 
-      // Get session first
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      if (sessionError) {
-        console.error('Session error:', sessionError);
-        setError('Authentication error. Please try logging in again.');
-        return;
-      }
-      
-      if (!session) {
-        setError('Not authenticated. Please log in.');
-        return;
-      }
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError) throw userError;
+      if (!user) throw new Error('No user found');
 
-      // Get user's role
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('role')
-        .eq('id', session.user.id)
+        .eq('id', user.id)
         .single();
 
-      if (profileError) {
-        console.error('Profile error:', profileError);
-        setError('Failed to fetch user profile. Please try logging in again.');
-        return;
-      }
+      if (profileError) throw profileError;
+      if (!profile) throw new Error('No profile found');
 
-      if (!profile) {
-        setError('Profile not found. Please try logging in again.');
-        return;
-      }
-
-      setUserRole(profile.role as 'owner' | 'sub_owner');
+      setUserRole(profile.role);
 
       if (profile.role === 'owner') {
-        // Check if user is owner
         const { data: ownerData, error: ownerError } = await supabase
           .from('owners')
           .select('id')
-          .eq('profile_id', session.user.id)
+          .eq('profile_id', user.id)
           .single();
 
-        if (ownerError) {
-          console.error('Owner error:', ownerError);
-          setError('Failed to fetch owner data. Please try logging in again.');
-          return;
-        }
+        if (ownerError) throw ownerError;
+        if (!ownerData) throw new Error('No owner data found');
 
-        if (!ownerData) {
-          setError('Owner record not found. Please try logging in again.');
-          return;
-        }
-
-        // Fetch tables for owner
-        const { data: tablesData, error: tablesError } = await supabase
+        const { data: ownerTables, error: tablesError } = await supabase
           .from('tables')
           .select('*')
-          .eq('owner_id', ownerData.id);
+          .eq('owner_id', ownerData.id) as { data: DatabaseTable[] | null, error: any };
 
-        if (tablesError) {
-          console.error('Tables error:', tablesError);
-          setError('Failed to fetch tables. Please try again.');
-          return;
-        }
+        if (tablesError) throw tablesError;
+        if (!ownerTables) throw new Error('No tables found');
 
-        // Add full permissions for owner
-        const tablesWithPermissions = tablesData.map(table => ({
-          ...table,
+        const formattedTables = ownerTables.map(table => ({
+          id: table.id,
+          name: table.name,
+          type: table.type,
+          owner_id: table.owner_id,
           permissions: {
             can_get: true,
             can_put: true,
@@ -300,88 +348,124 @@ export default function TablesPage() {
           }
         }));
 
-        setTables(tablesWithPermissions);
-      } else if (profile.role === 'sub_owner') {
-        // Fetch tables and permissions for sub-owner
+        setTables(formattedTables);
+      } else {
         const { data: subOwnerData, error: subOwnerError } = await supabase
           .from('sub_owners')
-          .select('id')
-          .eq('profile_id', session.user.id)
+          .select('id, owner_id')
+          .eq('profile_id', user.id)
           .single();
 
-        if (subOwnerError) {
-          console.error('Sub-owner error:', subOwnerError);
-          setError('Failed to fetch sub-owner data. Please try logging in again.');
-          return;
-        }
+        if (subOwnerError) throw subOwnerError;
+        if (!subOwnerData) throw new Error('No sub-owner data found');
 
-        if (!subOwnerData) {
-          setError('Sub-owner record not found. Please try logging in again.');
-          return;
-        }
+        // Log sub-owner data for debugging
+        console.log('Sub-owner data:', subOwnerData);
 
-        const { data: permissionsData, error: permissionsError } = await supabase
+        // Get all tables for the owner first
+        const { data: ownerTables, error: ownerTablesError } = await supabase
+          .from('tables')
+          .select('*')
+          .eq('owner_id', subOwnerData.owner_id);
+
+        if (ownerTablesError) throw ownerTablesError;
+        console.log('Owner tables:', ownerTables);
+
+        // Then get permissions for these tables
+        const { data: permissions, error: permissionsError } = await supabase
           .from('sub_owner_permissions')
-          .select(`
-            *,
-            table:tables(*)
-          `)
+          .select('*')
           .eq('sub_owner_id', subOwnerData.id);
 
-        if (permissionsError) {
-          console.error('Permissions error:', permissionsError);
-          setError('Failed to fetch table permissions. Please try again.');
-          return;
-        }
+        if (permissionsError) throw permissionsError;
+        console.log('Permissions:', permissions);
 
-        const tablesWithPermissions = permissionsData.map(permission => ({
-          ...permission.table,
-          permissions: {
-            can_get: permission.can_get,
-            can_put: permission.can_put,
-            can_post: permission.can_post,
-            can_delete: permission.can_delete
-          }
-        }));
+        // Combine the data
+        const formattedTables = ownerTables.map(table => {
+          const permission = permissions?.find(p => p.table_id === table.id);
+          return {
+            id: table.id,
+            name: table.name,
+            type: table.type,
+            owner_id: table.owner_id,
+            permissions: {
+              can_get: permission?.can_get || false,
+              can_put: permission?.can_put || false,
+              can_post: permission?.can_post || false,
+              can_delete: permission?.can_delete || false
+            }
+          };
+        });
 
-        setTables(tablesWithPermissions);
+        console.log('Formatted tables:', formattedTables);
+        setTables(formattedTables);
       }
     } catch (err: any) {
-      console.error('Error:', err);
-      setError(err.message || 'Failed to fetch tables. Please try again.');
+      console.error('Error fetching tables:', err);
+      setError(err.message || 'Failed to fetch tables');
+      if (err.message?.includes('auth') || err.message?.includes('JWT')) {
+        router.push('/login');
+      }
     } finally {
       setLoading(false);
     }
   };
 
   const fetchSubAccounts = async (tableId: string) => {
+    const supabase = createClient();
     try {
       const { data: permissions, error: permissionsError } = await supabase
         .from('sub_owner_permissions')
         .select(`
-          *,
-          profile:sub_owners(
-            profiles(
+          id,
+          table_id,
+          sub_owner_id,
+          can_get,
+          can_put,
+          can_post,
+          can_delete,
+          sub_owner:sub_owners (
+            profile:profiles (
               email,
               full_name
             )
           )
         `)
-        .eq('table_id', tableId);
+        .eq('table_id', tableId) as { data: PermissionResponse[] | null, error: any };
 
       if (permissionsError) throw permissionsError;
-      setSubAccounts(permissions);
+      
+      console.log('Raw permissions data:', JSON.stringify(permissions, null, 2));
+
+      const formattedPermissions = permissions?.map(p => {
+        console.log('Processing permission:', p);
+        return {
+          id: p.id,
+          table_id: p.table_id,
+          sub_owner_id: p.sub_owner_id,
+          can_get: p.can_get,
+          can_put: p.can_put,
+          can_post: p.can_post,
+          can_delete: p.can_delete,
+          profile: {
+            email: p.sub_owner?.profile?.email || '',
+            full_name: p.sub_owner?.profile?.full_name || ''
+          }
+        };
+      }) || [];
+
+      console.log('Formatted permissions:', JSON.stringify(formattedPermissions, null, 2));
+      setSubAccounts(formattedPermissions);
     } catch (err) {
       console.error('Error fetching sub accounts:', err);
     }
   };
 
-  const handleManageSubAccounts = (table: Table) => {
+  const handleManageSubAccounts = (table: Table, e?: React.MouseEvent) => {
+    e?.stopPropagation(); // Stop event from bubbling up to row click
     setSelectedTable(table);
-    // For testing purposes, use TEST_SUB_ACCOUNTS directly
-    setSubAccounts(TEST_SUB_ACCOUNTS);
-    // Comment out the actual fetch for now since we're using test data
-    // fetchSubAccounts(table.id);
+    setIsManageDialogOpen(true);
+    fetchSubAccounts(table.id);
   };
 
   const getPermissionBadge = (type: string, enabled: boolean, onClick?: () => void) => {
@@ -433,7 +517,7 @@ export default function TablesPage() {
       setTables(updatedTables);
 
       // In a real application, you would update the database here
-      // const { error } = await supabase
+      // const { error } = await createClient
       //   .from('tables')
       //   .update({ [`permissions.${permissionType}`]: !table.permissions?.[permissionType] })
       //   .eq('id', table.id);
@@ -448,6 +532,17 @@ export default function TablesPage() {
 
   const toggleSubAccountPermission = async (account: SubOwnerPermission, permissionType: 'can_get' | 'can_put' | 'can_post' | 'can_delete') => {
     try {
+      const supabase = createClient();
+      
+      // Update the permission in the database
+      const { error: updateError } = await supabase
+        .from('sub_owner_permissions')
+        .update({ [permissionType]: !account[permissionType] })
+        .eq('id', account.id);
+      
+      if (updateError) throw updateError;
+
+      // Update local state for sub-accounts dialog
       const updatedSubAccounts = subAccounts.map(acc => {
         if (acc.id === account.id) {
           return {
@@ -459,17 +554,11 @@ export default function TablesPage() {
       });
       setSubAccounts(updatedSubAccounts);
 
-      // In a real application, you would update the database here
-      // const { error } = await supabase
-      //   .from('sub_owner_permissions')
-      //   .update({ [permissionType]: !account[permissionType] })
-      //   .eq('id', account.id);
-      
-      // if (error) throw error;
+      // No need to refresh the entire tables list since we're only updating permissions in the dialog
     } catch (err) {
       console.error('Error updating permission:', err);
-      // Revert the change if the update fails
-      setSubAccounts(subAccounts);
+      // Show error to user
+      setError('Failed to update permission. Please try again.');
     }
   };
 
@@ -559,7 +648,7 @@ export default function TablesPage() {
                                 asChild
                                 className="h-8 w-8 p-0"
                               >
-                                <Link href={`/tables/${table.name.toLowerCase().replace(/\s+/g, '-')}`} target="_blank">
+                                <Link href={`/tables/${table.type}?id=${table.id}`} target="_blank">
                                   <ExternalLink className="h-4 w-4" />
                                   <span className="sr-only">Open in new tab</span>
                                 </Link>
@@ -578,7 +667,12 @@ export default function TablesPage() {
                                   </DropdownMenuTrigger>
                                   <DropdownMenuContent align="end">
                                     <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                    <DropdownMenuItem onClick={() => handleManageSubAccounts(table)}>
+                                    <DropdownMenuItem 
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleManageSubAccounts(table, e);
+                                      }}
+                                    >
                                       Manage Sub-Accounts
                                     </DropdownMenuItem>
                                   </DropdownMenuContent>
@@ -659,48 +753,76 @@ export default function TablesPage() {
 
           {/* Sub-accounts management dialog */}
           {userRole === 'owner' && (
-            <Dialog open={!!selectedTable} onOpenChange={(open) => !open && setSelectedTable(null)}>
+            <Dialog 
+              open={isManageDialogOpen} 
+              onOpenChange={(open) => {
+                if (!open) {
+                  setIsManageDialogOpen(false);
+                  setSelectedTable(null);
+                  setSubAccounts([]);
+                }
+              }}
+            >
               <DialogContent className="max-w-4xl">
                 <DialogHeader>
                   <DialogTitle>
                     Manage Sub-Account Permissions - {selectedTable?.name}
                   </DialogTitle>
+                  <DialogDescription>
+                    Manage access permissions for sub-accounts to this table. You can control their ability to read, write, create, and delete data.
+                  </DialogDescription>
                 </DialogHeader>
                 
                 <div className="p-6">
-                  <table className="w-full">
-                    <thead>
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                          Email
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                          Permissions
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                      {subAccounts.map((account) => (
-                        <tr key={account.id}>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                            {account.profile?.email}
-                          </td>
-                          <td className="px-6 py-4">
-                            <div className="flex space-x-2">
-                              {getPermissionBadge('GET', account.can_get, 
-                                () => toggleSubAccountPermission(account, 'can_get'))}
-                              {getPermissionBadge('PUT', account.can_put, 
-                                () => toggleSubAccountPermission(account, 'can_put'))}
-                              {getPermissionBadge('POST', account.can_post, 
-                                () => toggleSubAccountPermission(account, 'can_post'))}
-                              {getPermissionBadge('DELETE', account.can_delete, 
-                                () => toggleSubAccountPermission(account, 'can_delete'))}
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                  {subAccounts.length > 0 ? (
+                    <div className="rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="bg-gray-50 dark:bg-gray-800">
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                              Name
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                              Email
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                              Permissions
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+                          {subAccounts.map((account) => (
+                            <tr key={account.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                                {account.profile?.full_name || 'N/A'}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                                {account.profile?.email}
+                              </td>
+                              <td className="px-6 py-4">
+                                <div className="flex items-center space-x-2">
+                                  {getPermissionBadge('GET', account.can_get, 
+                                    () => toggleSubAccountPermission(account, 'can_get'))}
+                                  {getPermissionBadge('PUT', account.can_put, 
+                                    () => toggleSubAccountPermission(account, 'can_put'))}
+                                  {getPermissionBadge('POST', account.can_post, 
+                                    () => toggleSubAccountPermission(account, 'can_post'))}
+                                  {getPermissionBadge('DELETE', account.can_delete, 
+                                    () => toggleSubAccountPermission(account, 'can_delete'))}
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 bg-gray-50 dark:bg-gray-800 rounded-lg border border-dashed border-gray-300 dark:border-gray-600">
+                      <p className="text-gray-500 dark:text-gray-400">
+                        No sub-accounts found for this table. Add sub-accounts to manage their permissions.
+                      </p>
+                    </div>
+                  )}
                 </div>
               </DialogContent>
             </Dialog>

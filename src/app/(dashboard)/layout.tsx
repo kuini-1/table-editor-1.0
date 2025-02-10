@@ -6,12 +6,14 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { useTheme } from 'next-themes';
-import { supabase } from '@/lib/supabase/client';
+import { createClient } from '@/lib/supabase/client';
+import { getUserRole } from '@/lib/get-user-role';
 
 interface NavItem {
   name: string;
   href: string;
-  icon: (props: React.ComponentProps<'svg'>) => JSX.Element;
+  icon: (props: React.ComponentProps<'svg'>) => React.JSX.Element;
+  requiresOwner?: boolean;
 }
 
 const navigation: NavItem[] = [
@@ -38,6 +40,7 @@ const navigation: NavItem[] = [
   {
     name: 'Users',
     href: '/users',
+    requiresOwner: true,
     icon: (props) => (
       <svg
         xmlns="http://www.w3.org/2000/svg"
@@ -92,15 +95,32 @@ export default function DashboardLayout({
   const [isExpanded, setIsExpanded] = useState(false);
   const [mounted, setMounted] = useState(false);
   const { theme, setTheme } = useTheme();
+  const [userRole, setUserRole] = useState<string | null>(null);
 
   // Handle hydration mismatch
   useEffect(() => {
     setMounted(true);
   }, []);
 
+  // Fetch user role
+  useEffect(() => {
+    const fetchUserRole = async () => {
+      const role = await getUserRole();
+      setUserRole(role);
+    };
+
+    fetchUserRole();
+  }, []);
+
+  // Filter navigation items based on user role
+  const filteredNavigation = navigation.filter(item => 
+    !item.requiresOwner || userRole === 'owner'
+  );
+
   const handleSignOut = async () => {
     try {
       // Sign out from Supabase first
+      const supabase = createClient();
       await supabase.auth.signOut();
       
       // Clear all storage
@@ -198,7 +218,7 @@ export default function DashboardLayout({
         </div>
 
         <nav className="flex-1 px-2 py-4 space-y-1 overflow-y-auto">
-          {navigation.map((item) => {
+          {filteredNavigation.map((item) => {
             const isActive = pathname.startsWith(item.href);
             return (
               <Link

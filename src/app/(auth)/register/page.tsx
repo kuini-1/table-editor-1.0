@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { supabase } from '@/lib/supabase/client';
+import { createClient } from '@/lib/supabase/client';
 import { useTheme } from 'next-themes';
 
 export default function RegisterPage() {
@@ -45,6 +45,7 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
+      const supabase = createClient();
       const { data, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
@@ -97,11 +98,40 @@ export default function RegisterPage() {
             owner_id: ownerData.id,
           }));
 
-          const { error: tablesError } = await supabase
+          const { data: tablesData, error: tablesError } = await supabase
             .from('tables')
-            .insert(tablesToCreate);
+            .insert(tablesToCreate)
+            .select();
 
           if (tablesError) throw tablesError;
+
+          if (tablesData) {
+            const { data: subOwners, error: subOwnersError } = await supabase
+              .from('sub_owners')
+              .select('id')
+              .eq('owner_id', ownerData.id);
+
+            if (subOwnersError) throw subOwnersError;
+
+            if (subOwners && subOwners.length > 0) {
+              const defaultPermissions = tablesData.flatMap(table => 
+                subOwners.map(subOwner => ({
+                  table_id: table.id,
+                  sub_owner_id: subOwner.id,
+                  can_get: false,
+                  can_put: false,
+                  can_post: false,
+                  can_delete: false
+                }))
+              );
+
+              const { error: permissionsError } = await supabase
+                .from('sub_owner_permissions')
+                .insert(defaultPermissions);
+
+              if (permissionsError) throw permissionsError;
+            }
+          }
         }
 
         router.push(`/verify-email?email=${encodeURIComponent(email)}`);

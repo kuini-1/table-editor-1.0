@@ -1,10 +1,12 @@
-'use client';
+"use client";
 
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useTheme } from 'next-themes';
+import { createClient } from "@/lib/supabase/client";
+import OneTapComponent from '@/components/OneTapComponent';
+import Image from 'next/image';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -12,9 +14,17 @@ export default function LoginPage() {
   const [password, setPassword] = useState('xwqtyu12');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const { theme, setTheme } = useTheme();
+  const supabase = createClient();
+  const searchParams = useSearchParams();
+  const next = searchParams.get("next");
+  const [isGoogleLoading, setIsGoogleLoading] = useState<boolean>(false);
   
-  const supabase = createClientComponentClient();
+  // Handle theme hydration
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     const checkSession = async () => {
@@ -37,9 +47,9 @@ export default function LoginPage() {
     return () => {
       subscription.unsubscribe();
     };
-  }, [router, supabase]);
+  }, [router]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
@@ -64,8 +74,8 @@ export default function LoginPage() {
       }
 
       if (data.session) {
-        // The session will be automatically handled by the onAuthStateChange listener
         router.refresh();
+        router.push('/tables');
       } else {
         throw new Error('No session data returned');
       }
@@ -91,7 +101,7 @@ export default function LoginPage() {
             TableEditor
           </Link>
           <h2 className="mt-6 text-3xl font-bold text-gray-900 dark:text-white">
-            Welcome back
+            Sign in to your account
           </h2>
           <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
             Don't have an account?{' '}
@@ -99,19 +109,41 @@ export default function LoginPage() {
               href="/register"
               className="font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 dark:hover:text-indigo-300 transition-colors"
             >
-              Sign up for free
+              Sign up
             </Link>
           </p>
         </div>
 
         <div className="mt-8 bg-white dark:bg-gray-800 py-8 px-4 shadow-xl dark:shadow-gray-900/50 rounded-2xl border border-gray-100 dark:border-gray-700 sm:px-10">
-          <form className="space-y-6" onSubmit={handleSubmit}>
-            {error && (
-              <div className="rounded-lg bg-red-50 dark:bg-red-900/50 p-4 text-sm text-red-700 dark:text-red-200 border border-red-200 dark:border-red-800">
-                {error}
-              </div>
-            )}
-            
+          <OneTapComponent onStateChange={setIsGoogleLoading}>
+            <button
+              type="button"
+              disabled={isGoogleLoading}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Image
+                src="/google.svg"
+                alt="Google"
+                width={20}
+                height={20}
+                className="w-5 h-5"
+              />
+              {isGoogleLoading ? 'Signing in...' : 'Continue with Google'}
+            </button>
+          </OneTapComponent>
+
+          <div className="mt-6 relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-300 dark:border-gray-600" />
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-2 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400">
+                Sign in with email
+              </span>
+            </div>
+          </div>
+
+          <form className="mt-6 space-y-6" onSubmit={handleEmailLogin}>
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Email address
@@ -171,19 +203,17 @@ export default function LoginPage() {
               </Link>
             </div>
 
-            <div>
-              <button
-                type="submit"
-                disabled={loading}
-                className={`w-full flex justify-center py-2.5 px-4 border border-transparent rounded-lg text-sm font-medium text-white transition-colors ${
-                  loading
-                    ? 'bg-gray-400 dark:bg-gray-600 cursor-not-allowed'
-                    : 'bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-800'
-                }`}
-              >
-                {loading ? 'Signing in...' : 'Sign in'}
-              </button>
-            </div>
+            <button
+              type="submit"
+              disabled={loading}
+              className={`w-full flex justify-center py-2.5 px-4 border border-transparent rounded-lg text-sm font-medium text-white transition-colors ${
+                loading
+                  ? 'bg-gray-400 dark:bg-gray-600 cursor-not-allowed'
+                  : 'bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-800'
+              }`}
+            >
+              {loading ? 'Signing in...' : 'Sign in with Email'}
+            </button>
           </form>
         </div>
       </div>

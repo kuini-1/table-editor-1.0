@@ -17,18 +17,25 @@ WITH CHECK (
   )
 );
 
--- Allow owners to select permissions for their sub_owners
+-- Allow both owners and sub-owners to select permissions
 CREATE POLICY "Enable select for permissions"
 ON public.sub_owner_permissions
 FOR SELECT
 TO authenticated
 USING (
+  -- Allow owners to see permissions for their sub-owners
   sub_owner_id IN (
     SELECT id FROM public.sub_owners
     WHERE owner_id IN (
       SELECT id FROM public.owners
       WHERE profile_id = auth.uid()
     )
+  )
+  OR
+  -- Allow sub-owners to see their own permissions
+  sub_owner_id IN (
+    SELECT id FROM public.sub_owners
+    WHERE profile_id = auth.uid()
   )
 );
 

@@ -1,0 +1,48 @@
+# Instructions
+
+During your interaction with the user, if you find anything reusable in this project (e.g. version of a library, model name), especially about a fix to a mistake you made or a correction you received, you should take note in the `Lessons` section in the `.cursorrules` file so you will not make the same mistake again. 
+
+You should also use the `.cursorrules` file as a Scratchpad to organize your thoughts. Especially when you receive a new task, you should first review the content of the Scratchpad, clear old different task if necessary, first explain the task, and plan the steps you need to take to complete the task. You can use todo markers to indicate the progress, e.g.
+[X] Task 1
+[ ] Task 2
+
+Also update the progress of the task in the Scratchpad when you finish a subtask.
+Especially when you finished a milestone, it will help to improve your depth of task accomplishment to use the Scratchpad to reflect and plan.
+The goal is to help you maintain a big picture as well as the progress of the task. Always refer to the Scratchpad when you plan the next step.
+
+# Lessons
+
+## User Specified Lessons
+
+- User Role Management (Owner/Sub-Owner): When implementing role-based access control (RBAC), it's crucial to establish clear ownership hierarchies, where the owner automatically has full control and sub-owners are granted permissions based on their assigned roles. This simplifies the user management process and ensures a secure and scalable system.
+- Automatic Permission Creation for Sub-Owners: When automatically generating permissions for new users (e.g., sub-owners), it's essential to default permissions to the lowest level of access (e.g., false for all operations like GET, PUT, POST, DELETE) and provide an interface to easily modify them. This is important for security and user control.
+- Table Permission Management: Allowing the owner to modify permissions for sub-owners on a per-table basis is a powerful feature. It's important to clearly define what actions (read, write, delete) sub-owners can perform and make sure these permissions are enforced consistently across the system.
+- Database Schema Evolution: When modifying database schemas, it's important to use migrations to track changes and ensure they can be applied consistently across different environments. This includes properly handling column renames, additions, and maintaining data integrity.
+- Column Naming Conventions: When working with database columns, maintain consistent naming conventions (e.g., camelCase for specific types like "dwExp" or "wStageWinSolo") to reflect the data type and purpose of the field.
+
+## Cursor learned
+
+- When you are editing a file, you should first read the file and understand the context.
+- When modifying database schemas, always create proper migration files with clear comments and appropriate constraints.
+- Use descriptive column comments to document the purpose of each field in the database.
+
+# Scratchpad
+
+Current Task: Database Schema Modification for exp_table
+
+Task Description:
+Modify the exp_table schema to match the specified column structure with proper naming conventions and data types.
+
+Progress:
+[X] Create migration file for schema changes
+[X] Drop existing columns that need to be renamed
+[X] Add new columns with updated names and proper data types
+[X] Add comments to document each column's purpose
+[X] Update foreign key constraints and references
+[X] Add unique constraint on tblidx
+[X] Split stage-related columns into solo and team variants
+
+Next Steps:
+[ ] Verify the changes meet all requirements
+[ ] Test data migration if needed
+[ ] Update any related application code to use new column names
