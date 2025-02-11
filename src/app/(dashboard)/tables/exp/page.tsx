@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
-import { Upload, Plus, Edit } from 'lucide-react';
+import { Upload, Plus, Edit, ExternalLink, MoreVertical, RefreshCcw, Copy, Trash2, Search, X, Filter } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -27,6 +27,28 @@ import {
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { useSearchParams } from 'next/navigation';
+import Link from 'next/link';
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { 
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 // Form schema for validation
 const expTableSchema = z.object({
@@ -91,8 +113,7 @@ function ExpTableForm({ initialData, onSubmit, onCancel, isEdit, tblidx }: ExpTa
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-        {/* Hidden table_id field */}
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <FormField
           control={form.control}
           name="table_id"
@@ -101,405 +122,451 @@ function ExpTableForm({ initialData, onSubmit, onCancel, isEdit, tblidx }: ExpTa
           )}
         />
 
-        {/* Basic Info Section */}
-        <div className="bg-gray-50/50 dark:bg-gray-800/50 rounded-lg p-6 space-y-6 backdrop-blur-sm border border-gray-100 dark:border-gray-700 shadow-sm">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-medium text-gray-900 dark:text-white">Basic Information</h3>
-            <Separator className="flex-grow ml-4" />
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <FormField
-              control={form.control}
-              name="tblidx"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Table ID</FormLabel>
-                  <FormControl>
-                    <Input 
-                      type="number" 
-                      {...field} 
-                      className="transition-all duration-200 focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400"
-                      placeholder="Enter Table ID"
-                      disabled={isEdit}
+        <ScrollArea className="h-[600px] pr-4">
+          <Card className="border border-gray-200 dark:border-0 bg-white dark:bg-gray-950/50 backdrop-blur-xl shadow-xl">
+            <CardHeader className="border-b border-gray-200 dark:border-gray-800 pb-4">
+              <CardTitle className="text-xl font-semibold text-gray-900 dark:text-transparent dark:bg-gradient-to-r dark:from-indigo-500 dark:to-purple-500 dark:bg-clip-text">Basic Information</CardTitle>
+              <CardDescription className="text-gray-500 dark:text-gray-400">
+                Enter the basic details for this experience entry
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="grid grid-cols-3 gap-6 pt-6 bg-white dark:bg-transparent">
+              <FormField
+                control={form.control}
+                name="tblidx"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Table ID</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="number" 
+                        {...field} 
+                        placeholder="Enter Tblidx"
+                        className="bg-white dark:bg-gray-900/50 border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-200 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-indigo-500/50 dark:focus:ring-indigo-500/50 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="dwExp"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Experience</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="number" 
+                        {...field} 
+                        placeholder="Enter Exp"
+                        className="bg-white dark:bg-gray-900/50 border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-200 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-indigo-500/50 dark:focus:ring-indigo-500/50 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="dwNeed_Exp"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Required Experience</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="number" 
+                        {...field} 
+                        placeholder="Enter Required Exp"
+                        className="bg-white dark:bg-gray-900/50 border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-200 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-indigo-500/50 dark:focus:ring-indigo-500/50 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </CardContent>
+          </Card>
+
+          <Separator className="my-6 bg-gray-200 dark:bg-gray-800" />
+
+          <Tabs defaultValue="solo" className="w-full">
+            <TabsList className="w-full grid grid-cols-3 gap-4 bg-gray-100 dark:bg-gray-950/50 p-1 rounded-lg">
+              <TabsTrigger 
+                value="solo"
+                className="data-[state=active]:bg-white dark:data-[state=active]:bg-indigo-500/20 data-[state=active]:text-gray-900 dark:data-[state=active]:text-white rounded-md transition-all text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-white/80 dark:hover:bg-gray-800/50"
+              >
+                Solo Statistics
+              </TabsTrigger>
+              <TabsTrigger 
+                value="team"
+                className="data-[state=active]:bg-white dark:data-[state=active]:bg-indigo-500/20 data-[state=active]:text-gray-900 dark:data-[state=active]:text-white rounded-md transition-all text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-white/80 dark:hover:bg-gray-800/50"
+              >
+                Team Statistics
+              </TabsTrigger>
+              <TabsTrigger 
+                value="other"
+                className="data-[state=active]:bg-white dark:data-[state=active]:bg-indigo-500/20 data-[state=active]:text-gray-900 dark:data-[state=active]:text-white rounded-md transition-all text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-white/80 dark:hover:bg-gray-800/50"
+              >
+                Other Statistics
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="solo">
+              <Card className="border border-gray-200 dark:border-0 bg-white dark:bg-gray-950/50 backdrop-blur-xl shadow-xl">
+                <CardHeader className="border-b border-gray-200 dark:border-gray-800 pb-4">
+                  <CardTitle className="text-xl font-semibold text-gray-900 dark:text-transparent dark:bg-gradient-to-r dark:from-indigo-500 dark:to-purple-500 dark:bg-clip-text">Solo Statistics</CardTitle>
+                  <CardDescription className="text-gray-500 dark:text-gray-400">
+                    Configure statistics for solo gameplay
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="grid gap-6 pt-6 bg-white dark:bg-transparent">
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="wStageWinSolo"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Stage Wins</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              {...field} 
+                              placeholder="Enter Stage Wins"
+                              className="bg-white dark:bg-gray-900/50 border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-200 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-indigo-500/50 dark:focus:ring-indigo-500/50 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
                     />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="dwExp"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Experience</FormLabel>
-                  <FormControl>
-                    <Input 
-                      type="number" 
-                      {...field} 
-                      className="transition-all duration-200 focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400"
-                      placeholder="Enter Experience"
+                    <FormField
+                      control={form.control}
+                      name="wStageDrawSolo"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Stage Draws</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              {...field} 
+                              placeholder="Enter Stage Draws"
+                              className="bg-white dark:bg-gray-900/50 border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-200 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-indigo-500/50 dark:focus:ring-indigo-500/50 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
                     />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="dwNeed_Exp"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Required Experience</FormLabel>
-                  <FormControl>
-                    <Input 
-                      type="number" 
-                      {...field} 
-                      className="transition-all duration-200 focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400"
-                      placeholder="Enter Required Experience"
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="wStageLoseSolo"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Stage Losses</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              {...field} 
+                              placeholder="Enter Stage Losses"
+                              className="bg-white dark:bg-gray-900/50 border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-200 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-indigo-500/50 dark:focus:ring-indigo-500/50 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
                     />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-        </div>
+                    <FormField
+                      control={form.control}
+                      name="wWinSolo"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Total Wins</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              {...field} 
+                              placeholder="Enter Total Wins"
+                              className="bg-white dark:bg-gray-900/50 border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-200 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-indigo-500/50 dark:focus:ring-indigo-500/50 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <FormField
+                    control={form.control}
+                    name="wPerfectWinSolo"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Perfect Wins</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number" 
+                            {...field} 
+                            placeholder="Enter Perfect Wins"
+                            className="bg-white dark:bg-gray-900/50 border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-200 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-indigo-500/50 dark:focus:ring-indigo-500/50 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </CardContent>
+              </Card>
+            </TabsContent>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Solo Stats Section */}
-          <div className="bg-gray-50/50 dark:bg-gray-800/50 rounded-lg p-6 space-y-6 backdrop-blur-sm border border-gray-100 dark:border-gray-700 shadow-sm transition-all duration-200 hover:shadow-md">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white">Solo Statistics</h3>
-              <Separator className="flex-grow ml-4" />
-            </div>
-            <div className="grid gap-4">
-              <FormField
-                control={form.control}
-                name="wStageWinSolo"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Stage Wins</FormLabel>
-                    <FormControl>
-                      <Input 
-                        type="number" 
-                        {...field} 
-                        className="transition-all duration-200 focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400"
-                        placeholder="Enter Stage Wins"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="wStageDrawSolo"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Stage Draws</FormLabel>
-                    <FormControl>
-                      <Input 
-                        type="number" 
-                        {...field} 
-                        className="transition-all duration-200 focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400"
-                        placeholder="Enter Stage Draws"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="wStageLoseSolo"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Stage Losses</FormLabel>
-                    <FormControl>
-                      <Input 
-                        type="number" 
-                        {...field} 
-                        className="transition-all duration-200 focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400"
-                        placeholder="Enter Stage Losses"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="wWinSolo"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Total Wins</FormLabel>
-                    <FormControl>
-                      <Input 
-                        type="number" 
-                        {...field} 
-                        className="transition-all duration-200 focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400"
-                        placeholder="Enter Total Wins"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="wPerfectWinSolo"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Perfect Wins</FormLabel>
-                    <FormControl>
-                      <Input 
-                        type="number" 
-                        {...field} 
-                        className="transition-all duration-200 focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400"
-                        placeholder="Enter Perfect Wins"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-          </div>
+            <TabsContent value="team">
+              <Card className="border border-gray-200 dark:border-0 bg-white dark:bg-gray-950/50 backdrop-blur-xl shadow-xl">
+                <CardHeader className="border-b border-gray-200 dark:border-gray-800 pb-4">
+                  <CardTitle className="text-xl font-semibold text-gray-900 dark:text-transparent dark:bg-gradient-to-r dark:from-indigo-500 dark:to-purple-500 dark:bg-clip-text">Team Statistics</CardTitle>
+                  <CardDescription className="text-gray-500 dark:text-gray-400">
+                    Configure statistics for team gameplay
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="grid gap-6 pt-6 bg-white dark:bg-transparent">
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="wStageWinTeam"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Stage Wins</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              {...field} 
+                              placeholder="Enter Stage Wins"
+                              className="bg-white dark:bg-gray-900/50 border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-200 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-indigo-500/50 dark:focus:ring-indigo-500/50 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="wStageDrawTeam"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Stage Draws</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              {...field} 
+                              placeholder="Enter Stage Draws"
+                              className="bg-white dark:bg-gray-900/50 border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-200 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-indigo-500/50 dark:focus:ring-indigo-500/50 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="wStageLoseTeam"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Stage Losses</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              {...field} 
+                              placeholder="Enter Stage Losses"
+                              className="bg-white dark:bg-gray-900/50 border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-200 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-indigo-500/50 dark:focus:ring-indigo-500/50 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="wWinTeam"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Total Wins</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              {...field} 
+                              placeholder="Enter Total Wins"
+                              className="bg-white dark:bg-gray-900/50 border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-200 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-indigo-500/50 dark:focus:ring-indigo-500/50 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <FormField
+                    control={form.control}
+                    name="wPerfectWinTeam"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Perfect Wins</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number" 
+                            {...field} 
+                            placeholder="Enter Perfect Wins"
+                            className="bg-white dark:bg-gray-900/50 border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-200 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-indigo-500/50 dark:focus:ring-indigo-500/50 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </CardContent>
+              </Card>
+            </TabsContent>
 
-          {/* Team Stats Section */}
-          <div className="bg-gray-50/50 dark:bg-gray-800/50 rounded-lg p-6 space-y-6 backdrop-blur-sm border border-gray-100 dark:border-gray-700 shadow-sm transition-all duration-200 hover:shadow-md">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white">Team Statistics</h3>
-              <Separator className="flex-grow ml-4" />
-            </div>
-            <div className="grid gap-4">
-              <FormField
-                control={form.control}
-                name="wStageWinTeam"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Stage Wins</FormLabel>
-                    <FormControl>
-                      <Input 
-                        type="number" 
-                        {...field} 
-                        className="transition-all duration-200 focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400"
-                        placeholder="Enter Stage Wins"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="wStageDrawTeam"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Stage Draws</FormLabel>
-                    <FormControl>
-                      <Input 
-                        type="number" 
-                        {...field} 
-                        className="transition-all duration-200 focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400"
-                        placeholder="Enter Stage Draws"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="wStageLoseTeam"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Stage Losses</FormLabel>
-                    <FormControl>
-                      <Input 
-                        type="number" 
-                        {...field} 
-                        className="transition-all duration-200 focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400"
-                        placeholder="Enter Stage Losses"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="wWinTeam"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Total Wins</FormLabel>
-                    <FormControl>
-                      <Input 
-                        type="number" 
-                        {...field} 
-                        className="transition-all duration-200 focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400"
-                        placeholder="Enter Total Wins"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="wPerfectWinTeam"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Perfect Wins</FormLabel>
-                    <FormControl>
-                      <Input 
-                        type="number" 
-                        {...field} 
-                        className="transition-all duration-200 focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400"
-                        placeholder="Enter Perfect Wins"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-          </div>
+            <TabsContent value="other">
+              <Card className="border border-gray-200 dark:border-0 bg-white dark:bg-gray-950/50 backdrop-blur-xl shadow-xl">
+                <CardHeader className="border-b border-gray-200 dark:border-gray-800 pb-4">
+                  <CardTitle className="text-xl font-semibold text-gray-900 dark:text-transparent dark:bg-gradient-to-r dark:from-indigo-500 dark:to-purple-500 dark:bg-clip-text">Other Statistics</CardTitle>
+                  <CardDescription className="text-gray-500 dark:text-gray-400">
+                    Configure additional game statistics
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="grid gap-6 pt-6 bg-white dark:bg-transparent">
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="wNormal_Race"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Normal Race</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              {...field} 
+                              placeholder="Enter Count"
+                              className="bg-white dark:bg-gray-900/50 border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-200 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-indigo-500/50 dark:focus:ring-indigo-500/50 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="wSuperRace"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Super Race</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              {...field} 
+                              placeholder="Enter Count"
+                              className="bg-white dark:bg-gray-900/50 border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-200 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-indigo-500/50 dark:focus:ring-indigo-500/50 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="dwMobExp"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Mob Experience</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              {...field} 
+                              placeholder="Enter Mob Experience"
+                              className="bg-white dark:bg-gray-900/50 border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-200 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-indigo-500/50 dark:focus:ring-indigo-500/50 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="dwPhyDefenceRef"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Physical Defence</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              {...field} 
+                              placeholder="Enter Physical Defence"
+                              className="bg-white dark:bg-gray-900/50 border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-200 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-indigo-500/50 dark:focus:ring-indigo-500/50 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="dwEngDefenceRef"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Energy Defence</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              {...field} 
+                              placeholder="Enter Energy Defence"
+                              className="bg-white dark:bg-gray-900/50 border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-200 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-indigo-500/50 dark:focus:ring-indigo-500/50 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="dwMobZenny"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Mob Zenny</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              {...field} 
+                              placeholder="Enter Mob Zenny"
+                              className="bg-white dark:bg-gray-900/50 border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-200 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-indigo-500/50 dark:focus:ring-indigo-500/50 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        </ScrollArea>
 
-          {/* Other Stats Section */}
-          <div className="bg-gray-50/50 dark:bg-gray-800/50 rounded-lg p-6 space-y-6 backdrop-blur-sm border border-gray-100 dark:border-gray-700 shadow-sm transition-all duration-200 hover:shadow-md">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white">Other Statistics</h3>
-              <Separator className="flex-grow ml-4" />
-            </div>
-            <div className="grid gap-4">
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="wNormal_Race"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Normal Race</FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="number" 
-                          {...field} 
-                          className="transition-all duration-200 focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400"
-                          placeholder="Enter Count"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="wSuperRace"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Super Race</FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="number" 
-                          {...field} 
-                          className="transition-all duration-200 focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400"
-                          placeholder="Enter Count"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              <FormField
-                control={form.control}
-                name="dwMobExp"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Mob Experience</FormLabel>
-                    <FormControl>
-                      <Input 
-                        type="number" 
-                        {...field} 
-                        className="transition-all duration-200 focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400"
-                        placeholder="Enter Mob Experience"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="dwPhyDefenceRef"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Physical Defence</FormLabel>
-                    <FormControl>
-                      <Input 
-                        type="number" 
-                        {...field} 
-                        className="transition-all duration-200 focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400"
-                        placeholder="Enter Physical Defence"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="dwEngDefenceRef"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Energy Defence</FormLabel>
-                    <FormControl>
-                      <Input 
-                        type="number" 
-                        {...field} 
-                        className="transition-all duration-200 focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400"
-                        placeholder="Enter Energy Defence"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="dwMobZenny"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Mob Zenny</FormLabel>
-                    <FormControl>
-                      <Input 
-                        type="number" 
-                        {...field} 
-                        className="transition-all duration-200 focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400"
-                        placeholder="Enter Mob Zenny"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-          </div>
-        </div>
-
-        <DialogFooter className="gap-4">
+        <DialogFooter className="gap-4 pt-6 border-t border-gray-200 dark:border-gray-800">
           <Button
             type="button"
             variant="outline"
             onClick={onCancel}
-            className="transition-all duration-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+            className="border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800"
           >
             Cancel
           </Button>
           <Button
             type="submit"
-            className="bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 text-white transition-all duration-200"
+            className="bg-gray-900 hover:bg-gray-800 dark:bg-indigo-500 dark:hover:bg-indigo-600 text-white transition-colors"
           >
             {isEdit ? 'Update' : 'Create'}
           </Button>
@@ -511,8 +578,8 @@ function ExpTableForm({ initialData, onSubmit, onCancel, isEdit, tblidx }: ExpTa
 
 // Column definitions for the exp table
 const EXP_COLUMNS = [
-  { key: 'tblidx', label: 'Table Index' },
-  { key: 'dwExp', label: 'Experience' },
+  { key: 'tblidx', label: 'Tblidx' },
+  { key: 'dwExp', label: 'Exp' },
   { key: 'dwNeed_Exp', label: 'Required Exp' },
   { key: 'wStageWinSolo', label: 'Stage Wins (Solo)' },
   { key: 'wStageDrawSolo', label: 'Stage Draws (Solo)' },
@@ -556,15 +623,29 @@ interface ExpTableRow {
   dwMobZenny: number;
 }
 
+// Add ColumnFilter interface
+interface ColumnFilter {
+  operator: 'contains' | 'equals' | 'greater' | 'less';
+  value: string;
+}
+
+interface ColumnFilters {
+  [key: string]: ColumnFilter;
+}
+
 export default function ExpTablePage() {
   const [data, setData] = useState<ExpTableRow[]>([]);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedRow, setSelectedRow] = useState<ExpTableRow | null>(null);
-  const [nextTableId, setNextTableId] = useState<number>(1);
   const [currentTableId, setCurrentTableId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
+  const [isDuplicateDialogOpen, setIsDuplicateDialogOpen] = useState(false);
+  const [rowToDuplicate, setRowToDuplicate] = useState<ExpTableRow | null>(null);
+  const [filters, setFilters] = useState<ColumnFilters>({});
+  const [debouncedFilters, setDebouncedFilters] = useState<ColumnFilters>({});
 
   const supabase = createClient();
   const searchParams = useSearchParams();
@@ -597,12 +678,6 @@ export default function ExpTablePage() {
     }
 
     setData(expData);
-    
-    // Set next table ID
-    if (expData.length > 0) {
-      const maxTblidx = Math.max(...expData.map(row => row.tblidx));
-      setNextTableId(maxTblidx + 1);
-    }
     setLoading(false);
   };
 
@@ -675,149 +750,395 @@ export default function ExpTablePage() {
     setSelectedRow(null);
   };
 
+  const handleDeleteRows = async () => {
+    if (selectedRows.size === 0) return;
+
+    const { error } = await supabase
+      .from('exp_table')
+      .delete()
+      .in('id', Array.from(selectedRows));
+
+    if (error) {
+      console.error('Error deleting rows:', error);
+      setError('Failed to delete rows');
+      return;
+    }
+
+    setData(data.filter(row => !selectedRows.has(row.id)));
+    setSelectedRows(new Set());
+  };
+
+  const handleDuplicateRow = async (formData: ExpTableFormData) => {
+    const { data: newRow, error } = await supabase
+      .from('exp_table')
+      .insert([{ ...formData, table_id: currentTableId || '' }])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error duplicating row:', error);
+      setError('Failed to duplicate row');
+      return;
+    }
+
+    setData([...data, newRow]);
+    setIsDuplicateDialogOpen(false);
+    setRowToDuplicate(null);
+  };
+
+  const getPermissionBadges = () => (
+    <div className="flex space-x-2">
+      <span className="px-2 py-1 text-xs font-medium rounded bg-emerald-900/50 text-emerald-400">GET</span>
+      <span className="px-2 py-1 text-xs font-medium rounded bg-blue-900/50 text-blue-400">PUT</span>
+      <span className="px-2 py-1 text-xs font-medium rounded bg-amber-900/50 text-amber-400">POST</span>
+      <span className="px-2 py-1 text-xs font-medium rounded bg-red-900/50 text-red-400">DELETE</span>
+    </div>
+  );
+
+  // Add useEffect for debouncing filters
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedFilters(filters);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [filters]);
+
+  // Add filtered data logic
+  const filteredData = React.useMemo(() => {
+    return data.filter(row => {
+      return Object.entries(debouncedFilters).every(([key, filter]) => {
+        if (!filter.value) return true;
+        const cellValue = String(row[key as keyof ExpTableRow]).toLowerCase();
+        const filterValue = filter.value.toLowerCase();
+        
+        switch (filter.operator) {
+          case 'contains':
+            return cellValue.includes(filterValue);
+          case 'equals':
+            return cellValue === filterValue;
+          case 'greater':
+            return Number(cellValue) > Number(filterValue);
+          case 'less':
+            return Number(cellValue) < Number(filterValue);
+          default:
+            return true;
+        }
+      });
+    });
+  }, [data, debouncedFilters]);
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
-          {loading ? (
-            <div className="text-center">
-              <p className="text-gray-500 dark:text-gray-400">Loading...</p>
-            </div>
-          ) : error ? (
-            <div className="text-center text-red-500 dark:text-red-400">
-              {error}
-            </div>
-          ) : (
-            <div className="bg-white dark:bg-gray-800 shadow-md rounded-lg overflow-hidden">
-              <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                <div className="flex justify-between items-center">
-                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                    Experience Table
-                  </h2>
-                  <div className="flex items-center space-x-4">
-                    <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-                      <DialogTrigger asChild>
-                        <Button variant="outline">
-                          <Plus className="h-4 w-4 mr-2" />
-                          Add Row
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Experience Table</h2>
+            <div className="flex items-center space-x-4">
+              {selectedRows.size > 0 && (
+                <Button 
+                  variant="destructive" 
+                  onClick={handleDeleteRows}
+                  className="bg-red-500 hover:bg-red-600 dark:bg-red-600 dark:hover:bg-red-700"
+                >
+                  Delete Selected ({selectedRows.size})
+                </Button>
+              )}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    size="icon"
+                    className="relative h-8 w-8 p-0 border-gray-200 dark:border-gray-700"
+                  >
+                    <Filter className="h-4 w-4" />
+                    {Object.keys(filters).length > 0 && (
+                      <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-indigo-500 text-[10px] font-medium text-white flex items-center justify-center">
+                        {Object.keys(filters).length}
+                      </span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[400px] p-0" align="end">
+                  <div className="border-b border-gray-200 dark:border-gray-800 p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">Filters</h4>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">Add filters to refine table data</p>
+                      </div>
+                      {Object.keys(filters).length > 0 && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setFilters({})}
+                          className="h-8 px-2 text-xs hover:bg-gray-100 dark:hover:bg-gray-800"
+                        >
+                          Clear all
                         </Button>
-                      </DialogTrigger>
-                      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-                        <DialogHeader>
-                          <DialogTitle>Add New Row</DialogTitle>
-                          <DialogDescription>
-                            Add a new row to the experience table. Table ID will be {nextTableId}.
-                          </DialogDescription>
-                        </DialogHeader>
-                        <ExpTableForm
-                          onSubmit={handleAddRow}
-                          onCancel={() => setIsAddDialogOpen(false)}
-                          tblidx={nextTableId}
-                          initialData={{ table_id: currentTableId || '' }}
-                        />
-                      </DialogContent>
-                    </Dialog>
-                    
-                    <Button
-                      variant="outline"
-                      onClick={() => document.getElementById('file-upload')?.click()}
-                    >
-                      <Upload className="h-4 w-4 mr-2" />
-                      Import Data
-                    </Button>
-                    <input
-                      id="file-upload"
-                      type="file"
-                      accept=".csv"
-                      className="hidden"
-                      onChange={handleFileUpload}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="p-6">
-                {data.length > 0 ? (
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                      <thead className="bg-gray-50 dark:bg-gray-700">
-                        <tr>
-                          {EXP_COLUMNS.map((column) => (
-                            <th
-                              key={column.key}
-                              className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
-                            >
-                              {column.label}
-                            </th>
-                          ))}
-                          <th className="px-6 py-3 text-right">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                        {data.map((row) => (
-                          <tr key={row.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                            {EXP_COLUMNS.map((column) => (
-                              <td
-                                key={column.key}
-                                className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white"
-                              >
-                                {row[column.key as keyof ExpTableRow]}
-                              </td>
-                            ))}
-                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                              <Button
-                                variant="ghost"
-                                onClick={() => {
-                                  setSelectedRow(row);
-                                  setIsEditDialogOpen(true);
-                                }}
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                ) : (
-                  <div className="text-center py-12">
-                    <Upload className="mx-auto h-12 w-12 text-gray-400" />
-                    <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">No data</h3>
-                    <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                      Get started by adding a row or importing data
-                    </p>
-                    <div className="mt-6 flex justify-center gap-4">
-                      <Button
-                        variant="outline"
-                        onClick={() => setIsAddDialogOpen(true)}
-                      >
-                        <Plus className="h-4 w-4 mr-2" />
-                        Add Row
-                      </Button>
-                      <Button
-                        variant="outline"
-                        onClick={() => document.getElementById('file-upload')?.click()}
-                      >
-                        <Upload className="h-4 w-4 mr-2" />
-                        Import Data
-                      </Button>
+                      )}
                     </div>
                   </div>
-                )}
+                  <ScrollArea className="max-h-[300px] p-4">
+                    <div className="space-y-4">
+                      {Object.entries(filters).map(([key, filter]) => (
+                        <div key={key} className="space-y-2">
+                          <div className="flex items-center gap-2">
+                            <Select
+                              value={key}
+                              onValueChange={(value) => {
+                                const newFilters = { ...filters };
+                                delete newFilters[key];
+                                newFilters[value] = filter;
+                                setFilters(newFilters);
+                              }}
+                            >
+                              <SelectTrigger className="flex-1">
+                                <SelectValue placeholder="Select column" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {EXP_COLUMNS.map((col) => (
+                                  <SelectItem key={col.key} value={col.key}>{col.label}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <Select
+                              value={filter.operator}
+                              onValueChange={(value) => {
+                                setFilters(prev => ({
+                                  ...prev,
+                                  [key]: {
+                                    ...filter,
+                                    operator: value as ColumnFilter['operator']
+                                  }
+                                }));
+                              }}
+                            >
+                              <SelectTrigger className="w-32">
+                                <SelectValue placeholder="Select operator" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="contains">Contains</SelectItem>
+                                <SelectItem value="equals">Equals</SelectItem>
+                                <SelectItem value="greater">Greater than</SelectItem>
+                                <SelectItem value="less">Less than</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => {
+                                const newFilters = { ...filters };
+                                delete newFilters[key];
+                                setFilters(newFilters);
+                              }}
+                              className="h-9 w-9 p-0 hover:bg-gray-100 dark:hover:bg-gray-800"
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                          <div className="relative">
+                            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500 dark:text-gray-400" />
+                            <input
+                              type="text"
+                              value={filter.value}
+                              onChange={(e) => {
+                                setFilters(prev => ({
+                                  ...prev,
+                                  [key]: {
+                                    ...filter,
+                                    value: e.target.value
+                                  }
+                                }));
+                              }}
+                              placeholder="Enter value"
+                              className="h-9 w-full rounded-md border border-gray-200 bg-white/80 pl-9 pr-3 text-sm text-gray-900 shadow-sm transition-colors placeholder:text-gray-500 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 dark:border-gray-800 dark:bg-gray-900/50 dark:text-gray-100 dark:placeholder:text-gray-400 dark:hover:bg-gray-800/50"
+                            />
+                          </div>
+                        </div>
+                      ))}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          const unusedColumns = EXP_COLUMNS.filter(col => !filters[col.key]);
+                          if (unusedColumns.length > 0) {
+                            setFilters(prev => ({
+                              ...prev,
+                              [unusedColumns[0].key]: {
+                                operator: 'contains',
+                                value: ''
+                              }
+                            }));
+                          }
+                        }}
+                        disabled={Object.keys(filters).length === EXP_COLUMNS.length}
+                        className="w-full border-dashed border-gray-200 bg-transparent hover:bg-gray-50/50 dark:border-gray-800 dark:hover:bg-gray-800/50"
+                      >
+                        Add Filter
+                      </Button>
+                    </div>
+                  </ScrollArea>
+                </PopoverContent>
+              </Popover>
+              <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button className="bg-gray-900 hover:bg-gray-800 dark:bg-indigo-500 dark:hover:bg-indigo-600 text-white transition-colors">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Row
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800">
+                  <DialogHeader>
+                    <DialogTitle className="text-xl font-semibold text-gray-900 dark:text-white">Add New Row</DialogTitle>
+                    <DialogDescription className="text-gray-500 dark:text-gray-400">
+                      Add a new row to the experience table. Please enter the Table ID manually.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <ExpTableForm
+                    onSubmit={handleAddRow}
+                    onCancel={() => setIsAddDialogOpen(false)}
+                    initialData={{ table_id: currentTableId || '' }}
+                  />
+                </DialogContent>
+              </Dialog>
+              
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => fetchData(currentTableId || '')}
+                className="h-8 w-8 p-0 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white"
+              >
+                <RefreshCcw className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-gray-800 rounded-lg overflow-hidden shadow-sm border border-gray-200 dark:border-gray-700">
+            <div className="relative">
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                  <thead className="bg-gray-50 dark:bg-gray-900/50">
+                    <tr>
+                      <th className="sticky left-0 z-50 bg-gray-50 dark:bg-gray-900 px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">
+                        <input
+                          type="checkbox"
+                          className="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500 dark:bg-gray-900 dark:checked:bg-indigo-600"
+                          checked={selectedRows.size === data.length && data.length > 0}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedRows(new Set(data.map(row => row.id)));
+                            } else {
+                              setSelectedRows(new Set());
+                            }
+                          }}
+                        />
+                      </th>
+                      {EXP_COLUMNS.map((column) => (
+                        <th
+                          key={column.key}
+                          className="sticky top-0 px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap"
+                        >
+                          {column.label}
+                        </th>
+                      ))}
+                      <th className="sticky right-0 bg-gray-50 dark:bg-gray-900 px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                    {filteredData.map((row) => (
+                      <tr key={row.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                        <td className="sticky left-0 bg-white dark:bg-gray-800 px-6 py-4 whitespace-nowrap">
+                          <input
+                            type="checkbox"
+                            className="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500 dark:bg-gray-900 dark:checked:bg-indigo-600"
+                            checked={selectedRows.has(row.id)}
+                            onChange={(e) => {
+                              const newSelected = new Set(selectedRows);
+                              if (e.target.checked) {
+                                newSelected.add(row.id);
+                              } else {
+                                newSelected.delete(row.id);
+                              }
+                              setSelectedRows(newSelected);
+                            }}
+                          />
+                        </td>
+                        {EXP_COLUMNS.map((column) => (
+                          <td
+                            key={column.key}
+                            className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white"
+                          >
+                            {row[column.key as keyof ExpTableRow]}
+                          </td>
+                        ))}
+                        <td className="sticky right-0 bg-white dark:bg-gray-800 px-6 py-4 whitespace-nowrap text-right text-sm">
+                          <div className="flex items-center justify-end space-x-2">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => {
+                                setRowToDuplicate(row);
+                                setIsDuplicateDialogOpen(true);
+                              }}
+                              className="h-8 w-8 p-0 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white"
+                            >
+                              <Copy className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => {
+                                setSelectedRow(row);
+                                setIsEditDialogOpen(true);
+                              }}
+                              className="h-8 w-8 p-0 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={async () => {
+                                const { error } = await supabase
+                                  .from('exp_table')
+                                  .delete()
+                                  .eq('id', row.id);
+
+                                if (error) {
+                                  console.error('Error deleting row:', error);
+                                  setError('Failed to delete row');
+                                  return;
+                                }
+
+                                setData(data.filter(r => r.id !== row.id));
+                              }}
+                              className="h-8 w-8 p-0 text-red-500 dark:text-red-400 hover:text-red-600 dark:hover:text-red-300"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
-          )}
+          </div>
         </div>
       </div>
-
+      
       {/* Edit Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Edit Row</DialogTitle>
-            <DialogDescription>
-              Edit the values for table ID {selectedRow?.tblidx}.
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800">
+          <DialogHeader className="border-b border-gray-200 dark:border-gray-800 pb-4">
+            <DialogTitle className="text-xl font-semibold text-gray-900 dark:text-transparent dark:bg-gradient-to-r dark:from-indigo-500 dark:to-purple-500 dark:bg-clip-text">
+              Edit Row
+            </DialogTitle>
+            <DialogDescription className="text-gray-500 dark:text-gray-400">
+              Edit the values for tblidx {selectedRow?.tblidx}.
             </DialogDescription>
           </DialogHeader>
           <ExpTableForm
@@ -827,6 +1148,33 @@ export default function ExpTablePage() {
             isEdit
             tblidx={selectedRow?.tblidx}
           />
+        </DialogContent>
+      </Dialog>
+
+      {/* Duplicate Dialog */}
+      <Dialog open={isDuplicateDialogOpen} onOpenChange={setIsDuplicateDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800">
+          <DialogHeader className="border-b border-gray-200 dark:border-gray-800 pb-4">
+            <DialogTitle className="text-xl font-semibold text-gray-900 dark:text-transparent dark:bg-gradient-to-r dark:from-indigo-500 dark:to-purple-500 dark:bg-clip-text">
+              Duplicate Row
+            </DialogTitle>
+            <DialogDescription className="text-gray-500 dark:text-gray-400">
+              Create a new row with the same values as tblidx {rowToDuplicate?.tblidx}.
+              You can modify any values before creating the new row.
+            </DialogDescription>
+          </DialogHeader>
+          {rowToDuplicate && (
+            <ExpTableForm
+              initialData={{ ...rowToDuplicate, table_id: currentTableId || '' }}
+              onSubmit={handleDuplicateRow}
+              onCancel={() => {
+                setIsDuplicateDialogOpen(false);
+                setRowToDuplicate(null);
+              }}
+              isEdit={false}
+              tblidx={rowToDuplicate.tblidx}
+            />
+          )}
         </DialogContent>
       </Dialog>
     </div>
