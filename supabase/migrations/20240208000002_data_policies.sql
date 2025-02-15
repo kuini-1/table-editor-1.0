@@ -93,11 +93,11 @@ security definer
 as $$
 begin
     if TG_OP = 'INSERT' then
-        perform public.log_activity(NEW.table_id, 'create', format('Created new record with ID: %s', NEW.id));
+        perform public.log_activity(NEW.table_id, 'POST', format('Created new record with ID: %s', NEW.id));
     elsif TG_OP = 'UPDATE' then
-        perform public.log_activity(NEW.table_id, 'update', format('Updated record with ID: %s', NEW.id));
+        perform public.log_activity(NEW.table_id, 'PUT', format('Updated record with ID: %s', NEW.id));
     elsif TG_OP = 'DELETE' then
-        perform public.log_activity(OLD.table_id, 'delete', format('Deleted record with ID: %s', OLD.id));
+        perform public.log_activity(OLD.table_id, 'DELETE', format('Deleted record with ID: %s', OLD.id));
     end if;
     return coalesce(NEW, OLD);
 end;

@@ -1,17 +1,17 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from "@/components/ui/button";
-import { Upload, Plus, Edit, ExternalLink, MoreVertical, RefreshCcw, Copy, Trash2, Search, X, Filter } from 'lucide-react';
+import { Upload, Plus, Edit, ExternalLink, MoreVertical, Copy, Trash2, Search, X, Filter, RefreshCcw, ChevronFirst, ChevronLeft, ChevronRight, ChevronLast, Download } from 'lucide-react';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogFooter,
-} from "@/components/ui/dialog";
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+  SheetFooter,
+} from "@/components/ui/sheet";
 import { createClient } from '@/lib/supabase/client';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -49,6 +49,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { toast, Toaster } from "sonner";
+import { useStore } from '@/lib/store';
+import type { DatabaseTable, Table, SubOwnerPermission } from '../page';
+import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 // Form schema for validation
 const expTableSchema = z.object({
@@ -85,10 +97,13 @@ interface ExpTableFormProps {
 }
 
 function ExpTableForm({ initialData, onSubmit, onCancel, isEdit, tblidx }: ExpTableFormProps) {
+  const searchParams = useSearchParams();
+  const tableId = searchParams.get('id');
+
   const form = useForm<ExpTableFormData>({
     resolver: zodResolver(expTableSchema),
     defaultValues: {
-      table_id: initialData?.table_id || '',
+      table_id: initialData?.table_id || tableId || '',
       tblidx: initialData?.tblidx || tblidx || 0,
       dwExp: initialData?.dwExp || 0,
       dwNeed_Exp: initialData?.dwNeed_Exp || 0,
@@ -111,466 +126,477 @@ function ExpTableForm({ initialData, onSubmit, onCancel, isEdit, tblidx }: ExpTa
     }
   });
 
+  // Set table_id when component mounts
+  useEffect(() => {
+    if (tableId) {
+      form.setValue('table_id', tableId);
+    }
+  }, [tableId]);
+
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <FormField
-          control={form.control}
-          name="table_id"
-          render={({ field }) => (
-            <input type="hidden" {...field} />
-          )}
-        />
+      <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col h-full">
+        <div className="flex-1 overflow-y-auto">
+          <FormField
+            control={form.control}
+            name="table_id"
+            render={({ field }) => (
+              <input type="hidden" {...field} />
+            )}
+          />
 
-        <ScrollArea className="h-[600px] pr-4">
-          <Card className="border border-gray-200 dark:border-0 bg-white dark:bg-gray-950/50 backdrop-blur-xl shadow-xl">
-            <CardHeader className="border-b border-gray-200 dark:border-gray-800 pb-4">
-              <CardTitle className="text-xl font-semibold text-gray-900 dark:text-transparent dark:bg-gradient-to-r dark:from-indigo-500 dark:to-purple-500 dark:bg-clip-text">Basic Information</CardTitle>
-              <CardDescription className="text-gray-500 dark:text-gray-400">
-                Enter the basic details for this experience entry
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="grid grid-cols-3 gap-6 pt-6 bg-white dark:bg-transparent">
-              <FormField
-                control={form.control}
-                name="tblidx"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Table ID</FormLabel>
-                    <FormControl>
-                      <Input 
-                        type="number" 
-                        {...field} 
-                        placeholder="Enter Tblidx"
-                        className="bg-white dark:bg-gray-900/50 border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-200 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-indigo-500/50 dark:focus:ring-indigo-500/50 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors"
+          <ScrollArea className="pr-4">
+            <Card className="border border-gray-200 dark:border-0 bg-white dark:bg-gray-950/50 backdrop-blur-xl">
+              <CardHeader className="border-b border-gray-200 dark:border-gray-800 pb-4">
+                <CardTitle className="text-xl font-semibold text-gray-900 dark:text-transparent dark:bg-gradient-to-r dark:from-indigo-500 dark:to-purple-500 dark:bg-clip-text">Basic Information</CardTitle>
+                <CardDescription className="text-gray-500 dark:text-gray-400">
+                  Enter the basic details for this experience entry
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pt-6 bg-white dark:bg-transparent">
+                <FormField
+                  control={form.control}
+                  name="tblidx"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Table ID</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          {...field} 
+                          placeholder="Enter Tblidx"
+                          className="bg-white dark:bg-gray-900/50 border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-200 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-indigo-500/50 dark:focus:ring-indigo-500/50 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="dwExp"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Experience</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          {...field} 
+                          placeholder="Enter Exp"
+                          className="bg-white dark:bg-gray-900/50 border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-200 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-indigo-500/50 dark:focus:ring-indigo-500/50 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="dwNeed_Exp"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Required Experience</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          {...field} 
+                          placeholder="Enter Required Exp"
+                          className="bg-white dark:bg-gray-900/50 border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-200 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-indigo-500/50 dark:focus:ring-indigo-500/50 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </CardContent>
+            </Card>
+
+            <Separator className="my-6 bg-gray-200 dark:bg-gray-800" />
+
+            <Tabs defaultValue="solo" className="w-full">
+              <TabsList className="w-full grid grid-cols-1 sm:grid-cols-3 gap-2 bg-transparent">
+                <TabsTrigger 
+                  value="solo"
+                  className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-indigo-500 data-[state=active]:to-purple-500 data-[state=active]:text-white dark:data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-indigo-500/25 dark:data-[state=active]:shadow-indigo-900/50 rounded-lg transition-all duration-200 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800/50"
+                >
+                  Solo Statistics
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="team"
+                  className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-indigo-500 data-[state=active]:to-purple-500 data-[state=active]:text-white dark:data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-indigo-500/25 dark:data-[state=active]:shadow-indigo-900/50 rounded-lg transition-all duration-200 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800/50"
+                >
+                  Team Statistics
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="other"
+                  className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-indigo-500 data-[state=active]:to-purple-500 data-[state=active]:text-white dark:data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-indigo-500/25 dark:data-[state=active]:shadow-indigo-900/50 rounded-lg transition-all duration-200 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800/50"
+                >
+                  Other Statistics
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="solo">
+                <Card className="border border-gray-200 dark:border-0 bg-white dark:bg-gray-950/50 backdrop-blur-xl shadow-xl">
+                  <CardHeader className="border-b border-gray-200 dark:border-gray-800 pb-4">
+                    <CardTitle className="text-xl font-semibold text-gray-900 dark:text-transparent dark:bg-gradient-to-r dark:from-indigo-500 dark:to-purple-500 dark:bg-clip-text">Solo Statistics</CardTitle>
+                    <CardDescription className="text-gray-500 dark:text-gray-400">
+                      Configure statistics for solo gameplay
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="grid gap-6 pt-6 bg-white dark:bg-transparent">
+                    <div className="grid grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="wStageWinSolo"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Stage Wins</FormLabel>
+                            <FormControl>
+                              <Input 
+                                type="number" 
+                                {...field} 
+                                placeholder="Enter Stage Wins"
+                                className="bg-white dark:bg-gray-900/50 border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-200 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-indigo-500/50 dark:focus:ring-indigo-500/50 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
                       />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="dwExp"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Experience</FormLabel>
-                    <FormControl>
-                      <Input 
-                        type="number" 
-                        {...field} 
-                        placeholder="Enter Exp"
-                        className="bg-white dark:bg-gray-900/50 border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-200 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-indigo-500/50 dark:focus:ring-indigo-500/50 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors"
+                      <FormField
+                        control={form.control}
+                        name="wStageDrawSolo"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Stage Draws</FormLabel>
+                            <FormControl>
+                              <Input 
+                                type="number" 
+                                {...field} 
+                                placeholder="Enter Stage Draws"
+                                className="bg-white dark:bg-gray-900/50 border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-200 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-indigo-500/50 dark:focus:ring-indigo-500/50 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
                       />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="dwNeed_Exp"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Required Experience</FormLabel>
-                    <FormControl>
-                      <Input 
-                        type="number" 
-                        {...field} 
-                        placeholder="Enter Required Exp"
-                        className="bg-white dark:bg-gray-900/50 border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-200 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-indigo-500/50 dark:focus:ring-indigo-500/50 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors"
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="wStageLoseSolo"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Stage Losses</FormLabel>
+                            <FormControl>
+                              <Input 
+                                type="number" 
+                                {...field} 
+                                placeholder="Enter Stage Losses"
+                                className="bg-white dark:bg-gray-900/50 border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-200 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-indigo-500/50 dark:focus:ring-indigo-500/50 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
                       />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </CardContent>
-          </Card>
+                      <FormField
+                        control={form.control}
+                        name="wWinSolo"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Total Wins</FormLabel>
+                            <FormControl>
+                              <Input 
+                                type="number" 
+                                {...field} 
+                                placeholder="Enter Total Wins"
+                                className="bg-white dark:bg-gray-900/50 border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-200 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-indigo-500/50 dark:focus:ring-indigo-500/50 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    <FormField
+                      control={form.control}
+                      name="wPerfectWinSolo"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Perfect Wins</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              {...field} 
+                              placeholder="Enter Perfect Wins"
+                              className="bg-white dark:bg-gray-900/50 border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-200 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-indigo-500/50 dark:focus:ring-indigo-500/50 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </CardContent>
+                </Card>
+              </TabsContent>
 
-          <Separator className="my-6 bg-gray-200 dark:bg-gray-800" />
+              <TabsContent value="team">
+                <Card className="border border-gray-200 dark:border-0 bg-white dark:bg-gray-950/50 backdrop-blur-xl shadow-xl">
+                  <CardHeader className="border-b border-gray-200 dark:border-gray-800 pb-4">
+                    <CardTitle className="text-xl font-semibold text-gray-900 dark:text-transparent dark:bg-gradient-to-r dark:from-indigo-500 dark:to-purple-500 dark:bg-clip-text">Team Statistics</CardTitle>
+                    <CardDescription className="text-gray-500 dark:text-gray-400">
+                      Configure statistics for team gameplay
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="grid gap-6 pt-6 bg-white dark:bg-transparent">
+                    <div className="grid grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="wStageWinTeam"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Stage Wins</FormLabel>
+                            <FormControl>
+                              <Input 
+                                type="number" 
+                                {...field} 
+                                placeholder="Enter Stage Wins"
+                                className="bg-white dark:bg-gray-900/50 border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-200 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-indigo-500/50 dark:focus:ring-indigo-500/50 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="wStageDrawTeam"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Stage Draws</FormLabel>
+                            <FormControl>
+                              <Input 
+                                type="number" 
+                                {...field} 
+                                placeholder="Enter Stage Draws"
+                                className="bg-white dark:bg-gray-900/50 border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-200 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-indigo-500/50 dark:focus:ring-indigo-500/50 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="wStageLoseTeam"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Stage Losses</FormLabel>
+                            <FormControl>
+                              <Input 
+                                type="number" 
+                                {...field} 
+                                placeholder="Enter Stage Losses"
+                                className="bg-white dark:bg-gray-900/50 border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-200 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-indigo-500/50 dark:focus:ring-indigo-500/50 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="wWinTeam"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Total Wins</FormLabel>
+                            <FormControl>
+                              <Input 
+                                type="number" 
+                                {...field} 
+                                placeholder="Enter Total Wins"
+                                className="bg-white dark:bg-gray-900/50 border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-200 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-indigo-500/50 dark:focus:ring-indigo-500/50 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    <FormField
+                      control={form.control}
+                      name="wPerfectWinTeam"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Perfect Wins</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              {...field} 
+                              placeholder="Enter Perfect Wins"
+                              className="bg-white dark:bg-gray-900/50 border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-200 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-indigo-500/50 dark:focus:ring-indigo-500/50 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </CardContent>
+                </Card>
+              </TabsContent>
 
-          <Tabs defaultValue="solo" className="w-full">
-            <TabsList className="w-full grid grid-cols-3 gap-4 bg-gray-100 dark:bg-gray-950/50 p-1 rounded-lg">
-              <TabsTrigger 
-                value="solo"
-                className="data-[state=active]:bg-white dark:data-[state=active]:bg-indigo-500/20 data-[state=active]:text-gray-900 dark:data-[state=active]:text-white rounded-md transition-all text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-white/80 dark:hover:bg-gray-800/50"
-              >
-                Solo Statistics
-              </TabsTrigger>
-              <TabsTrigger 
-                value="team"
-                className="data-[state=active]:bg-white dark:data-[state=active]:bg-indigo-500/20 data-[state=active]:text-gray-900 dark:data-[state=active]:text-white rounded-md transition-all text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-white/80 dark:hover:bg-gray-800/50"
-              >
-                Team Statistics
-              </TabsTrigger>
-              <TabsTrigger 
-                value="other"
-                className="data-[state=active]:bg-white dark:data-[state=active]:bg-indigo-500/20 data-[state=active]:text-gray-900 dark:data-[state=active]:text-white rounded-md transition-all text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-white/80 dark:hover:bg-gray-800/50"
-              >
-                Other Statistics
-              </TabsTrigger>
-            </TabsList>
+              <TabsContent value="other">
+                <Card className="border border-gray-200 dark:border-0 bg-white dark:bg-gray-950/50 backdrop-blur-xl shadow-xl">
+                  <CardHeader className="border-b border-gray-200 dark:border-gray-800 pb-4">
+                    <CardTitle className="text-xl font-semibold text-gray-900 dark:text-transparent dark:bg-gradient-to-r dark:from-indigo-500 dark:to-purple-500 dark:bg-clip-text">Other Statistics</CardTitle>
+                    <CardDescription className="text-gray-500 dark:text-gray-400">
+                      Configure additional game statistics
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="grid gap-6 pt-6 bg-white dark:bg-transparent">
+                    <div className="grid grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="wNormal_Race"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Normal Race</FormLabel>
+                            <FormControl>
+                              <Input 
+                                type="number" 
+                                {...field} 
+                                placeholder="Enter Count"
+                                className="bg-white dark:bg-gray-900/50 border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-200 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-indigo-500/50 dark:focus:ring-indigo-500/50 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="wSuperRace"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Super Race</FormLabel>
+                            <FormControl>
+                              <Input 
+                                type="number" 
+                                {...field} 
+                                placeholder="Enter Count"
+                                className="bg-white dark:bg-gray-900/50 border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-200 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-indigo-500/50 dark:focus:ring-indigo-500/50 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="dwMobExp"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Mob Experience</FormLabel>
+                            <FormControl>
+                              <Input 
+                                type="number" 
+                                {...field} 
+                                placeholder="Enter Mob Experience"
+                                className="bg-white dark:bg-gray-900/50 border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-200 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-indigo-500/50 dark:focus:ring-indigo-500/50 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="dwPhyDefenceRef"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Physical Defence</FormLabel>
+                            <FormControl>
+                              <Input 
+                                type="number" 
+                                {...field} 
+                                placeholder="Enter Physical Defence"
+                                className="bg-white dark:bg-gray-900/50 border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-200 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-indigo-500/50 dark:focus:ring-indigo-500/50 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="dwEngDefenceRef"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Energy Defence</FormLabel>
+                            <FormControl>
+                              <Input 
+                                type="number" 
+                                {...field} 
+                                placeholder="Enter Energy Defence"
+                                className="bg-white dark:bg-gray-900/50 border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-200 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-indigo-500/50 dark:focus:ring-indigo-500/50 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="dwMobZenny"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Mob Zenny</FormLabel>
+                            <FormControl>
+                              <Input 
+                                type="number" 
+                                {...field} 
+                                placeholder="Enter Mob Zenny"
+                                className="bg-white dark:bg-gray-900/50 border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-200 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-indigo-500/50 dark:focus:ring-indigo-500/50 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
+          </ScrollArea>
+        </div>
 
-            <TabsContent value="solo">
-              <Card className="border border-gray-200 dark:border-0 bg-white dark:bg-gray-950/50 backdrop-blur-xl shadow-xl">
-                <CardHeader className="border-b border-gray-200 dark:border-gray-800 pb-4">
-                  <CardTitle className="text-xl font-semibold text-gray-900 dark:text-transparent dark:bg-gradient-to-r dark:from-indigo-500 dark:to-purple-500 dark:bg-clip-text">Solo Statistics</CardTitle>
-                  <CardDescription className="text-gray-500 dark:text-gray-400">
-                    Configure statistics for solo gameplay
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="grid gap-6 pt-6 bg-white dark:bg-transparent">
-                  <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="wStageWinSolo"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Stage Wins</FormLabel>
-                          <FormControl>
-                            <Input 
-                              type="number" 
-                              {...field} 
-                              placeholder="Enter Stage Wins"
-                              className="bg-white dark:bg-gray-900/50 border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-200 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-indigo-500/50 dark:focus:ring-indigo-500/50 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="wStageDrawSolo"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Stage Draws</FormLabel>
-                          <FormControl>
-                            <Input 
-                              type="number" 
-                              {...field} 
-                              placeholder="Enter Stage Draws"
-                              className="bg-white dark:bg-gray-900/50 border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-200 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-indigo-500/50 dark:focus:ring-indigo-500/50 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="wStageLoseSolo"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Stage Losses</FormLabel>
-                          <FormControl>
-                            <Input 
-                              type="number" 
-                              {...field} 
-                              placeholder="Enter Stage Losses"
-                              className="bg-white dark:bg-gray-900/50 border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-200 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-indigo-500/50 dark:focus:ring-indigo-500/50 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="wWinSolo"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Total Wins</FormLabel>
-                          <FormControl>
-                            <Input 
-                              type="number" 
-                              {...field} 
-                              placeholder="Enter Total Wins"
-                              className="bg-white dark:bg-gray-900/50 border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-200 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-indigo-500/50 dark:focus:ring-indigo-500/50 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  <FormField
-                    control={form.control}
-                    name="wPerfectWinSolo"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Perfect Wins</FormLabel>
-                        <FormControl>
-                          <Input 
-                            type="number" 
-                            {...field} 
-                            placeholder="Enter Perfect Wins"
-                            className="bg-white dark:bg-gray-900/50 border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-200 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-indigo-500/50 dark:focus:ring-indigo-500/50 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="team">
-              <Card className="border border-gray-200 dark:border-0 bg-white dark:bg-gray-950/50 backdrop-blur-xl shadow-xl">
-                <CardHeader className="border-b border-gray-200 dark:border-gray-800 pb-4">
-                  <CardTitle className="text-xl font-semibold text-gray-900 dark:text-transparent dark:bg-gradient-to-r dark:from-indigo-500 dark:to-purple-500 dark:bg-clip-text">Team Statistics</CardTitle>
-                  <CardDescription className="text-gray-500 dark:text-gray-400">
-                    Configure statistics for team gameplay
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="grid gap-6 pt-6 bg-white dark:bg-transparent">
-                  <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="wStageWinTeam"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Stage Wins</FormLabel>
-                          <FormControl>
-                            <Input 
-                              type="number" 
-                              {...field} 
-                              placeholder="Enter Stage Wins"
-                              className="bg-white dark:bg-gray-900/50 border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-200 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-indigo-500/50 dark:focus:ring-indigo-500/50 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="wStageDrawTeam"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Stage Draws</FormLabel>
-                          <FormControl>
-                            <Input 
-                              type="number" 
-                              {...field} 
-                              placeholder="Enter Stage Draws"
-                              className="bg-white dark:bg-gray-900/50 border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-200 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-indigo-500/50 dark:focus:ring-indigo-500/50 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="wStageLoseTeam"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Stage Losses</FormLabel>
-                          <FormControl>
-                            <Input 
-                              type="number" 
-                              {...field} 
-                              placeholder="Enter Stage Losses"
-                              className="bg-white dark:bg-gray-900/50 border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-200 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-indigo-500/50 dark:focus:ring-indigo-500/50 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="wWinTeam"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Total Wins</FormLabel>
-                          <FormControl>
-                            <Input 
-                              type="number" 
-                              {...field} 
-                              placeholder="Enter Total Wins"
-                              className="bg-white dark:bg-gray-900/50 border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-200 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-indigo-500/50 dark:focus:ring-indigo-500/50 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  <FormField
-                    control={form.control}
-                    name="wPerfectWinTeam"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Perfect Wins</FormLabel>
-                        <FormControl>
-                          <Input 
-                            type="number" 
-                            {...field} 
-                            placeholder="Enter Perfect Wins"
-                            className="bg-white dark:bg-gray-900/50 border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-200 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-indigo-500/50 dark:focus:ring-indigo-500/50 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="other">
-              <Card className="border border-gray-200 dark:border-0 bg-white dark:bg-gray-950/50 backdrop-blur-xl shadow-xl">
-                <CardHeader className="border-b border-gray-200 dark:border-gray-800 pb-4">
-                  <CardTitle className="text-xl font-semibold text-gray-900 dark:text-transparent dark:bg-gradient-to-r dark:from-indigo-500 dark:to-purple-500 dark:bg-clip-text">Other Statistics</CardTitle>
-                  <CardDescription className="text-gray-500 dark:text-gray-400">
-                    Configure additional game statistics
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="grid gap-6 pt-6 bg-white dark:bg-transparent">
-                  <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="wNormal_Race"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Normal Race</FormLabel>
-                          <FormControl>
-                            <Input 
-                              type="number" 
-                              {...field} 
-                              placeholder="Enter Count"
-                              className="bg-white dark:bg-gray-900/50 border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-200 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-indigo-500/50 dark:focus:ring-indigo-500/50 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="wSuperRace"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Super Race</FormLabel>
-                          <FormControl>
-                            <Input 
-                              type="number" 
-                              {...field} 
-                              placeholder="Enter Count"
-                              className="bg-white dark:bg-gray-900/50 border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-200 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-indigo-500/50 dark:focus:ring-indigo-500/50 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="dwMobExp"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Mob Experience</FormLabel>
-                          <FormControl>
-                            <Input 
-                              type="number" 
-                              {...field} 
-                              placeholder="Enter Mob Experience"
-                              className="bg-white dark:bg-gray-900/50 border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-200 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-indigo-500/50 dark:focus:ring-indigo-500/50 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="dwPhyDefenceRef"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Physical Defence</FormLabel>
-                          <FormControl>
-                            <Input 
-                              type="number" 
-                              {...field} 
-                              placeholder="Enter Physical Defence"
-                              className="bg-white dark:bg-gray-900/50 border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-200 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-indigo-500/50 dark:focus:ring-indigo-500/50 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="dwEngDefenceRef"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Energy Defence</FormLabel>
-                          <FormControl>
-                            <Input 
-                              type="number" 
-                              {...field} 
-                              placeholder="Enter Energy Defence"
-                              className="bg-white dark:bg-gray-900/50 border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-200 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-indigo-500/50 dark:focus:ring-indigo-500/50 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="dwMobZenny"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Mob Zenny</FormLabel>
-                          <FormControl>
-                            <Input 
-                              type="number" 
-                              {...field} 
-                              placeholder="Enter Mob Zenny"
-                              className="bg-white dark:bg-gray-900/50 border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-200 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-indigo-500/50 dark:focus:ring-indigo-500/50 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
-        </ScrollArea>
-
-        <DialogFooter className="gap-4 pt-6 border-t border-gray-200 dark:border-gray-800">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={onCancel}
-            className="border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800"
-          >
-            Cancel
-          </Button>
-          <Button
-            type="submit"
-            className="bg-gray-900 hover:bg-gray-800 dark:bg-indigo-500 dark:hover:bg-indigo-600 text-white transition-colors"
-          >
-            {isEdit ? 'Update' : 'Create'}
-          </Button>
-        </DialogFooter>
+        <div className="sticky bottom-0 px-6 py-4 bg-white dark:bg-gray-900/95 backdrop-blur-xl border-t border-gray-200 dark:border-gray-800">
+          <div className="flex gap-4 w-full">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onCancel}
+              className="flex-1"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              className="flex-1 bg-gradient-to-r from-indigo-500 to-purple-500 text-white dark:text-white hover:from-indigo-600 hover:to-purple-600 shadow-lg shadow-indigo-500/25 dark:shadow-indigo-900/50 transition-all duration-200"
+            >
+              {isEdit ? 'Update' : 'Create'}
+            </Button>
+          </div>
+        </div>
       </form>
     </Form>
   );
@@ -578,24 +604,24 @@ function ExpTableForm({ initialData, onSubmit, onCancel, isEdit, tblidx }: ExpTa
 
 // Column definitions for the exp table
 const EXP_COLUMNS = [
-  { key: 'tblidx', label: 'Tblidx' },
-  { key: 'dwExp', label: 'Exp' },
+  { key: 'tblidx', label: 'Table ID' },
+  { key: 'dwExp', label: 'Experience' },
   { key: 'dwNeed_Exp', label: 'Required Exp' },
-  { key: 'wStageWinSolo', label: 'Stage Wins (Solo)' },
-  { key: 'wStageDrawSolo', label: 'Stage Draws (Solo)' },
-  { key: 'wStageLoseSolo', label: 'Stage Losses (Solo)' },
-  { key: 'wWinSolo', label: 'Wins (Solo)' },
-  { key: 'wPerfectWinSolo', label: 'Perfect Wins (Solo)' },
-  { key: 'wStageWinTeam', label: 'Stage Wins (Team)' },
-  { key: 'wStageDrawTeam', label: 'Stage Draws (Team)' },
-  { key: 'wStageLoseTeam', label: 'Stage Losses (Team)' },
-  { key: 'wWinTeam', label: 'Wins (Team)' },
-  { key: 'wPerfectWinTeam', label: 'Perfect Wins (Team)' },
+  { key: 'wStageWinSolo', label: 'Stage Win Solo' },
+  { key: 'wStageDrawSolo', label: 'Stage Draw Solo' },
+  { key: 'wStageLoseSolo', label: 'Stage Lose Solo' },
+  { key: 'wWinSolo', label: 'Win Solo' },
+  { key: 'wPerfectWinSolo', label: 'Perfect Win Solo' },
+  { key: 'wStageWinTeam', label: 'Stage Win Team' },
+  { key: 'wStageDrawTeam', label: 'Stage Draw Team' },
+  { key: 'wStageLoseTeam', label: 'Stage Lose Team' },
+  { key: 'wWinTeam', label: 'Win Team' },
+  { key: 'wPerfectWinTeam', label: 'Perfect Win Team' },
   { key: 'wNormal_Race', label: 'Normal Race' },
   { key: 'wSuperRace', label: 'Super Race' },
-  { key: 'dwMobExp', label: 'Mob Experience' },
-  { key: 'dwPhyDefenceRef', label: 'Physical Defence' },
-  { key: 'dwEngDefenceRef', label: 'Energy Defence' },
+  { key: 'dwMobExp', label: 'Mob Exp' },
+  { key: 'dwPhyDefenceRef', label: 'Phy Defence Ref' },
+  { key: 'dwEngDefenceRef', label: 'Eng Defence Ref' },
   { key: 'dwMobZenny', label: 'Mob Zenny' },
 ];
 
@@ -633,157 +659,467 @@ interface ColumnFilters {
   [key: string]: ColumnFilter;
 }
 
+interface SubOwnerPermissions {
+  can_get: boolean;
+  can_put: boolean;
+  can_post: boolean;
+  can_delete: boolean;
+}
+
 export default function ExpTablePage() {
-  const [data, setData] = useState<ExpTableRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedTable, setSelectedTable] = useState<Table | null>(null);
+  const [isManageDialogOpen, setIsManageDialogOpen] = useState(false);
+  const [subAccounts, setSubAccounts] = useState<SubOwnerPermission[]>([]);
+  const [userRole, setUserRole] = useState<string>('');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedRow, setSelectedRow] = useState<ExpTableRow | null>(null);
-  const [currentTableId, setCurrentTableId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
   const [isDuplicateDialogOpen, setIsDuplicateDialogOpen] = useState(false);
   const [rowToDuplicate, setRowToDuplicate] = useState<ExpTableRow | null>(null);
   const [filters, setFilters] = useState<ColumnFilters>({});
-  const [debouncedFilters, setDebouncedFilters] = useState<ColumnFilters>({});
+  const [selectedColumn, setSelectedColumn] = useState<string>('');
+  const [operator, setOperator] = useState<ColumnFilter['operator']>('contains');
+  const [value, setValue] = useState('');
+  const [tableId, setTableId] = useState<string | null>(null);
+  const [rowToDelete, setRowToDelete] = useState<ExpTableRow | null>(null);
+  const [isBulkDeleteDialogOpen, setIsBulkDeleteDialogOpen] = useState(false);
+
+  // Get state and actions from store
+  const {
+    userProfile,
+    permissions,
+    tableData,
+    fetchUserProfile,
+    fetchTablePermissions,
+    setTableData,
+    clearTableData
+  } = useStore();
 
   const supabase = createClient();
   const searchParams = useSearchParams();
-  const tableId = searchParams.get('id');
+  const router = useRouter();
 
+  // Get cached table data
+  const currentTableData = tableId ? tableData[tableId] : null;
+  const page = currentTableData?.page || 1;
+  const pageSize = currentTableData?.pageSize || 50;
+  const totalRows = currentTableData?.totalRows || 0;
+  const data = currentTableData?.data || [];
+
+  // Column labels mapping
+  const columnLabels = Object.fromEntries(
+    EXP_COLUMNS.map(col => [col.key, col.label])
+  );
+
+  // Initialize data and fetch permissions
   useEffect(() => {
-    if (!tableId) {
-      setError('No table ID provided');
-      setLoading(false);
-      return;
-    }
+    const initializeData = async () => {
+      const searchParams = new URLSearchParams(window.location.search);
+      const id = searchParams.get('id');
+      if (!id) return;
 
-    setCurrentTableId(tableId);
+      setTableId(id);
+      await fetchTablePermissions(id);
+      await fetchData(id);
+    };
+
+    initializeData();
+  }, []);
+
+  // Effect for filter changes
+  useEffect(() => {
+    if (!tableId) return;
     fetchData(tableId);
-  }, [tableId]);
+  }, [filters, tableId]);
 
-  // Fetch data on component mount
-  const fetchData = async (id: string) => {
-    const { data: expData, error } = await supabase
-      .from('exp_table')
-      .select('*')
-      .eq('table_id', id)
-      .order('tblidx');
-
-    if (error) {
-      console.error('Error fetching data:', error);
-      setError('Failed to fetch data');
-      setLoading(false);
-      return;
-    }
-
-    setData(expData);
-    setLoading(false);
+  const handleColumnChange = (newColumn: string) => {
+    setSelectedColumn(newColumn);
   };
 
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+  const handleAddFilter = async () => {
+    if (!selectedColumn || !value.trim() || !tableId) return;
 
     try {
-      const text = await file.text();
-      const rows = text.split('\n');
-      const headers = rows[0].split(',');
-      const parsedData = rows.slice(1).map(row => {
-        const values = row.split(',');
-        return headers.reduce((obj, header, index) => {
-          obj[header.trim()] = values[index]?.trim();
-          return obj;
-        }, {} as any);
-      });
+      setLoading(true);
+      
+      // Create new filters object
+      const newFilters = {
+        ...filters,
+        [selectedColumn]: {
+          operator,
+          value: value.trim()
+        }
+      };
 
-      // TODO: Validate and transform the data before setting
-      setData(parsedData);
-    } catch (error) {
-      console.error('Error reading file:', error);
+      // Update filters state
+      setFilters(newFilters);
+      
+      // Clear the filter form
+      setSelectedColumn('');
+      setOperator('contains');
+      setValue('');
+      
+    } catch (err: any) {
+      console.error('Error applying filter:', err);
+      toast.error(err.message || 'Failed to apply filter');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRemoveFilter = async (column: string) => {
+    if (!tableId) return;
+    
+    try {
+      setLoading(true);
+      const { [column]: _, ...rest } = filters;
+      setFilters(rest);
+      
+      // Fetch data with updated filters
+      await fetchData(tableId, rest);
+    } catch (err: any) {
+      console.error('Error removing filter:', err);
+      toast.error(err.message || 'Failed to remove filter');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchData = async (id: string, currentFilters = filters) => {
+    if (!id || !permissions[id]?.can_get) {
+      throw new Error('You do not have permission to view this table');
+    }
+
+    try {
+      setLoading(true);
+      let query = supabase
+        .from('exp_table')
+        .select('*', { count: 'exact' })
+        .eq('table_id', id);
+
+      // Apply filters
+      for (const [column, filter] of Object.entries(currentFilters)) {
+        const numericColumns = ['tblidx', 'dwExp', 'dwNeed_Exp', 'wStageWinSolo', 'wStageDrawSolo', 'wStageLoseSolo', 
+          'wWinSolo', 'wPerfectWinSolo', 'wStageWinTeam', 'wStageDrawTeam', 'wStageLoseTeam', 'wWinTeam', 
+          'wPerfectWinTeam', 'wNormal_Race', 'wSuperRace', 'dwMobExp', 'dwPhyDefenceRef', 'dwEngDefenceRef', 'dwMobZenny'];
+        
+        const value = filter.value.trim();
+        const isNumericColumn = numericColumns.includes(column);
+        
+        if (!value) continue;
+
+        if (isNumericColumn) {
+          const numValue = Number(value);
+          if (isNaN(numValue)) continue;
+
+          switch (filter.operator) {
+            case 'equals':
+              query = query.eq(column, numValue);
+              break;
+            case 'greater':
+              query = query.gt(column, numValue);
+              break;
+            case 'less':
+              query = query.lt(column, numValue);
+              break;
+            case 'contains': {
+              // For numeric columns, use RPC function for partial number search
+              const { data: matchingRows, error: rpcError } = await supabase.rpc('search_partial_number', {
+                table_name: 'exp_table',
+                column_name: column,
+                search_value: value
+              });
+              if (rpcError) {
+                console.error('Error in partial number search:', rpcError);
+                continue;
+              }
+              if (matchingRows && matchingRows.length > 0) {
+                // Since RPC now returns full rows, we need to filter by matching IDs
+                const matchingIds = matchingRows.map((row: any) => row.id);
+                if (matchingIds.length > 0) {
+                  query = query.in('id', matchingIds);
+                }
+              }
+              break;
+            }
+          }
+        } else {
+          switch (filter.operator) {
+            case 'equals':
+              query = query.eq(column, value);
+              break;
+            case 'contains':
+              query = query.ilike(column, `%${value}%`);
+              break;
+            case 'greater':
+              query = query.gt(column, value);
+              break;
+            case 'less':
+              query = query.lt(column, value);
+              break;
+          }
+        }
+      }
+
+      // Fetch data with pagination
+      const { data: expData, count, error } = await query
+        .order('tblidx')
+        .range((page - 1) * pageSize, page * pageSize - 1);
+
+      if (error) throw error;
+
+      // Update store with new data
+      setTableData(id, {
+        data: expData || [],
+        totalRows: count || 0,
+        lastFetched: Date.now(),
+        filters: currentFilters,
+        page,
+        pageSize,
+      });
+    } catch (err: any) {
+      console.error('Error fetching data:', err);
+      toast.error(err.message || 'Failed to fetch data');
+      throw err;
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleAddRow = async (formData: ExpTableFormData) => {
-    if (!currentTableId) {
-      setError('No table ID found');
+    if (!tableId) {
+      toast.error('No table ID found. Please ensure you are on the correct page.');
       return;
     }
 
-    const { data: newRow, error } = await supabase
-      .from('exp_table')
-      .insert([formData])
-      .select()
-      .single();
+    try {
+      if (!permissions[tableId]?.can_post) {
+        toast.error('You do not have permission to add rows');
+        return;
+      }
 
-    if (error) {
-      console.error('Error adding row:', error);
-      setError('Failed to add row');
-      return;
+      // Check if tblidx already exists
+      const { count } = await supabase
+        .from('exp_table')
+        .select('*', { count: 'exact', head: true })
+        .eq('tblidx', formData.tblidx)
+        .eq('table_id', tableId);
+
+      if (count && count > 0) {
+        toast.error(`Row with tblidx ${formData.tblidx} already exists`);
+        return;
+      }
+
+      const { data: newRow, error } = await supabase
+        .from('exp_table')
+        .insert([{ ...formData, table_id: tableId }])
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error adding row:', error);
+        toast.error(error.message || 'Failed to add row');
+        return;
+      }
+
+      // Optimistically update the store
+      const updatedTableData = currentTableData || {
+        data: [],
+        totalRows: 0,
+        lastFetched: Date.now(),
+        filters: filters,
+        page,
+        pageSize,
+      };
+
+      setTableData(tableId, {
+        ...updatedTableData,
+        data: [...updatedTableData.data, newRow],
+        totalRows: updatedTableData.totalRows + 1,
+        lastFetched: Date.now(),
+      });
+
+      setIsAddDialogOpen(false);
+      toast.success('Row added successfully');
+    } catch (err: any) {
+      console.error('Error adding row:', err);
+      toast.error(err.message || 'Failed to add row');
     }
-
-    setData([...data, newRow]);
-    setIsAddDialogOpen(false);
   };
 
   const handleEditRow = async (formData: ExpTableFormData) => {
-    if (!selectedRow) {
-      setError('No row selected for editing');
+    if (!tableId || !selectedRow) {
+      toast.error('No table or row selected');
       return;
     }
 
-    const { data: updatedRow, error } = await supabase
-      .from('exp_table')
-      .update(formData)
-      .eq('id', selectedRow.id)
-      .select()
-      .single();
+    try {
+      if (!permissions[tableId]?.can_put) {
+        throw new Error('You do not have permission to edit rows');
+      }
 
-    if (error) {
-      console.error('Error updating row:', error);
-      setError('Failed to update row');
-      return;
+      const { data: updatedRow, error } = await supabase
+        .from('exp_table')
+        .update(formData)
+        .eq('id', selectedRow.id)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Get current table data or initialize if not exists
+      const updatedTableData = currentTableData || {
+        data: [],
+        totalRows: 0,
+        lastFetched: Date.now(),
+        filters: filters,
+        page,
+        pageSize,
+      };
+
+      setTableData(tableId, {
+        ...updatedTableData,
+        data: updatedTableData.data.map(row => row.id === selectedRow.id ? updatedRow : row),
+        lastFetched: Date.now(),
+      });
+      setIsEditDialogOpen(false);
+      setSelectedRow(null);
+      toast.success('Row updated successfully');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to update row');
     }
-
-    setData(data.map(row => row.id === selectedRow.id ? updatedRow : row));
-    setIsEditDialogOpen(false);
-    setSelectedRow(null);
   };
 
-  const handleDeleteRows = async () => {
-    if (selectedRows.size === 0) return;
-
-    const { error } = await supabase
-      .from('exp_table')
-      .delete()
-      .in('id', Array.from(selectedRows));
-
-    if (error) {
-      console.error('Error deleting rows:', error);
-      setError('Failed to delete rows');
+  const handleDeleteRow = async (rowId: string) => {
+    if (!tableId) {
+      toast.error('No table ID found');
       return;
     }
 
-    setData(data.filter(row => !selectedRows.has(row.id)));
-    setSelectedRows(new Set());
+    try {
+      if (!permissions[tableId]?.can_delete) {
+        throw new Error('You do not have permission to delete rows');
+      }
+
+      const { error } = await supabase
+        .from('exp_table')
+        .delete()
+        .eq('id', rowId);
+
+      if (error) throw error;
+
+      // Get current table data or initialize if not exists
+      const updatedTableData = currentTableData || {
+        data: [],
+        totalRows: 0,
+        lastFetched: Date.now(),
+        filters: filters,
+        page,
+        pageSize,
+      };
+
+      setTableData(tableId, {
+        ...updatedTableData,
+        data: updatedTableData.data.filter(r => r.id !== rowId),
+        totalRows: updatedTableData.totalRows - 1,
+        lastFetched: Date.now(),
+      });
+      setRowToDelete(null);
+      toast.success('Row deleted successfully');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to delete row');
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const deletePromises = Array.from(selectedRows).map(id =>
+        supabase
+          .from('exp_table')
+          .delete()
+          .eq('id', id)
+      );
+
+      const results = await Promise.all(deletePromises);
+      const errors = results.filter(result => result.error).map(result => result.error);
+
+      if (errors.length > 0) {
+        throw new Error(`Failed to delete some rows: ${errors.map(e => e?.message || 'Unknown error').join(', ')}`);
+      }
+
+      // Clear selected rows and refresh data
+      setSelectedRows(new Set());
+      setIsBulkDeleteDialogOpen(false);
+      await fetchData(tableId || '');
+      toast.success('Selected rows deleted successfully');
+    } catch (err: any) {
+      console.error('Error deleting rows:', err);
+      setError(err.message);
+      toast.error(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleDuplicateRow = async (formData: ExpTableFormData) => {
-    const { data: newRow, error } = await supabase
-      .from('exp_table')
-      .insert([{ ...formData, table_id: currentTableId || '' }])
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Error duplicating row:', error);
-      setError('Failed to duplicate row');
+    if (!tableId || !rowToDuplicate) {
+      toast.error('No row selected for duplication');
       return;
     }
 
-    setData([...data, newRow]);
-    setIsDuplicateDialogOpen(false);
-    setRowToDuplicate(null);
+    try {
+      if (!permissions[tableId]?.can_post) {
+        throw new Error('You do not have permission to duplicate rows');
+      }
+
+      // Check if tblidx already exists
+      const { count } = await supabase
+        .from('exp_table')
+        .select('*', { count: 'exact', head: true })
+        .eq('tblidx', formData.tblidx)
+        .eq('table_id', tableId);
+
+      if (count && count > 0) {
+        toast.error(`Row with tblidx ${formData.tblidx} already exists`);
+        return;
+      }
+
+      const { data: newRow, error } = await supabase
+        .from('exp_table')
+        .insert([{ ...formData, table_id: tableId }])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Get current table data or initialize if not exists
+      const updatedTableData = currentTableData || {
+        data: [],
+        totalRows: 0,
+        lastFetched: Date.now(),
+        filters: filters,
+        page,
+        pageSize,
+      };
+
+      setTableData(tableId, {
+        ...updatedTableData,
+        data: [...updatedTableData.data, newRow],
+        totalRows: updatedTableData.totalRows + 1,
+        lastFetched: Date.now(),
+      });
+      setIsDuplicateDialogOpen(false);
+      setRowToDuplicate(null);
+      toast.success('Row duplicated successfully');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to duplicate row');
+    }
   };
 
   const getPermissionBadges = () => (
@@ -795,234 +1131,401 @@ export default function ExpTablePage() {
     </div>
   );
 
-  // Add useEffect for debouncing filters
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedFilters(filters);
-    }, 300);
+  // Remove client-side filtering
+  const filteredData = data;
 
-    return () => clearTimeout(timer);
-  }, [filters]);
+  // Add pagination UI component
+  const Pagination = () => {
+    const totalPages = Math.ceil(totalRows / pageSize);
+    const canPreviousPage = page > 1;
+    const canNextPage = page < totalPages;
 
-  // Add filtered data logic
-  const filteredData = React.useMemo(() => {
-    return data.filter(row => {
-      return Object.entries(debouncedFilters).every(([key, filter]) => {
-        if (!filter.value) return true;
-        const cellValue = String(row[key as keyof ExpTableRow]).toLowerCase();
-        const filterValue = filter.value.toLowerCase();
-        
-        switch (filter.operator) {
-          case 'contains':
-            return cellValue.includes(filterValue);
-          case 'equals':
-            return cellValue === filterValue;
-          case 'greater':
-            return Number(cellValue) > Number(filterValue);
-          case 'less':
-            return Number(cellValue) < Number(filterValue);
-          default:
-            return true;
-        }
+    return (
+      <div className="sticky bottom-0 right-0 flex items-center justify-between gap-2 border-t border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-900/80 backdrop-blur-lg px-4 py-3">
+        <div className="flex items-center gap-2">
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            Rows per page
+          </p>
+          <Select
+            value={pageSize.toString()}
+            onValueChange={(value) => {
+              const newSize = parseInt(value);
+              if (tableId && currentTableData) {
+                setTableData(tableId, {
+                  data: currentTableData.data || [],
+                  totalRows: currentTableData.totalRows || 0,
+                  lastFetched: Date.now(),
+                  filters: currentTableData.filters || {},
+                  pageSize: newSize,
+                  page: 1,
+                });
+                fetchData(tableId);
+              }
+            }}
+          >
+            <SelectTrigger className="h-8 w-[70px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {[10, 20, 30, 40, 50].map((size) => (
+                <SelectItem key={size} value={size.toString()}>
+                  {size}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex items-center gap-2 sm:gap-4">
+          <div className="text-sm text-gray-500 dark:text-gray-400">
+            Page {page} of {totalPages}
+          </div>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => {
+                if (tableId && canPreviousPage && currentTableData) {
+                  setTableData(tableId, {
+                    data: currentTableData.data || [],
+                    totalRows: currentTableData.totalRows || 0,
+                    lastFetched: Date.now(),
+                    filters: currentTableData.filters || {},
+                    pageSize: currentTableData.pageSize,
+                    page: 1,
+                  });
+                  fetchData(tableId);
+                }
+              }}
+              disabled={!canPreviousPage}
+              className="h-8 w-8 p-0"
+            >
+              <span className="sr-only">Go to first page</span>
+              <ChevronFirst className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => {
+                if (tableId && canPreviousPage && currentTableData) {
+                  setTableData(tableId, {
+                    data: currentTableData.data || [],
+                    totalRows: currentTableData.totalRows || 0,
+                    lastFetched: Date.now(),
+                    filters: currentTableData.filters || {},
+                    pageSize: currentTableData.pageSize,
+                    page: page - 1,
+                  });
+                  fetchData(tableId);
+                }
+              }}
+              disabled={!canPreviousPage}
+              className="h-8 w-8 p-0"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => {
+                if (tableId && canNextPage && currentTableData) {
+                  setTableData(tableId, {
+                    data: currentTableData.data || [],
+                    totalRows: currentTableData.totalRows || 0,
+                    lastFetched: Date.now(),
+                    filters: currentTableData.filters || {},
+                    pageSize: currentTableData.pageSize,
+                    page: page + 1,
+                  });
+                  fetchData(tableId);
+                }
+              }}
+              disabled={!canNextPage}
+              className="h-8 w-8 p-0"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => {
+                if (tableId && canNextPage && currentTableData) {
+                  setTableData(tableId, {
+                    data: currentTableData.data || [],
+                    totalRows: currentTableData.totalRows || 0,
+                    lastFetched: Date.now(),
+                    filters: currentTableData.filters || {},
+                    pageSize: currentTableData.pageSize,
+                    page: totalPages,
+                  });
+                  fetchData(tableId);
+                }
+              }}
+              disabled={!canNextPage}
+              className="h-8 w-8 p-0"
+            >
+              <ChevronLast className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const handleExport = async () => {
+    try {
+      const response = await fetch('/api/export', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          tableId,
+          tableName: 'exp_table'
+        }),
       });
-    });
-  }, [data, debouncedFilters]);
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to export data');
+      }
+
+      toast.success('Export started successfully');
+    } catch (error: any) {
+      console.error('Export error:', error);
+      toast.error(error.message || 'Failed to export data');
+    }
+  };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        <div className="px-4 py-6 sm:px-0">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Experience Table</h2>
-            <div className="flex items-center space-x-4">
-              {selectedRows.size > 0 && (
-                <Button 
-                  variant="destructive" 
-                  onClick={handleDeleteRows}
-                  className="bg-red-500 hover:bg-red-600 dark:bg-red-600 dark:hover:bg-red-700"
+    <div className="min-h-screen bg-gray-50/50 dark:bg-gray-900/50 backdrop-blur-sm">
+      <div className="sticky top-0 z-50 w-full border-b border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-900/80 backdrop-blur-lg">
+        <div className="flex h-16 items-center gap-4 px-4">
+          <div className="flex flex-1 items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-semibold bg-gradient-to-r from-gray-900 to-gray-600 dark:from-gray-100 dark:to-gray-400 bg-clip-text text-transparent">
+                Experience Table
+              </h1>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                Manage and configure experience points and statistics
+              </p>
+            </div>
+            <div className="flex items-center gap-4">
+              <Button
+                variant="outline"
+                onClick={() => document.getElementById('file-upload')?.click()}
+                className="gap-2"
+              >
+                <Upload className="h-4 w-4" />
+                Import
+              </Button>
+              <input
+                id="file-upload"
+                type="file"
+                accept=".csv"
+                className="hidden"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+
+                  try {
+                    const text = await file.text();
+                    const rows = text.split('\n');
+                    const headers = rows[0].split(',');
+                    
+                    // Map CSV headers to column keys
+                    const headerMap = new Map(
+                      EXP_COLUMNS.map(col => [col.label.toLowerCase(), col.key])
+                    );
+
+                    const formattedRows = rows.slice(1).map(row => {
+                      const values = row.split(',');
+                      const rowData: any = { table_id: tableId };
+                      headers.forEach((header, index) => {
+                        const key = headerMap.get(header.toLowerCase().trim());
+                        if (key) {
+                          rowData[key] = Number(values[index]);
+                        }
+                      });
+                      return rowData;
+                    });
+
+                    // Insert rows into database
+                    const { error } = await supabase
+                      .from('exp_table')
+                      .insert(formattedRows);
+
+                    if (error) throw error;
+
+                    toast.success('Data imported successfully');
+                    fetchData(tableId || '');
+                  } catch (err: any) {
+                    console.error('Error importing data:', err);
+                    toast.error(err.message || 'Failed to import data');
+                  }
+                }}
+              />
+              {data.length > 0 && (
+                <Button
+                  variant="outline"
+                  onClick={handleExport}
+                  className="gap-2"
                 >
-                  Delete Selected ({selectedRows.size})
+                  <Download className="h-4 w-4" />
+                  Export
                 </Button>
               )}
               <Popover>
                 <PopoverTrigger asChild>
-                  <Button 
-                    variant="outline" 
-                    size="icon"
-                    className="relative h-8 w-8 p-0 border-gray-200 dark:border-gray-700"
-                  >
+                  <Button variant="outline" className="h-9 w-9 p-0 relative">
                     <Filter className="h-4 w-4" />
                     {Object.keys(filters).length > 0 && (
                       <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-indigo-500 text-[10px] font-medium text-white flex items-center justify-center">
                         {Object.keys(filters).length}
                       </span>
                     )}
+                    <span className="sr-only">Filter</span>
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-[400px] p-0" align="end">
-                  <div className="border-b border-gray-200 dark:border-gray-800 p-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">Filters</h4>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">Add filters to refine table data</p>
-                      </div>
-                      {Object.keys(filters).length > 0 && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setFilters({})}
-                          className="h-8 px-2 text-xs hover:bg-gray-100 dark:hover:bg-gray-800"
-                        >
-                          Clear all
-                        </Button>
-                      )}
+                <PopoverContent className="w-[600px] p-4">
+                  <div className="space-y-4">
+                    <div className="flex flex-col space-y-2">
+                      <h4 className="font-medium">Filter Data</h4>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        Add filters to refine the table data
+                      </p>
                     </div>
-                  </div>
-                  <ScrollArea className="max-h-[300px] p-4">
-                    <div className="space-y-4">
-                      {Object.entries(filters).map(([key, filter]) => (
-                        <div key={key} className="space-y-2">
-                          <div className="flex items-center gap-2">
-                            <Select
-                              value={key}
-                              onValueChange={(value) => {
-                                const newFilters = { ...filters };
-                                delete newFilters[key];
-                                newFilters[value] = filter;
-                                setFilters(newFilters);
-                              }}
-                            >
-                              <SelectTrigger className="flex-1">
-                                <SelectValue placeholder="Select column" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {EXP_COLUMNS.map((col) => (
-                                  <SelectItem key={col.key} value={col.key}>{col.label}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <Select
-                              value={filter.operator}
-                              onValueChange={(value) => {
-                                setFilters(prev => ({
-                                  ...prev,
-                                  [key]: {
-                                    ...filter,
-                                    operator: value as ColumnFilter['operator']
-                                  }
-                                }));
-                              }}
-                            >
-                              <SelectTrigger className="w-32">
-                                <SelectValue placeholder="Select operator" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="contains">Contains</SelectItem>
-                                <SelectItem value="equals">Equals</SelectItem>
-                                <SelectItem value="greater">Greater than</SelectItem>
-                                <SelectItem value="less">Less than</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => {
-                                const newFilters = { ...filters };
-                                delete newFilters[key];
-                                setFilters(newFilters);
-                              }}
-                              className="h-9 w-9 p-0 hover:bg-gray-100 dark:hover:bg-gray-800"
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          </div>
-                          <div className="relative">
-                            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500 dark:text-gray-400" />
-                            <input
-                              type="text"
-                              value={filter.value}
-                              onChange={(e) => {
-                                setFilters(prev => ({
-                                  ...prev,
-                                  [key]: {
-                                    ...filter,
-                                    value: e.target.value
-                                  }
-                                }));
-                              }}
-                              placeholder="Enter value"
-                              className="h-9 w-full rounded-md border border-gray-200 bg-white/80 pl-9 pr-3 text-sm text-gray-900 shadow-sm transition-colors placeholder:text-gray-500 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 dark:border-gray-800 dark:bg-gray-900/50 dark:text-gray-100 dark:placeholder:text-gray-400 dark:hover:bg-gray-800/50"
-                            />
-                          </div>
-                        </div>
-                      ))}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          const unusedColumns = EXP_COLUMNS.filter(col => !filters[col.key]);
-                          if (unusedColumns.length > 0) {
-                            setFilters(prev => ({
-                              ...prev,
-                              [unusedColumns[0].key]: {
-                                operator: 'contains',
-                                value: ''
-                              }
-                            }));
-                          }
-                        }}
-                        disabled={Object.keys(filters).length === EXP_COLUMNS.length}
-                        className="w-full border-dashed border-gray-200 bg-transparent hover:bg-gray-50/50 dark:border-gray-800 dark:hover:bg-gray-800/50"
+                    <div className="grid grid-cols-3 gap-4">
+                      <Select
+                        value={selectedColumn}
+                        onValueChange={handleColumnChange}
                       >
-                        Add Filter
-                      </Button>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select column" />
+                        </SelectTrigger>
+                        <SelectContent className="max-h-[200px]">
+                          <ScrollArea className="h-[200px]">
+                            {Object.entries(columnLabels)
+                              .filter(([key]) => !filters[key])
+                              .map(([key, label]) => (
+                                <SelectItem key={key} value={key}>
+                                  {label}
+                                </SelectItem>
+                              ))}
+                          </ScrollArea>
+                        </SelectContent>
+                      </Select>
+
+                      <Select
+                        value={operator}
+                        onValueChange={(value) => setOperator(value as ColumnFilter['operator'])}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select operator" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="contains">Contains</SelectItem>
+                          <SelectItem value="equals">Equals</SelectItem>
+                          <SelectItem value="greater">Greater than</SelectItem>
+                          <SelectItem value="less">Less than</SelectItem>
+                        </SelectContent>
+                      </Select>
+
+                      <Input
+                        placeholder="Enter value"
+                        value={value}
+                        onChange={(e) => setValue(e.target.value)}
+                        className="w-full"
+                      />
                     </div>
-                  </ScrollArea>
+                    <Button 
+                      onClick={handleAddFilter}
+                      className="w-full"
+                      disabled={!selectedColumn || !operator || !value}
+                    >
+                      Add Filter
+                    </Button>
+                    {Object.keys(filters).length > 0 && (
+                      <div className="space-y-2">
+                        <div className="text-sm font-medium">Active Filters</div>
+                        <div className="flex flex-wrap gap-2">
+                          {Object.entries(filters).map(([column, filter]) => (
+                            <Badge
+                              key={column}
+                              variant="secondary"
+                              className="flex items-center gap-1"
+                            >
+                              <span>{columnLabels[column]}</span>
+                              <span className="text-gray-500 dark:text-gray-400">
+                                {filter.operator}
+                              </span>
+                              <span>{filter.value}</span>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-4 w-4 p-0 hover:bg-transparent"
+                                onClick={() => handleRemoveFilter(column)}
+                              >
+                                <X className="h-3 w-3" />
+                                <span className="sr-only">Remove filter</span>
+                              </Button>
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </PopoverContent>
               </Popover>
-              <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button className="bg-gray-900 hover:bg-gray-800 dark:bg-indigo-500 dark:hover:bg-indigo-600 text-white transition-colors">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Row
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800">
-                  <DialogHeader>
-                    <DialogTitle className="text-xl font-semibold text-gray-900 dark:text-white">Add New Row</DialogTitle>
-                    <DialogDescription className="text-gray-500 dark:text-gray-400">
-                      Add a new row to the experience table. Please enter the Table ID manually.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <ExpTableForm
-                    onSubmit={handleAddRow}
-                    onCancel={() => setIsAddDialogOpen(false)}
-                    initialData={{ table_id: currentTableId || '' }}
-                  />
-                </DialogContent>
-              </Dialog>
-              
+
               <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => fetchData(currentTableId || '')}
-                className="h-8 w-8 p-0 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white"
+                onClick={() => setIsAddDialogOpen(true)}
+                className="bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white shadow-lg shadow-indigo-500/25 dark:shadow-indigo-900/50 transition-all duration-200"
               >
-                <RefreshCcw className="h-4 w-4" />
+                <Plus className="h-4 w-4 mr-2" />
+                Add Row
               </Button>
             </div>
           </div>
+        </div>
+      </div>
 
-          <div className="bg-white dark:bg-gray-800 rounded-lg overflow-hidden shadow-sm border border-gray-200 dark:border-gray-700">
+      {/* Main Content */}
+      <div className="container mx-auto px-4 py-6">
+        <div className="rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-xl">
+          <div className="overflow-x-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white"></h2>
+              <div className="flex items-center space-x-4 mt-2 mr-2">
+                {selectedRows.size > 0 && (
+                  <Button 
+                    variant="destructive" 
+                    onClick={() => setIsBulkDeleteDialogOpen(true)}
+                    className="bg-red-500 hover:bg-red-600 dark:bg-red-700 dark:hover:bg-red-800"
+                  >
+                    Delete Selected ({selectedRows.size})
+                  </Button>
+                )}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => fetchData(tableId || '')}
+                  className="h-8 w-8 p-0 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white"
+                >
+                  <RefreshCcw className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+
             <div className="relative">
               <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                  <thead className="bg-gray-50 dark:bg-gray-900/50">
-                    <tr>
-                      <th className="sticky left-0 z-50 bg-gray-50 dark:bg-gray-900 px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">
+                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-800">
+                  <thead>
+                    <tr className="bg-gray-50/50 dark:bg-gray-800/50 backdrop-blur-sm">
+                      <th className="sticky left-0 z-10 bg-gray-50/50 dark:bg-gray-800/50 backdrop-blur-sm px-4 py-3 text-left">
                         <input
                           type="checkbox"
-                          className="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500 dark:bg-gray-900 dark:checked:bg-indigo-600"
+                          className="rounded border-gray-300 text-indigo-500 focus:ring-indigo-500/50 dark:border-gray-600 dark:bg-gray-800 dark:checked:bg-indigo-500"
                           checked={selectedRows.size === data.length && data.length > 0}
                           onChange={(e) => {
                             if (e.target.checked) {
@@ -1036,23 +1539,26 @@ export default function ExpTablePage() {
                       {EXP_COLUMNS.map((column) => (
                         <th
                           key={column.key}
-                          className="sticky top-0 px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap"
+                          className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap"
                         >
                           {column.label}
                         </th>
                       ))}
-                      <th className="sticky right-0 bg-gray-50 dark:bg-gray-900 px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">
+                      <th className="sticky right-0 z-10 bg-gray-50/50 dark:bg-gray-800/50 backdrop-blur-sm px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">
                         Actions
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                    {filteredData.map((row) => (
-                      <tr key={row.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                        <td className="sticky left-0 bg-white dark:bg-gray-800 px-6 py-4 whitespace-nowrap">
+                  <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
+                    {data.map((row) => (
+                      <tr 
+                        key={row.id} 
+                        className="group hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors"
+                      >
+                        <td className="sticky left-0 z-10 bg-white dark:bg-gray-900 group-hover:bg-gray-50/50 dark:group-hover:bg-gray-800/50 px-4 py-3 transition-colors">
                           <input
                             type="checkbox"
-                            className="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500 dark:bg-gray-900 dark:checked:bg-indigo-600"
+                            className="rounded border-gray-300 text-indigo-500 focus:ring-indigo-500/50 dark:border-gray-600 dark:bg-gray-800 dark:checked:bg-indigo-500"
                             checked={selectedRows.has(row.id)}
                             onChange={(e) => {
                               const newSelected = new Set(selectedRows);
@@ -1068,13 +1574,13 @@ export default function ExpTablePage() {
                         {EXP_COLUMNS.map((column) => (
                           <td
                             key={column.key}
-                            className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white"
+                            className="px-4 py-3 text-sm text-gray-900 dark:text-gray-200 whitespace-nowrap"
                           >
                             {row[column.key as keyof ExpTableRow]}
                           </td>
                         ))}
-                        <td className="sticky right-0 bg-white dark:bg-gray-800 px-6 py-4 whitespace-nowrap text-right text-sm">
-                          <div className="flex items-center justify-end space-x-2">
+                        <td className="sticky right-0 z-10 bg-white dark:bg-gray-900 group-hover:bg-gray-50/50 dark:group-hover:bg-gray-800/50 px-4 py-3 text-right whitespace-nowrap transition-colors">
+                          <div className="flex items-center justify-end space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
                             <Button
                               variant="ghost"
                               size="icon"
@@ -1082,7 +1588,7 @@ export default function ExpTablePage() {
                                 setRowToDuplicate(row);
                                 setIsDuplicateDialogOpen(true);
                               }}
-                              className="h-8 w-8 p-0 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white"
+                              className="h-8 w-8 p-0 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
                             >
                               <Copy className="h-4 w-4" />
                             </Button>
@@ -1093,28 +1599,15 @@ export default function ExpTablePage() {
                                 setSelectedRow(row);
                                 setIsEditDialogOpen(true);
                               }}
-                              className="h-8 w-8 p-0 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white"
+                              className="h-8 w-8 p-0 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
                             >
                               <Edit className="h-4 w-4" />
                             </Button>
                             <Button
                               variant="ghost"
                               size="icon"
-                              onClick={async () => {
-                                const { error } = await supabase
-                                  .from('exp_table')
-                                  .delete()
-                                  .eq('id', row.id);
-
-                                if (error) {
-                                  console.error('Error deleting row:', error);
-                                  setError('Failed to delete row');
-                                  return;
-                                }
-
-                                setData(data.filter(r => r.id !== row.id));
-                              }}
-                              className="h-8 w-8 p-0 text-red-500 dark:text-red-400 hover:text-red-600 dark:hover:text-red-300"
+                              onClick={() => setRowToDelete(row)}
+                              className="h-8 w-8 p-0 text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300"
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -1125,58 +1618,150 @@ export default function ExpTablePage() {
                   </tbody>
                 </table>
               </div>
+              <Pagination />
             </div>
           </div>
         </div>
       </div>
-      
-      {/* Edit Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800">
-          <DialogHeader className="border-b border-gray-200 dark:border-gray-800 pb-4">
-            <DialogTitle className="text-xl font-semibold text-gray-900 dark:text-transparent dark:bg-gradient-to-r dark:from-indigo-500 dark:to-purple-500 dark:bg-clip-text">
-              Edit Row
-            </DialogTitle>
-            <DialogDescription className="text-gray-500 dark:text-gray-400">
-              Edit the values for tblidx {selectedRow?.tblidx}.
+
+      {/* Add Row Sheet */}
+      <Sheet open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+        <SheetContent side="right" className="w-[95%] sm:w-[90%] md:w-[1200px] p-0">
+          <div className="flex flex-col h-full">
+            <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-800">
+              <SheetHeader>
+                <SheetTitle>Add New Row</SheetTitle>
+                <SheetDescription>
+                  Add a new row to the experience table.
+                </SheetDescription>
+              </SheetHeader>
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-6 py-4">
+              <ExpTableForm
+                onSubmit={handleAddRow}
+                onCancel={() => setIsAddDialogOpen(false)}
+              />
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* Edit Row Sheet */}
+      <Sheet open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <SheetContent side="right" className="w-[95%] sm:w-[90%] md:w-[1200px] p-0">
+          <div className="flex flex-col h-full">
+            <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-800">
+              <SheetHeader>
+                <SheetTitle>Edit Row</SheetTitle>
+                <SheetDescription>
+                  Edit the selected row in the experience table.
+                </SheetDescription>
+              </SheetHeader>
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-6 py-4">
+              <ExpTableForm
+                initialData={selectedRow || undefined}
+                onSubmit={handleEditRow}
+                onCancel={() => {
+                  setIsEditDialogOpen(false);
+                  setSelectedRow(null);
+                }}
+                isEdit
+              />
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* Duplicate Row Sheet */}
+      <Sheet open={isDuplicateDialogOpen} onOpenChange={setIsDuplicateDialogOpen}>
+        <SheetContent side="right" className="w-[95%] sm:w-[90%] md:w-[1200px] p-0">
+          <div className="flex flex-col h-full">
+            <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-800">
+              <SheetHeader>
+                <SheetTitle>Duplicate Row</SheetTitle>
+                <SheetDescription>
+                  Create a new row based on the selected row.
+                </SheetDescription>
+              </SheetHeader>
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-6 py-4">
+              {rowToDuplicate && (
+                <ExpTableForm
+                  initialData={{
+                    ...rowToDuplicate,
+                    tblidx: rowToDuplicate.tblidx + 1
+                  }}
+                  onSubmit={handleDuplicateRow}
+                  onCancel={() => {
+                    setIsDuplicateDialogOpen(false);
+                    setRowToDuplicate(null);
+                  }}
+                />
+              )}
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={rowToDelete !== null} onOpenChange={(open) => !open && setRowToDelete(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Deletion</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this row? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
-          <ExpTableForm
-            initialData={{ ...selectedRow, table_id: currentTableId || '' }}
-            onSubmit={handleEditRow}
-            onCancel={() => setIsEditDialogOpen(false)}
-            isEdit
-            tblidx={selectedRow?.tblidx}
-          />
+          <DialogFooter className="flex gap-2 justify-end">
+            <Button
+              variant="outline"
+              onClick={() => setRowToDelete(null)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => rowToDelete && handleDeleteRow(rowToDelete.id)}
+              className="bg-red-500 hover:bg-red-600 text-white"
+            >
+              Delete
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Duplicate Dialog */}
-      <Dialog open={isDuplicateDialogOpen} onOpenChange={setIsDuplicateDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800">
-          <DialogHeader className="border-b border-gray-200 dark:border-gray-800 pb-4">
-            <DialogTitle className="text-xl font-semibold text-gray-900 dark:text-transparent dark:bg-gradient-to-r dark:from-indigo-500 dark:to-purple-500 dark:bg-clip-text">
-              Duplicate Row
-            </DialogTitle>
-            <DialogDescription className="text-gray-500 dark:text-gray-400">
-              Create a new row with the same values as tblidx {rowToDuplicate?.tblidx}.
-              You can modify any values before creating the new row.
+      {/* Bulk Delete Confirmation Dialog */}
+      <Dialog open={isBulkDeleteDialogOpen} onOpenChange={setIsBulkDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Deletion</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete {selectedRows.size} selected row{selectedRows.size !== 1 ? 's' : ''}? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
-          {rowToDuplicate && (
-            <ExpTableForm
-              initialData={{ ...rowToDuplicate, table_id: currentTableId || '' }}
-              onSubmit={handleDuplicateRow}
-              onCancel={() => {
-                setIsDuplicateDialogOpen(false);
-                setRowToDuplicate(null);
-              }}
-              isEdit={false}
-              tblidx={rowToDuplicate.tblidx}
-            />
-          )}
+          <DialogFooter className="flex space-x-2 justify-end">
+            <Button
+              variant="outline"
+              onClick={() => setIsBulkDeleteDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleBulkDelete}
+              className="bg-red-500 hover:bg-red-600 dark:bg-red-700 dark:hover:bg-red-800"
+            >
+              Delete
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Toaster />
     </div>
   );
 } 

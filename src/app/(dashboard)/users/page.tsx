@@ -93,6 +93,11 @@ interface SubOwnerResponse {
   }>;
 }
 
+interface CachedUsers {
+  data: User[];
+  timestamp: number;
+}
+
 const formSchema = z.object({
   email: z.string().email(),
   full_name: z.string().optional(),
@@ -109,7 +114,10 @@ export default function UsersPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [cachedUsers, setCachedUsers] = useState<CachedUsers | null>(null);
   const [open, setOpen] = useState(false);
+
+  const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -134,11 +142,18 @@ export default function UsersPage() {
 
   const fetchUsers = async () => {
     try {
+      // Check cache first
+      if (cachedUsers && Date.now() - cachedUsers.timestamp < CACHE_DURATION) {
+        setUsers(cachedUsers.data);
+        setLoading(false);
+        return;
+      }
+
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
-      // Get all sub-owners and their data in a single query
+      // Get all sub-owners and their data in a single query with nested selects
       const { data, error: subOwnersError } = await supabase
         .from('owners')
         .select(`
@@ -185,11 +200,16 @@ export default function UsersPage() {
         })) || [],
       })) || [];
 
+      // Update cache and state
+      setCachedUsers({
+        data: formattedUsers,
+        timestamp: Date.now()
+      });
       setUsers(formattedUsers);
-    } catch (err) {
+      setLoading(false);
+    } catch (err: any) {
       console.error('Error:', err);
-      setError('Failed to fetch users');
-    } finally {
+      setError(err.message || 'Failed to fetch users');
       setLoading(false);
     }
   };
@@ -254,7 +274,6 @@ export default function UsersPage() {
     try {
       const supabase = createClient();
       
-      // Delete the profile (this will cascade to delete sub_owner and permissions records)
       const { error: deleteError } = await supabase
         .from('profiles')
         .delete()
@@ -262,8 +281,15 @@ export default function UsersPage() {
 
       if (deleteError) throw deleteError;
 
-      // Update local state
-      setUsers(prev => prev.filter(user => user.id !== id));
+      // Update local state and cache
+      const updatedUsers = users.filter(user => user.id !== id);
+      setUsers(updatedUsers);
+      if (cachedUsers) {
+        setCachedUsers({
+          data: updatedUsers,
+          timestamp: Date.now()
+        });
+      }
     } catch (err: any) {
       console.error('Error:', err);
       setError(err.message || 'Failed to delete user');
@@ -295,14 +321,20 @@ export default function UsersPage() {
 
       if (profileError) throw profileError;
 
-      // Update local state
-      setUsers(prev => prev.map(user => 
+      // Update local state and cache
+      const updatedUsers = users.map(user => 
         user.id === selectedUserId 
           ? { ...user, full_name: values.full_name || undefined }
           : user
-      ));
+      );
+      setUsers(updatedUsers);
+      if (cachedUsers) {
+        setCachedUsers({
+          data: updatedUsers,
+          timestamp: Date.now()
+        });
+      }
 
-      // Close dialog and reset form
       setSelectedUserId(null);
       editForm.reset();
     } catch (err: any) {

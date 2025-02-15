@@ -1,0 +1,6 @@
+id,table_id,created_at,updated_at,tblidx,dwExp,dwNeed_Exp,wNormal_Race,wSuperRace,dwMobExp,dwPhyDefenceRef,dwEngDefenceRef,dwMobZenny,wStageWinSolo,wStageDrawSolo,wStageLoseSolo,wWinSolo,wPerfectWinSolo,wStageWinTeam,wStageDrawTeam,wStageLoseTeam,wWinTeam,wPerfectWinTeam
+b8254198-99d5-404f-87bd-7504d7666edc,ef8e9457-2fda-41ba-9366-5f404d02bd3e,"2025-02-12 03:55:21.70988+00","2025-02-12 03:55:21.70988+00",3,500,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+d9d65bcf-2722-46fc-bcad-ae3358ee4c3e,ef8e9457-2fda-41ba-9366-5f404d02bd3e,"2025-02-12 03:43:01.611947+00","2025-02-12 03:43:01.611947+00",1,900,1200,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+7a5f37e2-ccdf-4c33-beee-013b6498eaa6,ef8e9457-2fda-41ba-9366-5f404d02bd3e,"2025-02-12 04:18:45.701955+00","2025-02-12 04:18:45.701955+00",44,275,44,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+c3b3ab4f-8459-4395-b01a-4ac651a57693,ef8e9457-2fda-41ba-9366-5f404d02bd3e,"2025-02-11 10:21:28.727348+00","2025-02-11 10:21:28.727348+00",2,8602,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+133f4e93-435e-4e86-b487-3f6c0a3eefce,ef8e9457-2fda-41ba-9366-5f404d02bd3e,"2025-02-12 04:18:53.811616+00","2025-02-12 04:18:53.811616+00",45,22,841,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0

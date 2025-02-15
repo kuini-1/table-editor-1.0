@@ -10,6 +10,10 @@ Also update the progress of the task in the Scratchpad when you finish a subtask
 Especially when you finished a milestone, it will help to improve your depth of task accomplishment to use the Scratchpad to reflect and plan.
 The goal is to help you maintain a big picture as well as the progress of the task. Always refer to the Scratchpad when you plan the next step.
 
+Before providing an answer, ensure that it is not the same as any previous answers that did not work. You must verify this by reviewing our chat history to avoid repeating failed solutions.
+
+Finally, you should always use the official documentation of the library you are using.
+
 # Lessons
 
 ## User Specified Lessons
@@ -19,30 +23,38 @@ The goal is to help you maintain a big picture as well as the progress of the ta
 - Table Permission Management: Allowing the owner to modify permissions for sub-owners on a per-table basis is a powerful feature. It's important to clearly define what actions (read, write, delete) sub-owners can perform and make sure these permissions are enforced consistently across the system.
 - Database Schema Evolution: When modifying database schemas, it's important to use migrations to track changes and ensure they can be applied consistently across different environments. This includes properly handling column renames, additions, and maintaining data integrity.
 - Column Naming Conventions: When working with database columns, maintain consistent naming conventions (e.g., camelCase for specific types like "dwExp" or "wStageWinSolo") to reflect the data type and purpose of the field.
+- Supabase Text Search: When performing text pattern matching in Supabase, use the match operator: `query.match({ column: value })`. This works for both text and numeric columns.
 
 ## Cursor learned
 
 - When you are editing a file, you should first read the file and understand the context.
 - When modifying database schemas, always create proper migration files with clear comments and appropriate constraints.
 - Use descriptive column comments to document the purpose of each field in the database.
+- Always check the official documentation first before implementing complex solutions.
+- Cache user profile and permission data to reduce redundant API calls.
+- Use state management for shared data across components.
 
 # Scratchpad
 
-Current Task: Database Schema Modification for exp_table
+Current Task: Fix Filter Application
 
 Task Description:
-Modify the exp_table schema to match the specified column structure with proper naming conventions and data types.
+The filter functionality is not working correctly. When a user adds a filter, the table data is not being updated to reflect the filter.
+
+Areas to Check:
+[ ] Filter state management
+[ ] Filter application in fetchData function
+[ ] Column type handling (numeric vs text)
+[ ] Immediate data refresh after filter application
+
+Steps to Fix:
+[ ] Review handleAddFilter function
+[ ] Check if filters are properly passed to fetchData
+[ ] Verify filter value type conversion
+[ ] Ensure immediate data refresh
+[ ] Test filter application with different column types
 
 Progress:
-[X] Create migration file for schema changes
-[X] Drop existing columns that need to be renamed
-[X] Add new columns with updated names and proper data types
-[X] Add comments to document each column's purpose
-[X] Update foreign key constraints and references
-[X] Add unique constraint on tblidx
-[X] Split stage-related columns into solo and team variants
-
-Next Steps:
-[ ] Verify the changes meet all requirements
-[ ] Test data migration if needed
-[ ] Update any related application code to use new column names
+[ ] Initial analysis of filter functionality
+[ ] Fix filter application logic
+[ ] Test and verify filter works

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { RefreshCcw, ExternalLink, MoreVertical } from 'lucide-react';
@@ -16,16 +16,60 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useRouter } from 'next/navigation';
 
-interface ActivityLog {
-  id: string;
-  action: 'PUT' | 'POST' | 'DELETE';
-  details: string;
-  user: string;
-  timestamp: string;
-  table_id: string;
+interface ProfileResponse {
+  email: string;
+  full_name: string | null;
 }
 
-interface Table {
+interface UserResponse {
+  profile: ProfileResponse;
+}
+
+interface ActivityLogResponse {
+  id: string;
+  action: 'POST' | 'PUT' | 'DELETE';
+  details: string;
+  user_id: string;
+  created_at: string;
+  table_id: string;
+  profile: {
+    email: string;
+    full_name: string;
+  };
+}
+
+interface TableResponse {
+  id: string;
+  name: string;
+  type: string;
+  owner_id: string;
+}
+
+interface SubOwnerPermissionResponse {
+  table_id: string;
+  can_get: boolean;
+  can_put: boolean;
+  can_post: boolean;
+  can_delete: boolean;
+  table: TableResponse;
+}
+
+interface ActivityLog {
+  id: string;
+  action: 'POST' | 'PUT' | 'DELETE';
+  details: string;
+  user_id: string;
+  created_at: string;
+  table_id: string;
+  user?: {
+    profile: {
+      full_name: string | null;
+      email: string;
+    };
+  };
+}
+
+export interface Table {
   id: string;
   name: string;
   type: string;
@@ -38,7 +82,7 @@ interface Table {
   };
 }
 
-interface SubOwnerPermission {
+export interface SubOwnerPermission {
   id: string;
   table_id: string;
   sub_owner_id: string;
@@ -109,11 +153,19 @@ interface PermissionResponse {
   };
 }
 
-interface DatabaseTable {
+export interface DatabaseTable {
   id: string;
   name: string;
   type: string;
   owner_id: string;
+  permissions: {
+    can_get: boolean;
+    can_put: boolean;
+    can_post: boolean;
+    can_delete: boolean;
+  };
+  subAccounts?: SubOwnerPermission[];
+  activity_logs?: ActivityLog[];
 }
 
 interface DatabasePermission {
@@ -125,65 +177,35 @@ interface DatabasePermission {
   table: DatabaseTable;
 }
 
-// Add test data for activity logs
-const TEST_ACTIVITY_LOGS: ActivityLog[] = [
-  {
-    id: '1',
-    action: 'POST',
-    details: 'Added new expense record: 2500 EXP, 35000 Zenny',
-    user: 'John Smith',
-    timestamp: '2024-03-20 14:30',
-    table_id: '1'
-  },
-  {
-    id: '2',
-    action: 'PUT',
-    details: 'Updated expense amount from 1000 to 1500 EXP',
-    user: 'Jane Smith',
-    timestamp: '2024-03-20 14:25',
-    table_id: '1'
-  },
-  {
-    id: '3',
-    action: 'DELETE',
-    details: 'Removed expense record: ID 1005',
-    user: 'Mike Johnson',
-    timestamp: '2024-03-20 14:20',
-    table_id: '1'
-  },
-  {
-    id: '4',
-    action: 'POST',
-    details: 'Imported 10 expense records from CSV',
-    user: 'John Smith',
-    timestamp: '2024-03-20 14:15',
-    table_id: '1'
-  },
-  {
-    id: '5',
-    action: 'PUT',
-    details: 'Updated Zenny value from 25000 to 30000',
-    user: 'Jane Smith',
-    timestamp: '2024-03-20 14:10',
-    table_id: '1'
-  },
-  {
-    id: '6',
-    action: 'PUT',
-    details: 'Modified owner from user_001 to user_002',
-    user: 'Mike Johnson',
-    timestamp: '2024-03-20 14:05',
-    table_id: '1'
-  },
-  {
-    id: '7',
-    action: 'DELETE',
-    details: 'Bulk deleted 3 inactive expense records',
-    user: 'John Smith',
-    timestamp: '2024-03-20 14:00',
-    table_id: '1'
-  }
-];
+interface CachedTables {
+  data: DatabaseTable[];
+  timestamp: number;
+  userRole: string;
+  activityLogs: {
+    [tableId: string]: {
+      logs: ActivityLog[];
+      timestamp: number;
+    };
+  };
+}
+
+interface SubOwnerProfileResponse {
+  profile: {
+    email: string;
+    full_name: string | null;
+  };
+}
+
+interface SubOwnerWithProfileResponse {
+  sub_owner: SubOwnerProfileResponse;
+  id: string;
+  table_id: string;
+  sub_owner_id: string;
+  can_get: boolean;
+  can_put: boolean;
+  can_post: boolean;
+  can_delete: boolean;
+}
 
 // Add test data for tables
 const TEST_TABLES: Table[] = [
@@ -269,15 +291,26 @@ const TEST_SUB_ACCOUNTS: SubOwnerPermission[] = [
 ];
 
 export default function TablesPage() {
-  const [tables, setTables] = useState<Table[]>([]);
+  const [tables, setTables] = useState<DatabaseTable[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedTable, setSelectedTable] = useState<Table | null>(null);
   const [isManageDialogOpen, setIsManageDialogOpen] = useState(false);
   const [subAccounts, setSubAccounts] = useState<SubOwnerPermission[]>([]);
-  const [userRole, setUserRole] = useState<'owner' | 'sub_owner' | null>(null);
+  const [userRole, setUserRole] = useState<string>('');
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
+  const [cachedTables, setCachedTables] = useState<CachedTables | null>(null);
   const router = useRouter();
+  const supabase = createClient();
+  const [isLoadingMoreLogs, setIsLoadingMoreLogs] = useState(false);
+  const [hasMoreLogs, setHasMoreLogs] = useState(true);
+  const activityLogRef = useRef<HTMLDivElement>(null);
+
+  const CACHE_DURATION = {
+    TABLES: 5 * 60 * 1000, // 5 minutes
+    ACTIVITY_LOGS: 2 * 60 * 1000, // 2 minutes
+    SUB_ACCOUNTS: 5 * 60 * 1000 // 5 minutes
+  };
 
   useEffect(() => {
     fetchUserAndTables();
@@ -285,11 +318,11 @@ export default function TablesPage() {
 
   useEffect(() => {
     if (selectedTable) {
-      // For testing purposes, show all logs for exp tables
-      if (selectedTable.type === 'exp') {
-        setActivityLogs(TEST_ACTIVITY_LOGS);
+      const cachedLogs = cachedTables?.activityLogs?.[selectedTable.id];
+      if (cachedLogs && Date.now() - cachedLogs.timestamp < CACHE_DURATION.ACTIVITY_LOGS) {
+        setActivityLogs(cachedLogs.logs);
       } else {
-        setActivityLogs([]);
+        fetchActivityLogs(selectedTable.id);
       }
     } else {
       setActivityLogs([]);
@@ -297,45 +330,66 @@ export default function TablesPage() {
   }, [selectedTable]);
 
   const fetchUserAndTables = async () => {
-    const supabase = createClient();
     try {
       setLoading(true);
       setError(null);
+
+      // Check cache first
+      if (cachedTables && Date.now() - cachedTables.timestamp < CACHE_DURATION.TABLES) {
+        setTables(cachedTables.data);
+        setUserRole(cachedTables.userRole);
+        setLoading(false);
+        return;
+      }
 
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       if (userError) throw userError;
       if (!user) throw new Error('No user found');
 
-      const { data: profile, error: profileError } = await supabase
+      // Get profile, tables, and permissions in a single query
+      const { data: profileData, error: profileError } = await supabase
         .from('profiles')
-        .select('role')
+        .select(`
+          role,
+          owners!owners_profile_id_fkey (
+            id,
+            tables (
+              id,
+              name,
+              type,
+              owner_id
+            )
+          ),
+          sub_owners!sub_owners_profile_id_fkey (
+            id,
+            owner_id,
+            permissions:sub_owner_permissions (
+              table_id,
+              can_get,
+              can_put,
+              can_post,
+              can_delete,
+              table:tables (
+                id,
+                name,
+                type,
+                owner_id
+              )
+            )
+          )
+        `)
         .eq('id', user.id)
         .single();
 
       if (profileError) throw profileError;
-      if (!profile) throw new Error('No profile found');
+      if (!profileData) throw new Error('No profile found');
 
-      setUserRole(profile.role);
+      setUserRole(profileData.role);
+      let formattedTables: DatabaseTable[] = [];
 
-      if (profile.role === 'owner') {
-        const { data: ownerData, error: ownerError } = await supabase
-          .from('owners')
-          .select('id')
-          .eq('profile_id', user.id)
-          .single();
-
-        if (ownerError) throw ownerError;
-        if (!ownerData) throw new Error('No owner data found');
-
-        const { data: ownerTables, error: tablesError } = await supabase
-          .from('tables')
-          .select('*')
-          .eq('owner_id', ownerData.id) as { data: DatabaseTable[] | null, error: any };
-
-        if (tablesError) throw tablesError;
-        if (!ownerTables) throw new Error('No tables found');
-
-        const formattedTables = ownerTables.map(table => ({
+      if (profileData.role === 'owner' && profileData.owners?.[0]?.tables) {
+        const tables = profileData.owners[0].tables as unknown as TableResponse[];
+        formattedTables = tables.map(table => ({
           id: table.id,
           name: table.name,
           type: table.type,
@@ -347,73 +401,95 @@ export default function TablesPage() {
             can_delete: true
           }
         }));
-
-        setTables(formattedTables);
-      } else {
-        const { data: subOwnerData, error: subOwnerError } = await supabase
-          .from('sub_owners')
-          .select('id, owner_id')
-          .eq('profile_id', user.id)
-          .single();
-
-        if (subOwnerError) throw subOwnerError;
-        if (!subOwnerData) throw new Error('No sub-owner data found');
-
-        // Log sub-owner data for debugging
-        console.log('Sub-owner data:', subOwnerData);
-
-        // Get all tables for the owner first
-        const { data: ownerTables, error: ownerTablesError } = await supabase
-          .from('tables')
-          .select('*')
-          .eq('owner_id', subOwnerData.owner_id);
-
-        if (ownerTablesError) throw ownerTablesError;
-        console.log('Owner tables:', ownerTables);
-
-        // Then get permissions for these tables
-        const { data: permissions, error: permissionsError } = await supabase
-          .from('sub_owner_permissions')
-          .select('*')
-          .eq('sub_owner_id', subOwnerData.id);
-
-        if (permissionsError) throw permissionsError;
-        console.log('Permissions:', permissions);
-
-        // Combine the data
-        const formattedTables = ownerTables.map(table => {
-          const permission = permissions?.find(p => p.table_id === table.id);
-          return {
-            id: table.id,
-            name: table.name,
-            type: table.type,
-            owner_id: table.owner_id,
+      } else if (profileData.role === 'sub_owner' && profileData.sub_owners?.[0]?.permissions) {
+        const permissions = profileData.sub_owners[0].permissions as unknown as SubOwnerPermissionResponse[];
+        formattedTables = permissions
+          .filter(p => p.table)
+          .map(p => ({
+            id: p.table.id,
+            name: p.table.name,
+            type: p.table.type,
+            owner_id: p.table.owner_id,
             permissions: {
-              can_get: permission?.can_get || false,
-              can_put: permission?.can_put || false,
-              can_post: permission?.can_post || false,
-              can_delete: permission?.can_delete || false
+              can_get: p.can_get,
+              can_put: p.can_put,
+              can_post: p.can_post,
+              can_delete: p.can_delete
             }
-          };
-        });
+          }));
+      }
 
-        console.log('Formatted tables:', formattedTables);
-        setTables(formattedTables);
-      }
+      // Fetch activity logs for all tables in a single query
+      const { data: logsData, error: logsError } = await supabase
+        .from('activity_logs')
+        .select(`
+          id,
+          action,
+          details,
+          user_id,
+          created_at,
+          table_id,
+          profile:profiles (
+            full_name,
+            email
+          )
+        `)
+        .in('table_id', formattedTables.map(t => t.id))
+        .order('created_at', { ascending: false });
+
+      if (logsError) throw logsError;
+
+      // Group logs by table
+      const activityLogsMap: { [key: string]: { logs: ActivityLog[], timestamp: number } } = {};
+      const logs = logsData as unknown as ActivityLogResponse[];
+      logs?.forEach(log => {
+        if (!activityLogsMap[log.table_id]) {
+          activityLogsMap[log.table_id] = {
+            logs: [],
+            timestamp: Date.now()
+          };
+        }
+        activityLogsMap[log.table_id].logs.push({
+          id: log.id,
+          action: log.action,
+          details: log.details,
+          user_id: log.user_id,
+          created_at: log.created_at,
+          table_id: log.table_id,
+          user: {
+            profile: {
+              full_name: log.profile?.full_name,
+              email: log.profile?.email
+            }
+          }
+        });
+      });
+
+      // Update cache and state
+      setCachedTables({
+        data: formattedTables,
+        timestamp: Date.now(),
+        userRole: profileData.role,
+        activityLogs: activityLogsMap
+      });
+      setTables(formattedTables);
+      setLoading(false);
     } catch (err: any) {
-      console.error('Error fetching tables:', err);
-      setError(err.message || 'Failed to fetch tables');
-      if (err.message?.includes('auth') || err.message?.includes('JWT')) {
-        router.push('/login');
-      }
-    } finally {
+      console.error('Error:', err);
+      setError(err.message || 'Failed to fetch data');
       setLoading(false);
     }
   };
 
   const fetchSubAccounts = async (tableId: string) => {
-    const supabase = createClient();
     try {
+      // Check if we have cached sub-accounts
+      const cachedSubAccounts = cachedTables?.data.find(t => t.id === tableId)?.subAccounts;
+      if (cachedSubAccounts && Date.now() - (cachedTables?.timestamp || 0) < CACHE_DURATION.SUB_ACCOUNTS) {
+        setSubAccounts(cachedSubAccounts);
+        return;
+      }
+
       const { data: permissions, error: permissionsError } = await supabase
         .from('sub_owner_permissions')
         .select(`
@@ -431,30 +507,36 @@ export default function TablesPage() {
             )
           )
         `)
-        .eq('table_id', tableId) as { data: PermissionResponse[] | null, error: any };
+        .eq('table_id', tableId);
 
       if (permissionsError) throw permissionsError;
-      
-      console.log('Raw permissions data:', JSON.stringify(permissions, null, 2));
 
-      const formattedPermissions = permissions?.map(p => {
-        console.log('Processing permission:', p);
-        return {
-          id: p.id,
-          table_id: p.table_id,
-          sub_owner_id: p.sub_owner_id,
-          can_get: p.can_get,
-          can_put: p.can_put,
-          can_post: p.can_post,
-          can_delete: p.can_delete,
-          profile: {
-            email: p.sub_owner?.profile?.email || '',
-            full_name: p.sub_owner?.profile?.full_name || ''
-          }
-        };
-      }) || [];
+      const permissionsData = permissions as unknown as SubOwnerWithProfileResponse[];
+      const formattedPermissions = permissionsData?.map(p => ({
+        id: p.id,
+        table_id: p.table_id,
+        sub_owner_id: p.sub_owner_id,
+        can_get: p.can_get,
+        can_put: p.can_put,
+        can_post: p.can_post,
+        can_delete: p.can_delete,
+        profile: {
+          email: p.sub_owner.profile.email,
+          full_name: p.sub_owner.profile.full_name || ''
+        }
+      })) || [];
 
-      console.log('Formatted permissions:', JSON.stringify(formattedPermissions, null, 2));
+      // Update cache with sub-accounts
+      if (cachedTables) {
+        const updatedTables = cachedTables.data.map(t => 
+          t.id === tableId ? { ...t, subAccounts: formattedPermissions } : t
+        );
+        setCachedTables({
+          ...cachedTables,
+          data: updatedTables
+        });
+      }
+
       setSubAccounts(formattedPermissions);
     } catch (err) {
       console.error('Error fetching sub accounts:', err);
@@ -559,6 +641,113 @@ export default function TablesPage() {
       console.error('Error updating permission:', err);
       // Show error to user
       setError('Failed to update permission. Please try again.');
+    }
+  };
+
+  const fetchActivityLogs = async (tableId: string, isLoadMore: boolean = false) => {
+    try {
+      setIsLoadingMoreLogs(isLoadMore);
+      const currentLogs = isLoadMore ? activityLogs : [];
+      
+      const { data: logsData, error } = await supabase
+        .from('activity_logs')
+        .select(`
+          id,
+          action,
+          details,
+          user_id,
+          created_at,
+          table_id,
+          profile:profiles!activity_logs_user_id_fkey (
+            full_name,
+            email
+          )
+        `)
+        .eq('table_id', tableId)
+        .order('created_at', { ascending: false })
+        .range(currentLogs.length, currentLogs.length + 9);
+
+      if (error) throw error;
+
+      const logs = logsData as unknown as ActivityLogResponse[];
+      const formattedLogs = logs?.map(log => ({
+        id: log.id,
+        action: log.action as 'POST' | 'PUT' | 'DELETE',
+        details: log.details,
+        user_id: log.user_id,
+        created_at: log.created_at,
+        table_id: log.table_id,
+        user: {
+          profile: {
+            full_name: log.profile?.full_name || null,
+            email: log.profile?.email
+          }
+        }
+      })) || [];
+
+      setHasMoreLogs(formattedLogs.length === 10);
+      setActivityLogs([...currentLogs, ...formattedLogs]);
+
+      // Update cache
+      if (cachedTables) {
+        setCachedTables({
+          ...cachedTables,
+          activityLogs: {
+            ...cachedTables.activityLogs,
+            [tableId]: {
+              logs: [...currentLogs, ...formattedLogs],
+              timestamp: Date.now()
+            }
+          }
+        });
+      }
+    } catch (err) {
+      console.error('Error fetching activity logs:', err);
+    } finally {
+      setIsLoadingMoreLogs(false);
+    }
+  };
+
+  // Add scroll handler for infinite scrolling
+  const handleActivityLogScroll = useCallback(() => {
+    if (!activityLogRef.current || !hasMoreLogs || isLoadingMoreLogs || !selectedTable?.id) return;
+
+    const { scrollTop, scrollHeight, clientHeight } = activityLogRef.current;
+    if (scrollHeight - scrollTop <= clientHeight * 1.5) {
+      fetchActivityLogs(selectedTable.id, true);
+    }
+  }, [hasMoreLogs, isLoadingMoreLogs, selectedTable]);
+
+  useEffect(() => {
+    const scrollContainer = activityLogRef.current;
+    if (scrollContainer) {
+      scrollContainer.addEventListener('scroll', handleActivityLogScroll);
+      return () => scrollContainer.removeEventListener('scroll', handleActivityLogScroll);
+    }
+  }, [handleActivityLogScroll]);
+
+  const logActivity = async (action: 'POST' | 'PUT' | 'DELETE', details: string) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('No user found');
+
+      const { error } = await supabase
+        .from('activity_logs')
+        .insert([{
+          action,
+          details,
+          user_id: selectedTable?.id || '',
+          table_id: selectedTable?.id || ''
+        }]);
+
+      if (error) throw error;
+
+      // Refresh logs after inserting
+      if (selectedTable) {
+        fetchActivityLogs(selectedTable.id);
+      }
+    } catch (err) {
+      console.error('Error logging activity:', err);
     }
   };
 
@@ -692,9 +881,34 @@ export default function TablesPage() {
             <div className="lg:col-span-1">
               <div className="bg-white dark:bg-gray-800 shadow-md rounded-lg overflow-hidden">
                 <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Activity Log</h2>
+                  <div className="flex justify-between items-center">
+                    <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Activity Log</h2>
+                    {selectedTable && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => fetchActivityLogs(selectedTable.id)}
+                        className="h-8 w-8 p-0"
+                      >
+                        <RefreshCcw className="h-4 w-4" />
+                        <span className="sr-only">Refresh logs</span>
+                      </Button>
+                    )}
+                  </div>
+                  {selectedTable ? (
+                    <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                      Showing activity for {selectedTable.name}
+                    </p>
+                  ) : (
+                    <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                      Select a table to view its activity
+                    </p>
+                  )}
                 </div>
-                <div className="p-4">
+                <div 
+                  ref={activityLogRef}
+                  className="h-[500px] overflow-y-auto p-4"
+                >
                   {selectedTable ? (
                     activityLogs.length > 0 ? (
                       <div className="space-y-3">
@@ -705,45 +919,48 @@ export default function TablesPage() {
                           >
                             <div className="flex items-center gap-3 mb-2">
                               <div className={`
-                                min-w-[60px] text-center px-2 py-1 rounded-full text-xs font-medium
-                                ${log.action === 'POST' ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-400' : ''}
-                                ${log.action === 'PUT' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-400' : ''}
-                                ${log.action === 'DELETE' ? 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-400' : ''}
+                                min-w-[60px] text-center px-2 py-1 rounded text-xs font-medium
+                                ${log.action === 'POST' ? 'bg-emerald-900/50 text-emerald-400' : ''}
+                                ${log.action === 'PUT' ? 'bg-blue-900/50 text-blue-400' : ''}
+                                ${log.action === 'DELETE' ? 'bg-red-900/50 text-red-400' : ''}
                               `}>
                                 {log.action}
                               </div>
                               <p className="text-gray-500 dark:text-gray-400 text-xs">
-                                {log.timestamp}
+                                {new Date(log.created_at).toLocaleString()}
                               </p>
                             </div>
                             <p className="text-sm text-gray-900 dark:text-white mb-1">
                               {log.details}
                             </p>
                             <p className="text-xs text-gray-500 dark:text-gray-400">
-                              by {log.user}
+                              by {log.user?.profile?.full_name || log.user?.profile?.email || 'Unknown User'}
                             </p>
                           </div>
                         ))}
+                        {isLoadingMoreLogs && (
+                          <div className="text-center py-4">
+                            <p className="text-sm text-gray-500 dark:text-gray-400">Loading more logs...</p>
+                          </div>
+                        )}
+                        {!hasMoreLogs && activityLogs.length > 0 && (
+                          <div className="text-center py-4">
+                            <p className="text-sm text-gray-500 dark:text-gray-400">No more logs to load</p>
+                          </div>
+                        )}
                       </div>
                     ) : (
                       <div className="text-center py-8">
                         <p className="text-gray-500 dark:text-gray-400 text-sm">
-                          No activity logs found
+                          No activity logs found for this table
                         </p>
                       </div>
                     )
                   ) : (
-                    <div className="space-y-3">
-                      {[1, 2, 3].map((i) => (
-                        <div key={i} className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg animate-pulse">
-                          <div className="flex items-center gap-3 mb-2">
-                            <div className="h-6 w-16 bg-gray-200 dark:bg-gray-600 rounded-full" />
-                            <div className="h-4 w-24 bg-gray-200 dark:bg-gray-600 rounded" />
-                          </div>
-                          <div className="h-4 bg-gray-200 dark:bg-gray-600 rounded w-3/4 mb-2" />
-                          <div className="h-3 bg-gray-200 dark:bg-gray-600 rounded w-1/4" />
-                        </div>
-                      ))}
+                    <div className="text-center py-8">
+                      <p className="text-gray-500 dark:text-gray-400 text-sm">
+                        Select a table to view its activity logs
+                      </p>
                     </div>
                   )}
                 </div>
