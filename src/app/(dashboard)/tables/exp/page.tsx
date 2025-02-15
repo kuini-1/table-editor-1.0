@@ -61,6 +61,17 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 
 // Form schema for validation
 const expTableSchema = z.object({
@@ -579,7 +590,7 @@ function ExpTableForm({ initialData, onSubmit, onCancel, isEdit, tblidx }: ExpTa
           </ScrollArea>
         </div>
 
-        <div className="sticky bottom-0 px-6 py-4 bg-white dark:bg-gray-900/95 backdrop-blur-xl border-t border-gray-200 dark:border-gray-800">
+        <div className="sticky bottom-0 px-6 py-4 rounded-lg bg-white dark:bg-gray-900/95 backdrop-blur-xl border-t border-gray-200 dark:border-gray-800">
           <div className="flex gap-4 w-full">
             <Button
               type="button"
@@ -686,6 +697,10 @@ export default function ExpTablePage() {
   const [tableId, setTableId] = useState<string | null>(null);
   const [rowToDelete, setRowToDelete] = useState<ExpTableRow | null>(null);
   const [isBulkDeleteDialogOpen, setIsBulkDeleteDialogOpen] = useState(false);
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+  const [fileToImport, setFileToImport] = useState<File | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPageSize, setCurrentPageSize] = useState(50);
 
   // Get state and actions from store
   const {
@@ -733,7 +748,7 @@ export default function ExpTablePage() {
   useEffect(() => {
     if (!tableId) return;
     fetchData(tableId);
-  }, [filters, tableId]);
+  }, [filters, tableId, currentPage, currentPageSize]);
 
   const handleColumnChange = (newColumn: string) => {
     setSelectedColumn(newColumn);
@@ -813,7 +828,8 @@ export default function ExpTablePage() {
       let query = supabase
         .from('exp_table')
         .select('*', { count: 'exact' })
-        .eq('table_id', id);
+        .eq('table_id', id)
+        .range((currentPage - 1) * currentPageSize, (currentPage * currentPageSize) - 1);
 
       // Apply filters
       for (const [column, filter] of Object.entries(currentFilters)) {
@@ -879,26 +895,22 @@ export default function ExpTablePage() {
         }
       }
 
-      // Fetch data with pagination
-      const { data: expData, count, error } = await query
-        .order('tblidx')
-        .range((page - 1) * pageSize, page * pageSize - 1);
+      const { data: rows, error, count } = await query;
 
       if (error) throw error;
 
-      // Update store with new data
+      // Update table data in store
       setTableData(id, {
-        data: expData || [],
+        data: rows || [],
         totalRows: count || 0,
         lastFetched: Date.now(),
         filters: currentFilters,
-        page,
-        pageSize,
+        page: currentPage,
+        pageSize: currentPageSize
       });
     } catch (err: any) {
       console.error('Error fetching data:', err);
       toast.error(err.message || 'Failed to fetch data');
-      throw err;
     } finally {
       setLoading(false);
     }
@@ -1162,29 +1174,16 @@ export default function ExpTablePage() {
             Rows per page
           </p>
           <Select
-            value={pageSize.toString()}
-            onValueChange={(value) => {
-              const newSize = parseInt(value);
-              if (tableId && currentTableData) {
-                setTableData(tableId, {
-                  data: currentTableData.data || [],
-                  totalRows: currentTableData.totalRows || 0,
-                  lastFetched: Date.now(),
-                  filters: currentTableData.filters || {},
-                  pageSize: newSize,
-                  page: 1,
-                });
-                fetchData(tableId);
-              }
-            }}
+            value={currentPageSize.toString()}
+            onValueChange={(value) => handlePageSizeChange(Number(value))}
           >
             <SelectTrigger className="h-8 w-[70px]">
-              <SelectValue />
+              <SelectValue placeholder={currentPageSize} />
             </SelectTrigger>
-            <SelectContent>
-              {[10, 20, 30, 40, 50].map((size) => (
-                <SelectItem key={size} value={size.toString()}>
-                  {size}
+            <SelectContent side="top">
+              {[10, 20, 50, 100].map((pageSize) => (
+                <SelectItem key={pageSize} value={pageSize.toString()}>
+                  {pageSize}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -1193,48 +1192,23 @@ export default function ExpTablePage() {
 
         <div className="flex items-center gap-2 sm:gap-4">
           <div className="text-sm text-gray-500 dark:text-gray-400">
-            Page {page} of {totalPages}
+            Page {currentPage} of {totalPages}
           </div>
           <div className="flex items-center gap-1">
             <Button
               variant="outline"
               size="icon"
-              onClick={() => {
-                if (tableId && canPreviousPage && currentTableData) {
-                  setTableData(tableId, {
-                    data: currentTableData.data || [],
-                    totalRows: currentTableData.totalRows || 0,
-                    lastFetched: Date.now(),
-                    filters: currentTableData.filters || {},
-                    pageSize: currentTableData.pageSize,
-                    page: 1,
-                  });
-                  fetchData(tableId);
-                }
-              }}
-              disabled={!canPreviousPage}
+              onClick={() => handlePageChange(1)}
+              disabled={currentPage === 1}
               className="h-8 w-8 p-0"
             >
-              <span className="sr-only">Go to first page</span>
               <ChevronFirst className="h-4 w-4" />
             </Button>
             <Button
               variant="outline"
               size="icon"
-              onClick={() => {
-                if (tableId && canPreviousPage && currentTableData) {
-                  setTableData(tableId, {
-                    data: currentTableData.data || [],
-                    totalRows: currentTableData.totalRows || 0,
-                    lastFetched: Date.now(),
-                    filters: currentTableData.filters || {},
-                    pageSize: currentTableData.pageSize,
-                    page: page - 1,
-                  });
-                  fetchData(tableId);
-                }
-              }}
-              disabled={!canPreviousPage}
+              onClick={() => handlePageChange(currentPage - 1)}
+              disabled={currentPage === 1}
               className="h-8 w-8 p-0"
             >
               <ChevronLeft className="h-4 w-4" />
@@ -1242,20 +1216,8 @@ export default function ExpTablePage() {
             <Button
               variant="outline"
               size="icon"
-              onClick={() => {
-                if (tableId && canNextPage && currentTableData) {
-                  setTableData(tableId, {
-                    data: currentTableData.data || [],
-                    totalRows: currentTableData.totalRows || 0,
-                    lastFetched: Date.now(),
-                    filters: currentTableData.filters || {},
-                    pageSize: currentTableData.pageSize,
-                    page: page + 1,
-                  });
-                  fetchData(tableId);
-                }
-              }}
-              disabled={!canNextPage}
+              onClick={() => handlePageChange(currentPage + 1)}
+              disabled={currentPage >= Math.ceil(totalRows / currentPageSize)}
               className="h-8 w-8 p-0"
             >
               <ChevronRight className="h-4 w-4" />
@@ -1263,20 +1225,8 @@ export default function ExpTablePage() {
             <Button
               variant="outline"
               size="icon"
-              onClick={() => {
-                if (tableId && canNextPage && currentTableData) {
-                  setTableData(tableId, {
-                    data: currentTableData.data || [],
-                    totalRows: currentTableData.totalRows || 0,
-                    lastFetched: Date.now(),
-                    filters: currentTableData.filters || {},
-                    pageSize: currentTableData.pageSize,
-                    page: totalPages,
-                  });
-                  fetchData(tableId);
-                }
-              }}
-              disabled={!canNextPage}
+              onClick={() => handlePageChange(Math.ceil(totalRows / currentPageSize))}
+              disabled={currentPage >= Math.ceil(totalRows / currentPageSize)}
               className="h-8 w-8 p-0"
             >
               <ChevronLast className="h-4 w-4" />
@@ -1319,6 +1269,80 @@ export default function ExpTablePage() {
     }
   };
 
+  const handleImport = async (file: File) => {
+    try {
+      // First upload the file
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('tableId', tableId || '');
+      formData.append('tableName', 'exp_table');
+
+      const response = await fetch('/api/import', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.details || data.error || 'Import failed');
+      }
+
+      if (data.success) {
+        toast.success('Import completed successfully');
+        // Refresh the table data
+        fetchData(tableId || '');
+      } else {
+        throw new Error('Import failed without error');
+      }
+    } catch (error: any) {
+      console.error('Import error:', error);
+      toast.error(error.message || 'Failed to import data');
+    }
+  };
+
+  const handlePageChange = async (newPage: number) => {
+    try {
+      setLoading(true);
+      setCurrentPage(newPage);
+      
+      // Update the store immediately
+      if (tableId && currentTableData) {
+        setTableData(tableId, {
+          ...currentTableData,
+          page: newPage
+        });
+      }
+    } catch (error: any) {
+      console.error('Error changing page:', error);
+      toast.error(error.message || 'Failed to change page');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePageSizeChange = async (newSize: number) => {
+    try {
+      setLoading(true);
+      setCurrentPage(1); // Reset to first page
+      setCurrentPageSize(newSize);
+      
+      // Update the store immediately with new page size
+      if (tableId && currentTableData) {
+        setTableData(tableId, {
+          ...currentTableData,
+          page: 1,
+          pageSize: newSize
+        });
+      }
+    } catch (error: any) {
+      console.error('Error changing page size:', error);
+      toast.error(error.message || 'Failed to update page size');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50/50 dark:bg-gray-900/50 backdrop-blur-sm">
       <div className="sticky top-0 z-50 w-full border-b border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-900/80 backdrop-blur-lg">
@@ -1333,6 +1357,16 @@ export default function ExpTablePage() {
               </p>
             </div>
             <div className="flex items-center gap-4">
+              {selectedRows.size > 0 && (
+                <Button 
+                  variant="destructive" 
+                  onClick={() => setIsBulkDeleteDialogOpen(true)}
+                  className="gap-2"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Delete Selected ({selectedRows.size})
+                </Button>
+              )}
               <Button
                 variant="outline"
                 onClick={() => document.getElementById('file-upload')?.click()}
@@ -1344,47 +1378,13 @@ export default function ExpTablePage() {
               <input
                 id="file-upload"
                 type="file"
-                accept=".csv"
+                accept=".rdf"
                 className="hidden"
                 onChange={async (e) => {
                   const file = e.target.files?.[0];
                   if (!file) return;
-
-                  try {
-                    const text = await file.text();
-                    const rows = text.split('\n');
-                    const headers = rows[0].split(',');
-                    
-                    // Map CSV headers to column keys
-                    const headerMap = new Map(
-                      EXP_COLUMNS.map(col => [col.label.toLowerCase(), col.key])
-                    );
-
-                    const formattedRows = rows.slice(1).map(row => {
-                      const values = row.split(',');
-                      const rowData: any = { table_id: tableId };
-                      headers.forEach((header, index) => {
-                        const key = headerMap.get(header.toLowerCase().trim());
-                        if (key) {
-                          rowData[key] = Number(values[index]);
-                        }
-                      });
-                      return rowData;
-                    });
-
-                    // Insert rows into database
-                    const { error } = await supabase
-                      .from('exp_table')
-                      .insert(formattedRows);
-
-                    if (error) throw error;
-
-                    toast.success('Data imported successfully');
-                    fetchData(tableId || '');
-                  } catch (err: any) {
-                    console.error('Error importing data:', err);
-                    toast.error(err.message || 'Failed to import data');
-                  }
+                  setFileToImport(file);
+                  setIsImportDialogOpen(true);
                 }}
               />
               {data.length > 0 && (
@@ -1399,14 +1399,17 @@ export default function ExpTablePage() {
               )}
               <Popover>
                 <PopoverTrigger asChild>
-                  <Button variant="outline" className="h-9 w-9 p-0 relative">
+                  <Button 
+                    variant="outline"
+                    className="gap-2"
+                  >
                     <Filter className="h-4 w-4" />
+                    Filter
                     {Object.keys(filters).length > 0 && (
-                      <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-indigo-500 text-[10px] font-medium text-white flex items-center justify-center">
+                      <span className="flex h-4 w-4 items-center justify-center rounded-full bg-indigo-500 text-[10px] font-medium text-white">
                         {Object.keys(filters).length}
                       </span>
                     )}
-                    <span className="sr-only">Filter</span>
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-[600px] p-4">
@@ -1499,10 +1502,17 @@ export default function ExpTablePage() {
                   </div>
                 </PopoverContent>
               </Popover>
-
+              <Button
+                variant="outline"
+                onClick={() => fetchData(tableId || '')}
+                className="gap-2"
+              >
+                <RefreshCcw className="h-4 w-4" />
+                Refresh
+              </Button>
               <Button
                 onClick={() => setIsAddDialogOpen(true)}
-                className="bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white shadow-lg shadow-indigo-500/25 dark:shadow-indigo-900/50 transition-all duration-200"
+                className="bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white dark:text-white shadow-lg shadow-indigo-500/25 dark:shadow-indigo-900/50 transition-all duration-200"
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Add Row
@@ -1516,46 +1526,22 @@ export default function ExpTablePage() {
       <div className="container mx-auto px-4 py-6">
         <div className="rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-xl">
           <div className="overflow-x-auto">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white"></h2>
-              <div className="flex items-center space-x-4 mt-2 mr-2">
-                {selectedRows.size > 0 && (
-                  <Button 
-                    variant="destructive" 
-                    onClick={() => setIsBulkDeleteDialogOpen(true)}
-                    className="bg-red-500 hover:bg-red-600 dark:bg-red-700 dark:hover:bg-red-800"
-                  >
-                    Delete Selected ({selectedRows.size})
-                  </Button>
-                )}
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => fetchData(tableId || '')}
-                  className="h-8 w-8 p-0 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white"
-                >
-                  <RefreshCcw className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-
             <div className="relative">
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-800">
                   <thead>
                     <tr className="bg-gray-50/50 dark:bg-gray-800/50 backdrop-blur-sm">
-                      <th className="sticky left-0 z-10 bg-gray-50/50 dark:bg-gray-800/50 backdrop-blur-sm px-4 py-3 text-left">
-                        <input
-                          type="checkbox"
-                          className="rounded border-gray-300 text-indigo-500 focus:ring-indigo-500/50 dark:border-gray-600 dark:bg-gray-800 dark:checked:bg-indigo-500"
-                          checked={selectedRows.size === data.length && data.length > 0}
-                          onChange={(e) => {
-                            if (e.target.checked) {
+                      <th className="sticky left-0 z-20 bg-gray-50 dark:bg-gray-800 px-4 py-3 text-left">
+                        <Checkbox
+                          checked={data.length > 0 && selectedRows.size === data.length}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
                               setSelectedRows(new Set(data.map(row => row.id)));
                             } else {
                               setSelectedRows(new Set());
                             }
                           }}
+                          aria-label="Select all"
                         />
                       </th>
                       {EXP_COLUMNS.map((column) => (
@@ -1566,7 +1552,7 @@ export default function ExpTablePage() {
                           {column.label}
                         </th>
                       ))}
-                      <th className="sticky right-0 z-10 bg-gray-50/50 dark:bg-gray-800/50 backdrop-blur-sm px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">
+                      <th className="sticky right-0 z-20 bg-gray-50 dark:bg-gray-800 px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">
                         Actions
                       </th>
                     </tr>
@@ -1577,20 +1563,19 @@ export default function ExpTablePage() {
                         key={row.id} 
                         className="group hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors"
                       >
-                        <td className="sticky left-0 z-10 bg-white dark:bg-gray-900 group-hover:bg-gray-50/50 dark:group-hover:bg-gray-800/50 px-4 py-3 transition-colors">
-                          <input
-                            type="checkbox"
-                            className="rounded border-gray-300 text-indigo-500 focus:ring-indigo-500/50 dark:border-gray-600 dark:bg-gray-800 dark:checked:bg-indigo-500"
+                        <td className="sticky left-0 z-20 bg-white dark:bg-gray-900 group-hover:bg-gray-50 dark:group-hover:bg-gray-800 px-4 py-3">
+                          <Checkbox
                             checked={selectedRows.has(row.id)}
-                            onChange={(e) => {
+                            onCheckedChange={(checked) => {
                               const newSelected = new Set(selectedRows);
-                              if (e.target.checked) {
+                              if (checked) {
                                 newSelected.add(row.id);
                               } else {
                                 newSelected.delete(row.id);
                               }
                               setSelectedRows(newSelected);
                             }}
+                            aria-label={`Select row ${row.tblidx}`}
                           />
                         </td>
                         {EXP_COLUMNS.map((column) => (
@@ -1601,7 +1586,7 @@ export default function ExpTablePage() {
                             {row[column.key as keyof ExpTableRow]}
                           </td>
                         ))}
-                        <td className="sticky right-0 z-10 bg-white dark:bg-gray-900 group-hover:bg-gray-50/50 dark:group-hover:bg-gray-800/50 px-4 py-3 text-right whitespace-nowrap transition-colors">
+                        <td className="sticky right-0 z-20 bg-white dark:bg-gray-900 group-hover:bg-gray-50 dark:group-hover:bg-gray-800 px-4 py-3 text-right whitespace-nowrap">
                           <div className="flex items-center justify-end space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
                             <Button
                               variant="ghost"
@@ -1748,7 +1733,7 @@ export default function ExpTablePage() {
             <Button
               variant="destructive"
               onClick={() => rowToDelete && handleDeleteRow(rowToDelete.id)}
-              className="bg-red-500 hover:bg-red-600 text-white"
+              className="bg-red-500 hover:bg-red-600"
             >
               Delete
             </Button>
@@ -1782,6 +1767,33 @@ export default function ExpTablePage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Import Confirmation Dialog */}
+      <AlertDialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Import</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action will replace all existing data in the current table with the data from the imported file. 
+              This cannot be undone. Are you sure you want to continue?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setFileToImport(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={async () => {
+                if (fileToImport) {
+                  await handleImport(fileToImport);
+                  setFileToImport(null);
+                }
+              }}
+              className="bg-red-500 hover:bg-red-600"
+            >
+              Import
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <Toaster />
     </div>
