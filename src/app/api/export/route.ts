@@ -8,6 +8,7 @@ import { promisify } from 'util';
 import { EXPORT_COLUMNS, type TableName } from '@/config/export-columns';
 
 const execAsync = promisify(exec);
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 interface StorageFile {
   name: string;
@@ -16,6 +17,43 @@ interface StorageFile {
   created_at: string;
   last_accessed_at: string;
   metadata: any;
+}
+
+const LOCK_FILE = path.join(process.cwd(), 'exports', '.lock');
+const MAX_RETRIES = 60; // Maximum number of retries (60 * 1000ms = 60 seconds max wait)
+const RETRY_INTERVAL = 1000; // 1 second between retries
+
+async function acquireLock(): Promise<boolean> {
+  let retries = 0;
+  
+  while (retries < MAX_RETRIES) {
+    try {
+      // Try to create the lock file
+      const lockFileHandle = fs.openSync(LOCK_FILE, 'wx');
+      fs.closeSync(lockFileHandle);
+      return true;
+    } catch (error: any) {
+      // If file exists, wait and retry
+      if (error.code === 'EEXIST') {
+        await sleep(RETRY_INTERVAL);
+        retries++;
+        continue;
+      }
+      throw error;
+    }
+  }
+  
+  return false;
+}
+
+function releaseLock() {
+  try {
+    if (fs.existsSync(LOCK_FILE)) {
+      fs.unlinkSync(LOCK_FILE);
+    }
+  } catch (error) {
+    console.error('Error releasing lock:', error);
+  }
 }
 
 async function cleanupExistingFiles(supabase: any, userId: string, userDir: string) {
@@ -102,9 +140,21 @@ export async function POST(req: Request) {
     const csvPath = path.join(userDir, `${tableName}.csv`);
     fs.writeFileSync(csvPath, csvData);
 
-    // Execute the external program
-    const exePath = path.join(process.cwd(), 'exports', 'export.exe');
+    // Try to acquire the lock
+    const lockAcquired = await acquireLock();
+    if (!lockAcquired) {
+      // Clean up and return error if we couldn't get the lock
+      fs.unlinkSync(csvPath);
+      fs.rmdirSync(userDir);
+      return NextResponse.json(
+        { error: 'Server is busy, please try again later' },
+        { status: 503 }
+      );
+    }
+
     try {
+      // Execute the external program
+      const exePath = path.join(process.cwd(), 'exports', 'export.exe');
       await execAsync(`${exePath} ${tableName} ${userId}`);
     } catch (execError: any) {
       console.error('Execution error:', execError);
@@ -112,6 +162,9 @@ export async function POST(req: Request) {
         { error: 'Failed to process export' },
         { status: 500 }
       );
+    } finally {
+      // Always release the lock
+      releaseLock();
     }
 
     // Check if .rdf file was created
