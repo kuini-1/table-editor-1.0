@@ -789,12 +789,27 @@ export default function ExpTablePage() {
   };
 
   const fetchData = async (id: string, currentFilters = filters) => {
-    if (!id || !permissions[id]?.can_get) {
-      throw new Error('You do not have permission to view this table');
-    }
-
     try {
       setLoading(true);
+
+      // Get authenticated user data
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError) {
+        throw new Error('Failed to authenticate user');
+      }
+
+      // Fetch user profile if not already loaded
+      if (!userProfile) {
+        await fetchUserProfile();
+      }
+
+      const isOwner = userProfile?.data?.role === 'owner';
+      
+      // Only check permissions if not owner
+      if (!isOwner && !permissions[id]?.can_get) {
+        throw new Error('You do not have permission to view this table');
+      }
+
       let query = supabase
         .from('exp_table')
         .select('*', { count: 'exact' })
@@ -1285,12 +1300,19 @@ export default function ExpTablePage() {
         }),
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to export data');
+        throw new Error(data.details || data.error || 'Export failed');
       }
 
-      toast.success('Export started successfully');
+      if (data.success) {
+        toast.success('Export completed successfully');
+        // Optionally trigger download
+        window.open(data.downloadUrl, '_blank');
+      } else {
+        throw new Error('Export failed without error');
+      }
     } catch (error: any) {
       console.error('Export error:', error);
       toast.error(error.message || 'Failed to export data');

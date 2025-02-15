@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
+import { createClient as createServiceClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import fs from 'fs';
@@ -22,6 +23,33 @@ interface StorageFile {
 const LOCK_FILE = path.join(process.cwd(), 'exports', '.lock');
 const MAX_RETRIES = 60; // Maximum number of retries (60 * 1000ms = 60 seconds max wait)
 const RETRY_INTERVAL = 1000; // 1 second between retries
+
+function getServiceClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  
+  if (!supabaseUrl || !serviceRoleKey) {
+    throw new Error('Missing Supabase service role credentials');
+  }
+
+  return createServiceClient(supabaseUrl, serviceRoleKey);
+}
+
+async function verifyConvertExecutable() {
+  const exePath = path.join(process.cwd(), 'exports', 'Convert.exe');
+  
+  if (!fs.existsSync(exePath)) {
+    return false;
+  }
+
+  try {
+    const stats = fs.statSync(exePath);
+    fs.accessSync(exePath, fs.constants.X_OK);
+    return true;
+  } catch (error) {
+    return false;
+  }
+}
 
 async function acquireLock(): Promise<boolean> {
   let retries = 0;
@@ -85,42 +113,113 @@ async function cleanupExistingFiles(supabase: any, userId: string, userDir: stri
   }
 }
 
-export async function POST(req: Request) {
+async function ensureExportsBucket(supabase: any) {
   try {
-    const supabase = createClient();
-
-    // Get user session
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-    if (sessionError || !session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const serviceClient = getServiceClient();
+    
+    const { error: createError } = await serviceClient.storage.createBucket('exports', {
+      public: true,
+      fileSizeLimit: 50000000
+    });
+    
+    if (createError && 
+        !createError.message.includes('already exists') && 
+        !createError.message.includes('The resource already exists')) {
+      return false;
     }
 
-    const userId = session.user.id;
-    const { tableId, tableName } = await req.json();
+    const { error: updateError } = await serviceClient.storage.updateBucket('exports', {
+      public: true,
+      fileSizeLimit: 50000000
+    });
+    
+    if (updateError) {
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    return false;
+  }
+}
+
+export async function POST(req: Request) {
+  if (!await verifyConvertExecutable()) {
+    return NextResponse.json({
+      error: 'Server configuration error',
+      details: 'Conversion utility is not properly configured'
+    }, { status: 500 });
+  }
+
+  try {
+    const supabase = createClient();
+    
+    if (!await ensureExportsBucket(supabase)) {
+      return NextResponse.json({
+        error: 'Storage configuration error',
+        details: 'Failed to configure storage bucket'
+      }, { status: 500 });
+    }
+
+    // Get authenticated user data instead of session
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError) {
+      console.error('Authentication error:', userError);
+      return NextResponse.json({ 
+        error: 'Authentication failed', 
+        details: userError.message 
+      }, { status: 401 });
+    }
+    if (!user) {
+      return NextResponse.json({ 
+        error: 'No authenticated user found'
+      }, { status: 401 });
+    }
+
+    let body;
+    try {
+      body = await req.json();
+    } catch (parseError: any) {
+      return NextResponse.json({ 
+        error: 'Invalid request body',
+        details: parseError.message
+      }, { status: 400 });
+    }
+
+    const { tableId, tableName } = body;
 
     if (!tableId || !tableName) {
-      return NextResponse.json(
-        { error: 'Table ID and name are required' },
-        { status: 400 }
-      );
+      return NextResponse.json({
+        error: 'Missing required fields',
+        details: {
+          tableId: !tableId ? 'Table ID is required' : null,
+          tableName: !tableName ? 'Table name is required' : null
+        }
+      }, { status: 400 });
     }
 
     // Validate table name
     if (!(tableName in EXPORT_COLUMNS)) {
-      return NextResponse.json(
-        { error: 'Invalid table name' },
-        { status: 400 }
-      );
+      return NextResponse.json({
+        error: 'Invalid table configuration',
+        details: `Table "${tableName}" is not configured for export`
+      }, { status: 400 });
     }
 
-    // Clean up existing files
-    const userDir = path.join(process.cwd(), 'exports', userId);
-    await cleanupExistingFiles(supabase, userId, userDir);
+    // Ensure exports directory exists
+    const userDir = path.join(process.cwd(), 'exports', user.id);
+    try {
+      await cleanupExistingFiles(supabase, user.id, userDir);
+      fs.mkdirSync(userDir, { recursive: true });
+    } catch (fsError: any) {
+      console.error('File system error:', fsError);
+      return NextResponse.json({
+        error: 'Failed to prepare export directory',
+        details: fsError.message
+      }, { status: 500 });
+    }
 
-    // Create user directory
-    fs.mkdirSync(userDir, { recursive: true });
-
-    // Get CSV from Supabase with only specified columns for the table
+    // Get CSV data
     const columns = EXPORT_COLUMNS[tableName as TableName].join(',');
     const { data: csvData, error: csvError } = await supabase
       .from(tableName)
@@ -129,92 +228,156 @@ export async function POST(req: Request) {
       .csv();
 
     if (csvError) {
-      console.error('Supabase CSV error:', csvError);
-      return NextResponse.json(
-        { error: 'Failed to generate CSV' },
-        { status: 500 }
-      );
+      console.error('CSV generation error:', csvError);
+      return NextResponse.json({
+        error: 'Failed to generate CSV',
+        details: csvError.message
+      }, { status: 500 });
     }
 
-    // Write CSV to file
-    const csvPath = path.join(userDir, `${tableName}.csv`);
-    fs.writeFileSync(csvPath, csvData);
+    if (!csvData) {
+      return NextResponse.json({
+        error: 'No data found',
+        details: 'The query returned no results'
+      }, { status: 404 });
+    }
 
-    // Try to acquire the lock
+    // Write CSV file
+    const csvPath = path.join(userDir, `${tableName}.csv`);
+    try {
+      fs.writeFileSync(csvPath, csvData);
+    } catch (writeError: any) {
+      console.error('File write error:', writeError);
+      return NextResponse.json({
+        error: 'Failed to write CSV file',
+        details: writeError.message
+      }, { status: 500 });
+    }
+
+    // Verify CSV file
+    try {
+      const csvContent = fs.readFileSync(csvPath, 'utf8');
+      const csvLines = csvContent.trim().split('\n');
+      
+      if (csvLines.length < 2) { // At least header + one data row
+        throw new Error('CSV file has insufficient data');
+      }
+    } catch (csvError: any) {
+      console.error('CSV verification failed:', csvError);
+      return NextResponse.json({
+        error: 'Invalid CSV data',
+        details: csvError.message
+      }, { status: 500 });
+    }
+
+    // Acquire lock
     const lockAcquired = await acquireLock();
     if (!lockAcquired) {
-      // Clean up and return error if we couldn't get the lock
-      fs.unlinkSync(csvPath);
-      fs.rmdirSync(userDir);
-      return NextResponse.json(
-        { error: 'Server is busy, please try again later' },
-        { status: 503 }
-      );
+      try {
+        // Clean up if lock fails
+        fs.unlinkSync(csvPath);
+        fs.rmdirSync(userDir);
+      } catch (cleanupError: any) {
+        console.error('Cleanup error after lock failure:', cleanupError);
+      }
+      return NextResponse.json({
+        error: 'Server is busy',
+        details: 'Could not acquire lock for conversion process. Please try again later.'
+      }, { status: 503 });
     }
 
     try {
-      // Execute the external program
-      const exePath = path.join(process.cwd(), 'exports', 'export.exe');
-      await execAsync(`${exePath} ${tableName} ${userId}`);
-    } catch (execError: any) {
-      console.error('Execution error:', execError);
-      return NextResponse.json(
-        { error: 'Failed to process export' },
-        { status: 500 }
-      );
+      // Execute conversion
+      const exePath = path.join(process.cwd(), 'exports', 'Convert.exe');
+      const workingDir = path.join(process.cwd(), 'exports');
+      
+      if (!fs.existsSync(exePath)) {
+        throw new Error(`Conversion executable not found at: ${exePath}`);
+      }
+
+      try {
+        // Execute with output capture and working directory set
+        const { stdout, stderr } = await execAsync(
+          `"${exePath}" "${tableName}" "${user.id}" "rdf"`, 
+          { 
+            cwd: workingDir,
+            env: {
+              ...process.env,
+              PATH: `${workingDir};${process.env.PATH}`,
+              CSV_PATH: csvPath, // Pass CSV path as environment variable
+              OUTPUT_DIR: userDir // Pass output directory as environment variable
+            }
+          }
+        );
+      } catch (execError: any) {
+        console.error('Conversion execution error:', execError);
+        // Log more details about the error
+        if (execError.code) console.error('Exit code:', execError.code);
+        if (execError.signal) console.error('Signal:', execError.signal);
+        if (execError.killed) console.error('Process was killed');
+        throw new Error(`Conversion process failed: ${execError.message}`);
+      }
+
+      // Verify RDF file was created
+      const rdfPath = path.join(userDir, `${tableName}.rdf`);
+      
+      if (!fs.existsSync(rdfPath)) {
+        throw new Error(`RDF file was not generated at expected path: ${rdfPath}`);
+      }
+
+      // Check file size to ensure it's not empty
+      const stats = fs.statSync(rdfPath);
+      if (stats.size === 0) {
+        throw new Error('RDF file was generated but is empty');
+      }
+
+      // Upload to storage
+      const rdfContent = fs.readFileSync(rdfPath);
+      const storagePath = `${user.id}/${tableName}.rdf`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('exports')
+        .upload(storagePath, rdfContent, {
+          contentType: 'application/octet-stream',
+          upsert: true
+        });
+
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      // Get the public URL for the uploaded file
+      const { data: { publicUrl } } = supabase.storage
+        .from('exports')
+        .getPublicUrl(storagePath);
+
+      // Clean up local files
+      fs.unlinkSync(csvPath);
+      fs.unlinkSync(rdfPath);
+      fs.rmdirSync(userDir);
+
+      return NextResponse.json({ 
+        success: true,
+        filePath: storagePath,
+        downloadUrl: publicUrl
+      });
+
+    } catch (processError: any) {
+      console.error('Processing error:', processError);
+      return NextResponse.json({
+        error: 'Export processing failed',
+        details: processError.message
+      }, { status: 500 });
     } finally {
-      // Always release the lock
       releaseLock();
     }
 
-    // Check if .rdf file was created
-    const rdfPath = path.join(userDir, `${tableName}.rdf`);
-    if (!fs.existsSync(rdfPath)) {
-      return NextResponse.json(
-        { error: 'RDF file was not generated' },
-        { status: 500 }
-      );
-    }
-
-    // Upload .rdf file to Supabase Storage
-    const rdfContent = fs.readFileSync(rdfPath);
-    const storagePath = `${userId}/${tableName}.rdf`;
-    
-    const { error: uploadError } = await supabase.storage
-      .from('exports')
-      .upload(storagePath, rdfContent, {
-        contentType: 'application/octet-stream',
-        upsert: true
-      });
-
-    if (uploadError) {
-      console.error('Storage upload error:', uploadError);
-      return NextResponse.json(
-        { error: 'Failed to upload RDF file' },
-        { status: 500 }
-      );
-    }
-
-    // Get the public URL for the uploaded file
-    const { data: { publicUrl } } = supabase.storage
-      .from('exports')
-      .getPublicUrl(storagePath);
-
-    // Clean up local files
-    fs.unlinkSync(csvPath);
-    fs.unlinkSync(rdfPath);
-    fs.rmdirSync(userDir);
-
-    return NextResponse.json({ 
-      success: true,
-      filePath: storagePath,
-      downloadUrl: publicUrl
-    });
   } catch (error: any) {
-    console.error('Export error:', error);
-    return NextResponse.json(
-      { error: error.message || 'Internal server error' },
-      { status: 500 }
-    );
+    console.error('Unexpected export error:', error);
+    return NextResponse.json({
+      error: 'Internal server error',
+      details: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    }, { status: 500 });
   }
 } 
