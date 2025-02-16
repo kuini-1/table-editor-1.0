@@ -813,13 +813,8 @@ export default function ExpTablePage() {
         throw new Error('Failed to authenticate user');
       }
 
-      // Fetch user profile if not already loaded
-      if (!userProfile) {
-        await fetchUserProfile();
-      }
-
       const isOwner = userProfile?.data?.role === 'owner';
-      
+
       // Only check permissions if not owner
       if (!isOwner && !permissions[id]?.can_get) {
         throw new Error('You do not have permission to view this table');

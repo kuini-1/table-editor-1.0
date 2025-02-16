@@ -15,7 +15,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useRouter } from 'next/navigation';
-
+import { useStore } from '@/lib/store';
 interface ProfileResponse {
   email: string;
   full_name: string | null;
@@ -207,89 +207,6 @@ interface SubOwnerWithProfileResponse {
   can_delete: boolean;
 }
 
-// Add test data for tables
-const TEST_TABLES: Table[] = [
-  {
-    id: '1',
-    name: 'Expenses 2024',
-    type: 'exp',
-    owner_id: '1',
-    permissions: {
-      can_get: true,
-      can_put: true,
-      can_post: true,
-      can_delete: true
-    }
-  },
-  {
-    id: '2',
-    name: 'Merchant List',
-    type: 'merchant',
-    owner_id: '1',
-    permissions: {
-      can_get: true,
-      can_put: false,
-      can_post: false,
-      can_delete: false
-    }
-  },
-  {
-    id: '3',
-    name: 'Items Inventory',
-    type: 'item',
-    owner_id: '1',
-    permissions: {
-      can_get: true,
-      can_put: true,
-      can_post: true,
-      can_delete: false
-    }
-  }
-];
-
-// Add test data for sub-accounts
-const TEST_SUB_ACCOUNTS: SubOwnerPermission[] = [
-  {
-    id: '1',
-    table_id: '1',
-    sub_owner_id: '1',
-    can_get: true,
-    can_put: true,
-    can_post: false,
-    can_delete: false,
-    profile: {
-      email: 'john.doe@example.com',
-      full_name: 'John Doe'
-    }
-  },
-  {
-    id: '2',
-    table_id: '1',
-    sub_owner_id: '2',
-    can_get: true,
-    can_put: false,
-    can_post: false,
-    can_delete: false,
-    profile: {
-      email: 'jane.smith@example.com',
-      full_name: 'Jane Smith'
-    }
-  },
-  {
-    id: '3',
-    table_id: '1',
-    sub_owner_id: '3',
-    can_get: true,
-    can_put: true,
-    can_post: true,
-    can_delete: true,
-    profile: {
-      email: 'mike.wilson@example.com',
-      full_name: 'Mike Wilson'
-    }
-  }
-];
-
 export default function TablesPage() {
   const [tables, setTables] = useState<DatabaseTable[]>([]);
   const [loading, setLoading] = useState(true);
@@ -306,6 +223,11 @@ export default function TablesPage() {
   const [hasMoreLogs, setHasMoreLogs] = useState(true);
   const activityLogRef = useRef<HTMLDivElement>(null);
 
+  const {
+    userProfile,
+    fetchUserProfile,
+  } = useStore();
+
   const CACHE_DURATION = {
     TABLES: 5 * 60 * 1000, // 5 minutes
     ACTIVITY_LOGS: 2 * 60 * 1000, // 2 minutes
@@ -313,7 +235,13 @@ export default function TablesPage() {
   };
 
   useEffect(() => {
-    fetchUserAndTables();
+    const initProfile = async () => {
+      fetchUserAndTables();
+      if (!userProfile) {
+        await fetchUserProfile();
+      }
+    };
+    initProfile();
   }, []);
 
   useEffect(() => {
