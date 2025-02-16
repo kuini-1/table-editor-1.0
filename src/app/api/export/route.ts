@@ -6,7 +6,6 @@ import fs from 'fs';
 import path from 'path';
 import { exec } from 'child_process';
 import { promisify } from 'util';
-import { EXPORT_COLUMNS, type TableName } from '@/config/export-columns';
 
 const execAsync = promisify(exec);
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -198,14 +197,6 @@ export async function POST(req: Request) {
       }, { status: 400 });
     }
 
-    // Validate table name
-    if (!(tableName in EXPORT_COLUMNS)) {
-      return NextResponse.json({
-        error: 'Invalid table configuration',
-        details: `Table "${tableName}" is not configured for export`
-      }, { status: 400 });
-    }
-
     // Ensure exports directory exists
     const userDir = path.join(process.cwd(), 'exports', user.id);
     try {
@@ -220,10 +211,9 @@ export async function POST(req: Request) {
     }
 
     // Get CSV data
-    const columns = EXPORT_COLUMNS[tableName as TableName].join(',');
     const { data: csvData, error: csvError } = await supabase
       .from(tableName)
-      .select(columns)
+      .select('*')
       .eq('table_id', tableId)
       .csv();
 
