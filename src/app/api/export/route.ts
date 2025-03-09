@@ -142,7 +142,15 @@ async function ensureExportsBucket(supabase: any) {
   }
 }
 
-export async function POST(req: Request) {
+export async function GET(req: Request) {
+  const { searchParams } = new URL(req.url);
+  const table = searchParams.get('table');
+  const tableId = searchParams.get('table_id');
+
+  if (!table || !tableId) {
+    return NextResponse.json({ error: 'Missing required parameters' }, { status: 400 });
+  }
+
   if (!await verifyConvertExecutable()) {
     return NextResponse.json({
       error: 'Server configuration error',

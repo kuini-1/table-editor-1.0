@@ -33,28 +33,31 @@ Finally, you should always use the official documentation of the library you are
 - Always check the official documentation first before implementing complex solutions.
 - Cache user profile and permission data to reduce redundant API calls.
 - Use state management for shared data across components.
+- When implementing filter functionality, ensure proper handling of different data types (text, number, boolean) with appropriate UI controls and database query methods.
+- For boolean fields in forms, use Checkbox components instead of text inputs for better user experience.
+- When adding new column types, update all relevant interfaces and components to maintain type safety.
+- When adding a new type to an interface, ensure it's consistently added to all related interfaces across components to avoid type errors.
 
 # Scratchpad
 
-Current Task: Fix Filter Application
+Current Task: Create Item Table Page
 
 Task Description:
-The filter functionality is not working correctly. When a user adds a filter, the table data is not being updated to reflect the filter.
+Create a new page for the item table similar to the exp page, with appropriate schema validation, form layout, and functionality.
 
 Areas to Check:
-[ ] Filter state management
-[ ] Filter application in fetchData function
-[ ] Column type handling (numeric vs text)
-[ ] Immediate data refresh after filter application
+[ ] Examine exp page structure
+[ ] Create item schema with Zod validation
+[ ] Organize columns into logical sections/tabs
+[ ] Implement CRUD operations
+[ ] Set up import/export functionality
 
-Steps to Fix:
-[ ] Review handleAddFilter function
-[ ] Check if filters are properly passed to fetchData
-[ ] Verify filter value type conversion
-[ ] Ensure immediate data refresh
-[ ] Test filter application with different column types
+Steps to Create:
+[ ] Create folder structure for item page
+[ ] Define Zod schema for item table
+[ ] Create page component with appropriate layout
+[ ] Organize form fields into logical tabs and sections
+[ ] Implement data fetching and manipulation
+[ ] Test CRUD operations
 
-Progress:
-[ ] Initial analysis of filter functionality
-[ ] Fix filter application logic
-[ ] Test and verify filter works
+The item table has many columns including several boolean fields that will need proper styling with our updated checkbox components.

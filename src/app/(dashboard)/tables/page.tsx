@@ -217,6 +217,7 @@ export default function TablesPage() {
   const [userRole, setUserRole] = useState<string>('');
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
   const [cachedTables, setCachedTables] = useState<CachedTables | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
   const router = useRouter();
   const supabase = createClient();
   const [isLoadingMoreLogs, setIsLoadingMoreLogs] = useState(false);
@@ -679,6 +680,11 @@ export default function TablesPage() {
     }
   };
 
+  // Filter tables based on search term
+  const filteredTables = tables.filter(table => 
+    table.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4">
@@ -707,18 +713,50 @@ export default function TablesPage() {
             {/* Tables Section */}
             <div className="lg:col-span-2">
               <div className="bg-white dark:bg-gray-800 shadow-md rounded-lg overflow-hidden">
-                <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
-                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Tables</h2>
-                  <div className="flex space-x-2">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => fetchUserAndTables()}
-                      className="h-8 w-8 p-0"
-                    >
-                      <RefreshCcw className="h-4 w-4" />
-                      <span className="sr-only">Refresh</span>
-                    </Button>
+                <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                  <div className="flex justify-between items-center mb-4">
+                    <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Tables</h2>
+                    <div className="flex space-x-2">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => fetchUserAndTables()}
+                        className="h-8 w-8 p-0"
+                      >
+                        <RefreshCcw className="h-4 w-4" />
+                        <span className="sr-only">Refresh</span>
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      placeholder="Search tables..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="w-full h-10 px-3 pr-10 bg-gray-50 dark:bg-gray-800/50 border-2 border-gray-200 dark:border-gray-700 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-transparent text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
+                    />
+                    {searchTerm && (
+                      <button
+                        onClick={() => setSearchTerm('')}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors duration-200"
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-4 w-4 text-gray-500 dark:text-gray-400"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <line x1="18" y1="6" x2="6" y2="18" />
+                          <line x1="6" y1="6" x2="18" y2="18" />
+                        </svg>
+                        <span className="sr-only">Clear search</span>
+                      </button>
+                    )}
                   </div>
                 </div>
                 
@@ -738,7 +776,7 @@ export default function TablesPage() {
                       </tr>
                     </thead>
                     <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                      {tables.map((table) => (
+                      {filteredTables.map((table) => (
                         <tr 
                           key={table.id} 
                           className={`hover:bg-gray-50/80 dark:hover:bg-gray-700/50 cursor-pointer ${
@@ -806,7 +844,7 @@ export default function TablesPage() {
             </div>
 
             {/* Activity Log Section */}
-            <div className="lg:col-span-1">
+            <div className="lg:col-span-1 xl:fixed xl:w-[350px] xl:right-[30px]">
               <div className="bg-white dark:bg-gray-800 shadow-md rounded-lg overflow-hidden">
                 <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
                   <div className="flex justify-between items-center">
@@ -840,9 +878,9 @@ export default function TablesPage() {
                   {selectedTable ? (
                     activityLogs.length > 0 ? (
                       <div className="space-y-3">
-                        {activityLogs.map((log) => (
+                        {activityLogs.map((log, index) => (
                           <div 
-                            key={log.id} 
+                            key={`${log.id}-${log.created_at}-${index}`} 
                             className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg"
                           >
                             <div className="flex items-center gap-3 mb-2">

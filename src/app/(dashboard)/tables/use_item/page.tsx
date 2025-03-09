@@ -18,13 +18,13 @@ import { TablePagination } from '@/components/table/TablePagination';
 import { DataTable } from "@/components/table/DataTable";
 import { DeleteDialog, ImportDialog } from '@/components/table/TableDialogs';
 import { useStore } from "@/lib/store";
-import { merchantSchema } from "./schema";
-import MerchantForm from "./MerchantForm";
+import { useItemSchema } from "./schema";
+import UseItemForm from "./UseItemForm";
 import { ErrorDisplay } from '@/components/ErrorDisplay';
 
-type MerchantFormData = z.infer<typeof merchantSchema>;
+type UseItemFormData = z.infer<typeof useItemSchema>;
 
-interface MerchantRow extends MerchantFormData {
+interface UseItemRow extends UseItemFormData {
   id: string;
 }
 
@@ -34,41 +34,33 @@ type FormMode = 'add' | 'edit' | 'duplicate';
 const formTheme = {
   title: {
     text: {
-      add: "Add New Merchant",
-      edit: "Edit Merchant",
-      duplicate: "Duplicate Merchant"
+      add: "Add New Use Item",
+      edit: "Edit Use Item",
+      duplicate: "Duplicate Use Item"
     }
   },
   description: {
     text: {
-      add: "Add a new merchant to the database.",
-      edit: "Edit the selected merchant's details.",
-      duplicate: "Create a new merchant based on the selected one."
+      add: "Add a new use item to the database.",
+      edit: "Edit the selected use item's details.",
+      duplicate: "Create a new use item based on the selected one."
     }
-  },
-  button: {
-    text: {
-      add: "Add Merchant",
-      edit: "Save Changes",
-      duplicate: "Duplicate Entry"
-    },
-    className: "flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700",
   },
 } as const;
 
-export default function MerchantPage() {
+export default function UseItemPage() {
   const searchParams = useSearchParams();
   const tableId = searchParams.get('id') || '';
   const { userProfile } = useStore();
   const selectedTable = userProfile?.data?.id === tableId ? {
     id: tableId,
-    name: 'Merchant Table',
-    type: 'merchant',
+    name: 'Use Item Table',
+    type: 'use_item',
   } : undefined;
   
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [formMode, setFormMode] = useState<FormMode>('add');
-  const [selectedRow, setSelectedRow] = useState<MerchantRow | null>(null);
+  const [selectedRow, setSelectedRow] = useState<UseItemRow | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
 
@@ -78,59 +70,52 @@ export default function MerchantPage() {
       key: "tblidx",
       label: "ID",
       type: "number" as const,
-      validation: merchantSchema.shape.tblidx,
+      validation: useItemSchema.shape.tblidx,
     },
     {
-      key: "wsznametext",
-      label: "Name",
+      key: "byuse_item_active_type",
+      label: "Active Type",
+      type: "number" as const,
+      validation: useItemSchema.shape.byuse_item_active_type,
+    },
+    {
+      key: "bybuff_group",
+      label: "Buff Group",
+      type: "number" as const,
+      validation: useItemSchema.shape.bybuff_group,
+    },
+    {
+      key: "bybuffkeeptype",
+      label: "Buff Keep Type",
+      type: "number" as const,
+      validation: useItemSchema.shape.bybuffkeeptype,
+    },
+    {
+      key: "use_info_text",
+      label: "Info Text",
       type: "text" as const,
-      validation: merchantSchema.shape.wsznametext,
+      validation: useItemSchema.shape.use_info_text,
     },
     {
-      key: "bysell_type",
-      label: "Sell Type",
+      key: "dwcool_time",
+      label: "Cool Time",
       type: "number" as const,
-      validation: merchantSchema.shape.bysell_type,
+      validation: useItemSchema.shape.dwcool_time,
     },
     {
-      key: "tab_name",
-      label: "Tab Name",
-      type: "text" as const,
-      validation: merchantSchema.shape.tab_name,
-    },
-    {
-      key: "dwneedmileage",
-      label: "Need Mileage",
+      key: "dwkeep_time",
+      label: "Keep Time",
       type: "number" as const,
-      validation: merchantSchema.shape.dwneedmileage,
+      validation: useItemSchema.shape.dwkeep_time,
     },
     {
-      key: "aitem_tblidx_0",
-      label: "Item 1 ID",
+      key: "byuse_range_max",
+      label: "Use Range Max",
       type: "number" as const,
-      validation: merchantSchema.shape.aitem_tblidx_0,
-    },
-    {
-      key: "aneeditemtblidx_0",
-      label: "Need Item 1 ID",
-      type: "number" as const,
-      validation: merchantSchema.shape.aneeditemtblidx_0,
-    },
-    {
-      key: "abyneeditemstack_0",
-      label: "Need Item 1 Stack",
-      type: "number" as const,
-      validation: merchantSchema.shape.abyneeditemstack_0,
-    },
-    {
-      key: "adwneedzenny_0",
-      label: "Need Zenny 1",
-      type: "number" as const,
-      validation: merchantSchema.shape.adwneedzenny_0,
+      validation: useItemSchema.shape.byuse_range_max,
     },
   ];
 
-  // Use the custom hook to fetch and manage data
   const {
     data,
     loading,
@@ -150,15 +135,14 @@ export default function MerchantPage() {
     handlePageSizeChange,
     handleRowSelection,
     refreshData,
-  } = useTableData<MerchantRow>({
+  } = useTableData<UseItemRow>({
     config: {
-      tableName: "table_merchant_data",
+      tableName: "table_use_item_data",
       columns,
     },
     tableId,
   });
 
-  // Handle import dialog
   const handleImport = () => {
     const input = document.createElement('input');
     input.type = 'file';
@@ -172,7 +156,6 @@ export default function MerchantPage() {
     input.click();
   };
 
-  // Handle import confirmation
   const handleImportConfirm = async (file: File) => {
     if (!file) {
       toast.error("Please select a file to import");
@@ -182,7 +165,7 @@ export default function MerchantPage() {
     try {
       const formData = new FormData();
       formData.append("file", file);
-      formData.append("tableName", "merchant");
+      formData.append("tableName", "use_item");
       formData.append("tableId", tableId);
 
       const response = await fetch("/api/import", {
@@ -204,11 +187,10 @@ export default function MerchantPage() {
     }
   };
 
-  // Handle export
   const handleExport = async () => {
     try {
       const response = await fetch(
-        `/api/export?table=merchant&table_id=${tableId}`,
+        `/api/export?table=use_item&table_id=${tableId}`,
         {
           method: "GET",
         }
@@ -219,22 +201,11 @@ export default function MerchantPage() {
         throw new Error(errorData.error || "Failed to export data");
       }
 
-      // Get the filename from the Content-Disposition header if available
-      const contentDisposition = response.headers.get("Content-Disposition");
-      let filename = "merchant_export.csv";
-      if (contentDisposition) {
-        const filenameMatch = contentDisposition.match(/filename="(.+)"/);
-        if (filenameMatch && filenameMatch[1]) {
-          filename = filenameMatch[1];
-        }
-      }
-
-      // Create a blob from the response and download it
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = filename;
+      a.download = `use_item_export.csv`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -261,8 +232,8 @@ export default function MerchantPage() {
   return (
     <div className="min-h-screen bg-gray-900">
       <TableHeader
-        title={selectedTable?.name || 'Merchant Table'}
-        description="Manage merchants and their items"
+        title={selectedTable?.name || 'Use Item Table'}
+        description="Manage use items and their properties"
         columns={columns}
         filters={filters}
         selectedCount={selectedRows.size}
@@ -304,7 +275,7 @@ export default function MerchantPage() {
           }}
           onDuplicate={(row) => {
             const { id, ...rest } = row;
-            setSelectedRow({ ...rest, id: '' } as MerchantRow);
+            setSelectedRow({ ...rest, id: '' } as UseItemRow);
             setFormMode('duplicate');
             setIsFormOpen(true);
           }}
@@ -323,7 +294,6 @@ export default function MerchantPage() {
         onPageSizeChange={handlePageSizeChange}
       />
 
-      {/* Merchant Form */}
       <Sheet open={isFormOpen} onOpenChange={setIsFormOpen}>
         <SheetContent 
           side="right" 
@@ -337,7 +307,7 @@ export default function MerchantPage() {
               {formTheme.description.text[formMode]}
             </SheetDescription>
           </SheetHeader>
-          <MerchantForm
+          <UseItemForm
             open={isFormOpen}
             onOpenChange={setIsFormOpen}
             mode={formMode === 'duplicate' ? 'add' : formMode}
@@ -345,15 +315,15 @@ export default function MerchantPage() {
             onSubmit={(data) => {
               switch (formMode) {
                 case 'add':
-                  handleAddRow(data as MerchantRow);
+                  handleAddRow(data as UseItemRow);
                   break;
                 case 'edit':
                   if (selectedRow?.id) {
-                    handleEditRow(selectedRow.id, data as MerchantRow);
+                    handleEditRow(selectedRow.id, data as UseItemRow);
                   }
                   break;
                 case 'duplicate':
-                  handleAddRow(data as MerchantRow);
+                  handleAddRow(data as UseItemRow);
                   break;
               }
               setIsFormOpen(false);
@@ -362,15 +332,6 @@ export default function MerchantPage() {
         </SheetContent>
       </Sheet>
 
-      {/* Import Dialog */}
-      <ImportDialog
-        isOpen={isImportDialogOpen}
-        onClose={() => setIsImportDialogOpen(false)}
-        onImport={handleImportConfirm}
-        file={null}
-      />
-
-      {/* Delete Confirmation Dialog */}
       <DeleteDialog
         isOpen={isDeleteDialogOpen}
         onClose={() => setIsDeleteDialogOpen(false)}
@@ -380,7 +341,14 @@ export default function MerchantPage() {
             setIsDeleteDialogOpen(false);
           }
         }}
-        itemName={selectedRow?.wsznametext || "this merchant"}
+        itemName={`Use Item ${selectedRow?.tblidx || ""}`}
+      />
+
+      <ImportDialog
+        isOpen={isImportDialogOpen}
+        onClose={() => setIsImportDialogOpen(false)}
+        onImport={handleImportConfirm}
+        file={null}
       />
     </div>
   );

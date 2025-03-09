@@ -84,56 +84,6 @@ export default function RegisterPage() {
 
         if (ownerError) throw ownerError;
 
-        const { data: ownerData } = await supabase
-          .from('owners')
-          .select('id')
-          .eq('profile_id', data.user.id)
-          .single();
-
-        if (ownerData) {
-          const tableTypes = ['exp', 'merchant', 'item'];
-          const tablesToCreate = tableTypes.map((type) => ({
-            name: `${type.charAt(0).toUpperCase() + type.slice(1)} Table`,
-            type,
-            owner_id: ownerData.id,
-          }));
-
-          const { data: tablesData, error: tablesError } = await supabase
-            .from('tables')
-            .insert(tablesToCreate)
-            .select();
-
-          if (tablesError) throw tablesError;
-
-          if (tablesData) {
-            const { data: subOwners, error: subOwnersError } = await supabase
-              .from('sub_owners')
-              .select('id')
-              .eq('owner_id', ownerData.id);
-
-            if (subOwnersError) throw subOwnersError;
-
-            if (subOwners && subOwners.length > 0) {
-              const defaultPermissions = tablesData.flatMap(table => 
-                subOwners.map(subOwner => ({
-                  table_id: table.id,
-                  sub_owner_id: subOwner.id,
-                  can_get: false,
-                  can_put: false,
-                  can_post: false,
-                  can_delete: false
-                }))
-              );
-
-              const { error: permissionsError } = await supabase
-                .from('sub_owner_permissions')
-                .insert(defaultPermissions);
-
-              if (permissionsError) throw permissionsError;
-            }
-          }
-        }
-
         router.push(`/verify-email?email=${encodeURIComponent(email)}`);
       }
     } catch (err: any) {

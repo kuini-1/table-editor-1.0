@@ -1,9 +1,9 @@
-"use client";
+'use client';
+
 import { useState } from "react";
 import { z } from "zod";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
-import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -12,22 +12,19 @@ import {
   SheetTitle,
   SheetDescription,
 } from "@/components/ui/sheet";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { DataTable } from "@/components/table/DataTable";
 import { useTableData } from "@/hooks/useTableData";
 import { TableHeader } from '@/components/table/TableHeader';
 import { TablePagination } from '@/components/table/TablePagination';
+import { DataTable } from "@/components/table/DataTable";
 import { DeleteDialog, ImportDialog } from '@/components/table/TableDialogs';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useStore } from "@/lib/store";
-import { itemTableSchema } from "./schema";
-import ItemForm from "./ItemForm";
+import { skillSchema } from "./schema";
+import SkillForm from "./SkillForm";
 import { ErrorDisplay } from '@/components/ErrorDisplay';
 
-type ItemTableFormData = z.infer<typeof itemTableSchema>;
+type SkillFormData = z.infer<typeof skillSchema>;
 
-interface ItemTableRow extends ItemTableFormData {
+interface SkillRow extends SkillFormData {
   id: string;
 }
 
@@ -37,21 +34,21 @@ type FormMode = 'add' | 'edit' | 'duplicate';
 const formTheme = {
   title: {
     text: {
-      add: "Add New Item",
-      edit: "Edit Item",
-      duplicate: "Duplicate Item"
+      add: "Add New Skill",
+      edit: "Edit Skill",
+      duplicate: "Duplicate Skill"
     }
   },
   description: {
     text: {
-      add: "Add a new item to the database.",
-      edit: "Edit the selected item's details.",
-      duplicate: "Create a new item based on the selected one."
+      add: "Add a new skill to the database.",
+      edit: "Edit the selected skill's details.",
+      duplicate: "Create a new skill based on the selected one."
     }
   },
   button: {
     text: {
-      add: "Add Item",
+      add: "Add Skill",
       edit: "Save Changes",
       duplicate: "Duplicate Entry"
     },
@@ -59,24 +56,21 @@ const formTheme = {
   },
 } as const;
 
-export default function ItemTablePage() {
-  const router = useRouter();
+export default function SkillPage() {
   const searchParams = useSearchParams();
   const tableId = searchParams.get('id') || '';
   const { userProfile } = useStore();
   const selectedTable = userProfile?.data?.id === tableId ? {
     id: tableId,
-    name: 'Item Table',
-    type: 'item',
+    name: 'Skill Table',
+    type: 'skill',
   } : undefined;
   
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [formMode, setFormMode] = useState<FormMode>('add');
-  const [selectedRow, setSelectedRow] = useState<ItemTableRow | null>(null);
+  const [selectedRow, setSelectedRow] = useState<SkillRow | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
-  const [importFile, setImportFile] = useState<File | null>(null);
-  const [isImporting, setIsImporting] = useState(false);
 
   // Define columns for the data table
   const columns = [
@@ -84,266 +78,61 @@ export default function ItemTablePage() {
       key: "tblidx",
       label: "ID",
       type: "number" as const,
-      validation: itemTableSchema.shape.tblidx,
+      validation: skillSchema.shape.tblidx,
     },
     {
-      key: "name",
-      label: "Name",
+      key: "skill_name",
+      label: "Skill Name",
       type: "text" as const,
-      validation: itemTableSchema.shape.name,
+      validation: skillSchema.shape.skill_name,
     },
     {
       key: "wsznametext",
       label: "Display Name",
       type: "text" as const,
-      validation: itemTableSchema.shape.wsznametext,
+      validation: skillSchema.shape.wsznametext,
+    },
+    {
+      key: "byskill_class",
+      label: "Skill Class",
+      type: "number" as const,
+      validation: skillSchema.shape.byskill_class,
+    },
+    {
+      key: "byskill_type",
+      label: "Skill Type",
+      type: "number" as const,
+      validation: skillSchema.shape.byskill_type,
+    },
+    {
+      key: "byskill_active_type",
+      label: "Active Type",
+      type: "number" as const,
+      validation: skillSchema.shape.byskill_active_type,
+    },
+    {
+      key: "byskill_grade",
+      label: "Grade",
+      type: "number" as const,
+      validation: skillSchema.shape.byskill_grade,
+    },
+    {
+      key: "byrequire_train_level",
+      label: "Required Level",
+      type: "number" as const,
+      validation: skillSchema.shape.byrequire_train_level,
+    },
+    {
+      key: "bvalidity_able",
+      label: "Validity",
+      type: "number" as const,
+      validation: skillSchema.shape.bvalidity_able,
     },
     {
       key: "szicon_name",
-      label: "Icon Name",
+      label: "Icon",
       type: "text" as const,
-      validation: itemTableSchema.shape.szicon_name,
-    },
-    {
-      key: "byitem_type",
-      label: "Item Type",
-      type: "number" as const,
-      validation: itemTableSchema.shape.byitem_type,
-    },
-    {
-      key: "byequip_type",
-      label: "Equip Type",
-      type: "number" as const,
-      validation: itemTableSchema.shape.byequip_type,
-    },
-    {
-      key: "byrank",
-      label: "Rank",
-      type: "number" as const,
-      validation: itemTableSchema.shape.byrank,
-    },
-    {
-      key: "dwcost",
-      label: "Cost",
-      type: "number" as const,
-      validation: itemTableSchema.shape.dwcost,
-    },
-    {
-      key: "dwsell_price",
-      label: "Sell Price",
-      type: "number" as const,
-      validation: itemTableSchema.shape.dwsell_price,
-    },
-    {
-      key: "bvalidity_able",
-      label: "Valid",
-      type: "boolean" as const,
-      validation: itemTableSchema.shape.bvalidity_able,
-    },
-    {
-      key: "biscanhaveoption",
-      label: "Can Have Option",
-      type: "boolean" as const,
-      validation: itemTableSchema.shape.biscanhaveoption,
-    },
-    {
-      key: "bcreatesuperiorable",
-      label: "Can Create Superior",
-      type: "boolean" as const,
-      validation: itemTableSchema.shape.bcreatesuperiorable,
-    },
-    {
-      key: "bcreateexcellentable",
-      label: "Can Create Excellent",
-      type: "boolean" as const,
-      validation: itemTableSchema.shape.bcreateexcellentable,
-    },
-    {
-      key: "bcreaterareable",
-      label: "Can Create Rare",
-      type: "boolean" as const,
-      validation: itemTableSchema.shape.bcreaterareable,
-    },
-    {
-      key: "bcreatelegendaryable",
-      label: "Can Create Legendary",
-      type: "boolean" as const,
-      validation: itemTableSchema.shape.bcreatelegendaryable,
-    },
-    {
-      key: "biscanrenewal",
-      label: "Can Renewal",
-      type: "boolean" as const,
-      validation: itemTableSchema.shape.biscanrenewal,
-    },
-  ];
-
-  // Define filter definitions for the data table
-  const filterDefinitions = [
-    {
-      key: "tblidx",
-      label: "ID",
-      type: "number" as const,
-      validation: itemTableSchema.shape.tblidx,
-    },
-    {
-      key: "name",
-      label: "Name",
-      type: "text" as const,
-      validation: itemTableSchema.shape.name,
-    },
-    {
-      key: "byitem_type",
-      label: "Item Type",
-      type: "number" as const,
-      validation: itemTableSchema.shape.byitem_type,
-    },
-    {
-      key: "byrank",
-      label: "Rank",
-      type: "number" as const,
-      validation: itemTableSchema.shape.byrank,
-    },
-    {
-      key: "bvalidity_able",
-      label: "Valid",
-      type: "boolean" as const,
-      validation: itemTableSchema.shape.bvalidity_able,
-    },
-  ];
-
-  // Define tabs for the form
-  const tabs = [
-    {
-      id: "basic",
-      label: "Basic Info",
-      fields: [
-        "tblidx",
-        "name",
-        "wsznametext",
-        "szicon_name",
-        "bymodel_type",
-        "szmodel",
-        "szsub_weapon_act_model",
-        "byitem_type",
-        "byequip_type",
-        "dwequip_slot_type_bit_flag",
-        "wfunction_bit_flag",
-        "bymax_stack",
-        "byrank",
-        "dwweight",
-        "dwcost",
-        "dwsell_price",
-        "bvalidity_able",
-        "note",
-      ],
-    },
-    {
-      id: "attributes",
-      label: "Attributes",
-      fields: [
-        "bydurability",
-        "bydurability_count",
-        "bybattle_attribute",
-        "wphysical_offence",
-        "wenergy_offence",
-        "wphysical_defence",
-        "wenergy_defence",
-        "fattack_range_bonus",
-        "wattack_speed_rate",
-        "fattack_physical_revision",
-        "fattack_energy_revision",
-        "fdefence_physical_revision",
-        "fdefence_energy_revision",
-      ],
-    },
-    {
-      id: "requirements",
-      label: "Requirements",
-      fields: [
-        "byneed_min_level",
-        "byneed_max_level",
-        "dwneed_class_bit_flag",
-        "dwneed_gender_bit_flag",
-        "byclass_special",
-        "byrace_special",
-        "wneed_str",
-        "wneed_con",
-        "wneed_foc",
-        "wneed_dex",
-        "wneed_sol",
-        "wneed_eng",
-        "byrestricttype",
-        "byneedfunction",
-      ],
-    },
-    {
-      id: "options",
-      label: "Options",
-      fields: [
-        "biscanhaveoption",
-        "item_option_tblidx",
-        "byitemgroup",
-        "charm_tblidx",
-        "wcostumehidebitflag",
-        "needitemtblidx",
-        "set_item_tblidx",
-        "use_item_tblidx",
-      ],
-    },
-    {
-      id: "scouter",
-      label: "Scouter",
-      fields: [
-        "bybag_size",
-        "wscouter_watt",
-        "dwscouter_maxpower",
-        "byscouter_parts_type1",
-        "byscouter_parts_type2",
-        "byscouter_parts_type3",
-        "byscouter_parts_type4",
-      ],
-    },
-    {
-      id: "enhancement",
-      label: "Enhancement",
-      fields: [
-        "bcreatesuperiorable",
-        "bcreateexcellentable",
-        "bcreaterareable",
-        "bcreatelegendaryable",
-        "enchantratetblidx",
-        "excellenttblidx",
-        "raretblidx",
-        "legendarytblidx",
-        "biscanrenewal",
-      ],
-    },
-    {
-      id: "duration",
-      label: "Duration",
-      fields: [
-        "commonpoint",
-        "bycommonpointtype",
-        "dwusedurationmax",
-        "bydurationtype",
-        "contentstblidx",
-        "dwdurationgroup",
-      ],
-    },
-    {
-      id: "disassembly",
-      label: "Disassembly",
-      fields: [
-        "wdisassemble_bit_flag",
-        "bydisassemblenormalmin",
-        "bydisassemblenormalmax",
-        "bydisassembleuppermin",
-        "bydisassembleuppermax",
-        "bydropvisual",
-        "byusedisassemble",
-        "bydroplevel",
-      ],
+      validation: skillSchema.shape.szicon_name,
     },
   ];
 
@@ -367,9 +156,9 @@ export default function ItemTablePage() {
     handlePageSizeChange,
     handleRowSelection,
     refreshData,
-  } = useTableData<ItemTableRow>({
+  } = useTableData<SkillRow>({
     config: {
-      tableName: "table_item_data",
+      tableName: "table_skill_data",
       columns,
     },
     tableId,
@@ -383,7 +172,6 @@ export default function ItemTablePage() {
     input.onchange = async (e) => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (file) {
-        setImportFile(file);
         setIsImportDialogOpen(true);
       }
     };
@@ -397,12 +185,10 @@ export default function ItemTablePage() {
       return;
     }
 
-    setIsImporting(true);
-
     try {
       const formData = new FormData();
       formData.append("file", file);
-      formData.append("tableName", "item");
+      formData.append("tableName", "skill");
       formData.append("tableId", tableId);
 
       const response = await fetch("/api/import", {
@@ -418,12 +204,9 @@ export default function ItemTablePage() {
       toast.success("Data imported successfully");
       refreshData();
       setIsImportDialogOpen(false);
-      setImportFile(null);
     } catch (error) {
       console.error("Import error:", error);
       toast.error(error instanceof Error ? error.message : "Failed to import data");
-    } finally {
-      setIsImporting(false);
     }
   };
 
@@ -431,7 +214,7 @@ export default function ItemTablePage() {
   const handleExport = async () => {
     try {
       const response = await fetch(
-        `/api/export?table=item&table_id=${tableId}`,
+        `/api/export?table=skill&table_id=${tableId}`,
         {
           method: "GET",
         }
@@ -444,7 +227,7 @@ export default function ItemTablePage() {
 
       // Get the filename from the Content-Disposition header if available
       const contentDisposition = response.headers.get("Content-Disposition");
-      let filename = "item_export.csv";
+      let filename = "skill_export.csv";
       if (contentDisposition) {
         const filenameMatch = contentDisposition.match(/filename="(.+)"/);
         if (filenameMatch && filenameMatch[1]) {
@@ -484,8 +267,8 @@ export default function ItemTablePage() {
   return (
     <div className="min-h-screen bg-gray-900">
       <TableHeader
-        title={selectedTable?.name || 'Item Table'}
-        description="Manage items and their properties"
+        title={selectedTable?.name || 'Skill Table'}
+        description="Manage skills and their properties"
         columns={columns}
         filters={filters}
         selectedCount={selectedRows.size}
@@ -527,7 +310,7 @@ export default function ItemTablePage() {
           }}
           onDuplicate={(row) => {
             const { id, ...rest } = row;
-            setSelectedRow({ ...rest, id: '' } as ItemTableRow);
+            setSelectedRow({ ...rest, id: '' } as SkillRow);
             setFormMode('duplicate');
             setIsFormOpen(true);
           }}
@@ -546,7 +329,7 @@ export default function ItemTablePage() {
         onPageSizeChange={handlePageSizeChange}
       />
 
-      {/* Item Form */}
+      {/* Skill Form */}
       <Sheet open={isFormOpen} onOpenChange={setIsFormOpen}>
         <SheetContent 
           side="right" 
@@ -560,7 +343,7 @@ export default function ItemTablePage() {
               {formTheme.description.text[formMode]}
             </SheetDescription>
           </SheetHeader>
-          <ItemForm
+          <SkillForm
             open={isFormOpen}
             onOpenChange={setIsFormOpen}
             mode={formMode === 'duplicate' ? 'add' : formMode}
@@ -568,15 +351,15 @@ export default function ItemTablePage() {
             onSubmit={(data) => {
               switch (formMode) {
                 case 'add':
-                  handleAddRow(data as ItemTableRow);
+                  handleAddRow(data as SkillRow);
                   break;
                 case 'edit':
                   if (selectedRow?.id) {
-                    handleEditRow(selectedRow.id, data as ItemTableRow);
+                    handleEditRow(selectedRow.id, data as SkillRow);
                   }
                   break;
                 case 'duplicate':
-                  handleAddRow(data as ItemTableRow);
+                  handleAddRow(data as SkillRow);
                   break;
               }
               setIsFormOpen(false);
@@ -590,7 +373,7 @@ export default function ItemTablePage() {
         isOpen={isImportDialogOpen}
         onClose={() => setIsImportDialogOpen(false)}
         onImport={handleImportConfirm}
-        file={importFile}
+        file={null}
       />
 
       {/* Delete Confirmation Dialog */}
@@ -603,7 +386,7 @@ export default function ItemTablePage() {
             setIsDeleteDialogOpen(false);
           }
         }}
-        itemName={selectedRow?.name || "this item"}
+        itemName={selectedRow?.skill_name || "this skill"}
       />
     </div>
   );

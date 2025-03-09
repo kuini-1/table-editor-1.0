@@ -29,6 +29,7 @@ import {
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
+import { toast } from "sonner";
 
 interface SubOwnerProfile {
   id: string;
@@ -252,12 +253,14 @@ export default function UsersPage() {
         throw new Error(data.error || 'Failed to create user');
       }
 
+      // Clear form and close dialog
+      form.reset();
+      setOpen(false);
+
       // Refresh the users list
       await fetchUsers();
       
-      // Reset form and close dialog
-      form.reset();
-      setOpen(false);
+      toast.success('User created successfully');
     } catch (err: any) {
       console.error('Error creating user:', err);
       setError(err.message);
