@@ -242,7 +242,6 @@ export default function ExpTablePage() {
   const handleImport = () => {
     const input = document.createElement('input');
     input.type = 'file';
-    input.accept = '.csv,.xlsx,.xls';
     input.onchange = async (e) => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (file) {
@@ -282,7 +281,7 @@ export default function ExpTablePage() {
 
   const handleExport = async () => {
     try {
-      const response = await fetch(`/api/export?table=exp&table_id=${tableId}`);
+      const response = await fetch(`/api/export?table=table_exp_data&table_id=${tableId}`);
       if (!response.ok) throw new Error('Export failed');
 
       const blob = await response.blob();

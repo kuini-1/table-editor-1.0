@@ -183,24 +183,24 @@ export async function GET(req: Request) {
       }, { status: 401 });
     }
 
-    let body;
-    try {
-      body = await req.json();
-    } catch (parseError: any) {
-      return NextResponse.json({ 
-        error: 'Invalid request body',
-        details: parseError.message
-      }, { status: 400 });
-    }
+    // let body;
+    // try {
+    //   body = await req.json();
+    // } catch (parseError: any) {
+    //   return NextResponse.json({ 
+    //     error: 'Invalid request body',
+    //     details: parseError.message
+    //   }, { status: 400 });
+    // }
 
-    const { tableId, tableName } = body;
+    // const { tableId, tableName } = body;
 
-    if (!tableId || !tableName) {
+    if (!tableId || !table) {
       return NextResponse.json({
         error: 'Missing required fields',
         details: {
           tableId: !tableId ? 'Table ID is required' : null,
-          tableName: !tableName ? 'Table name is required' : null
+          tableName: !table ? 'Table name is required' : null
         }
       }, { status: 400 });
     }
@@ -220,7 +220,7 @@ export async function GET(req: Request) {
 
     // Get CSV data
     const { data: csvData, error: csvError } = await supabase
-      .from(tableName)
+      .from(table)
       .select('*')
       .eq('table_id', tableId)
       .csv();
@@ -241,7 +241,7 @@ export async function GET(req: Request) {
     }
 
     // Write CSV file
-    const csvPath = path.join(userDir, `${tableName}.csv`);
+    const csvPath = path.join(userDir, `${table}.csv`);
     try {
       fs.writeFileSync(csvPath, csvData);
     } catch (writeError: any) {
@@ -296,7 +296,7 @@ export async function GET(req: Request) {
       try {
         // Execute with output capture and working directory set
         const { stdout, stderr } = await execAsync(
-          `"${exePath}" "${tableName}" "${user.id}" "rdf"`, 
+          `"${exePath}" "${table}" "${user.id}" "rdf"`, 
           { 
             cwd: workingDir,
             env: {
@@ -317,7 +317,7 @@ export async function GET(req: Request) {
       }
 
       // Verify RDF file was created
-      const rdfPath = path.join(userDir, `${tableName}.rdf`);
+      const rdfPath = path.join(userDir, `${table}.rdf`);
       
       if (!fs.existsSync(rdfPath)) {
         throw new Error(`RDF file was not generated at expected path: ${rdfPath}`);
@@ -331,7 +331,7 @@ export async function GET(req: Request) {
 
       // Upload to storage
       const rdfContent = fs.readFileSync(rdfPath);
-      const storagePath = `${user.id}/${tableName}.rdf`;
+      const storagePath = `${user.id}/${table}.rdf`;
       
       const { error: uploadError } = await supabase.storage
         .from('exports')
