@@ -11,12 +11,13 @@ import {
   SheetHeader,
   SheetTitle,
   SheetDescription,
+  SheetFooter,
 } from "@/components/ui/sheet";
 import { useTableData } from "@/hooks/useTableData";
 import { TableHeader } from '@/components/table/TableHeader';
 import { TablePagination } from '@/components/table/TablePagination';
 import { DataTable } from "@/components/table/DataTable";
-import { DeleteDialog, ImportDialog } from '@/components/table/TableDialogs';
+import { DeleteDialog, ImportDialog, useExport } from '@/components/table/TableDialogs';
 import { useStore } from "@/lib/store";
 import { setItemSchema } from "./schema";
 import SetItemForm from "./SetItemForm";
@@ -59,6 +60,7 @@ const formTheme = {
 export default function SetItemPage() {
   const searchParams = useSearchParams();
   const tableId = searchParams.get('id') || '';
+  const tableName = 'table_set_item_data';
   const { userProfile } = useStore();
   const selectedTable = userProfile?.data?.id === tableId ? {
     id: tableId,
@@ -131,6 +133,7 @@ export default function SetItemPage() {
     handleAddRow,
     handleEditRow,
     handleDeleteRow,
+    handleBulkDelete,
     handleDuplicateRow,
     handleAddFilter,
     handleRemoveFilter,
@@ -140,11 +143,13 @@ export default function SetItemPage() {
     refreshData,
   } = useTableData<SetItemRow>({
     config: {
-      tableName: "table_set_item_data",
+      tableName,
       columns,
     },
     tableId,
   });
+
+  const handleExport = useExport({ tableId, tableName });
 
   // Handle import dialog
   const handleImport = () => {
@@ -192,49 +197,6 @@ export default function SetItemPage() {
     }
   };
 
-  // Handle export
-  const handleExport = async () => {
-    try {
-      const response = await fetch(
-        `/api/export?table=set_item&table_id=${tableId}`,
-        {
-          method: "GET",
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to export data");
-      }
-
-      // Get the filename from the Content-Disposition header if available
-      const contentDisposition = response.headers.get("Content-Disposition");
-      let filename = "set_item_export.csv";
-      if (contentDisposition) {
-        const filenameMatch = contentDisposition.match(/filename="(.+)"/);
-        if (filenameMatch && filenameMatch[1]) {
-          filename = filenameMatch[1];
-        }
-      }
-
-      // Create a blob from the response and download it
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-
-      toast.success("Data exported successfully");
-    } catch (error) {
-      console.error("Export error:", error);
-      toast.error(error instanceof Error ? error.message : "Failed to export data");
-    }
-  };
-
   if (error) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -259,7 +221,7 @@ export default function SetItemPage() {
           setFormMode('add');
           setIsFormOpen(true);
         }}
-        onImport={handleImport}
+        onImport={() => setIsImportDialogOpen(true)}
         onExport={handleExport}
         onRefresh={refreshData}
         onBulkDelete={() => {
@@ -277,14 +239,6 @@ export default function SetItemPage() {
           data={data}
           selectedRows={selectedRows}
           onRowSelect={handleRowSelection}
-          onSelectAll={(checked) => {
-            if (checked) {
-              const allIds = data.map((row) => row.id);
-              allIds.forEach(handleRowSelection);
-            } else {
-              selectedRows.forEach((id) => handleRowSelection(id));
-            }
-          }}
           onEdit={(row) => {
             setSelectedRow(row);
             setFormMode('edit');
@@ -315,7 +269,7 @@ export default function SetItemPage() {
       <Sheet open={isFormOpen} onOpenChange={setIsFormOpen}>
         <SheetContent 
           side="right" 
-          className="w-[100vw] sm:w-[85vw] md:w-[75vw] lg:w-[65vw] xl:w-[50vw] bg-gray-900 border-gray-800 p-0"
+          className="w-[100vw] sm:w-[85vw] md:w-[75vw] lg:w-[65vw] xl:w-[50vw] bg-gray-900 border-gray-800 p-0 flex flex-col"
         >
           <SheetHeader className="px-6 py-4 border-b border-gray-200 dark:border-gray-800">
             <SheetTitle className="bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent text-2xl font-bold">
@@ -325,28 +279,56 @@ export default function SetItemPage() {
               {formTheme.description.text[formMode]}
             </SheetDescription>
           </SheetHeader>
-          <SetItemForm
-            open={isFormOpen}
-            onOpenChange={setIsFormOpen}
-            mode={formMode === 'duplicate' ? 'add' : formMode}
-            initialData={selectedRow || undefined}
-            onSubmit={(data) => {
-              switch (formMode) {
-                case 'add':
-                  handleAddRow(data as SetItemRow);
-                  break;
-                case 'edit':
-                  if (selectedRow?.id) {
-                    handleEditRow(selectedRow.id, data as SetItemRow);
-                  }
-                  break;
-                case 'duplicate':
-                  handleAddRow(data as SetItemRow);
-                  break;
-              }
-              setIsFormOpen(false);
-            }}
-          />
+          
+          <div className="flex-1 overflow-y-auto">
+            <SetItemForm
+              open={isFormOpen}
+              onOpenChange={setIsFormOpen}
+              mode={formMode === 'duplicate' ? 'add' : formMode}
+              initialData={selectedRow || undefined}
+              onSubmit={(data) => {
+                switch (formMode) {
+                  case 'add':
+                    handleAddRow(data as SetItemRow);
+                    break;
+                  case 'edit':
+                    if (selectedRow?.id) {
+                      handleEditRow(selectedRow.id, data as SetItemRow);
+                    }
+                    break;
+                  case 'duplicate':
+                    handleAddRow(data as SetItemRow);
+                    break;
+                }
+                setIsFormOpen(false);
+              }}
+            />
+          </div>
+
+          <SheetFooter className="px-6 py-4 border-t border-gray-200 dark:border-gray-800">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setSelectedRow(null);
+                setIsFormOpen(false);
+              }}
+              className="flex-1"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              className={formTheme.button.className}
+              onClick={() => {
+                const form = document.querySelector('form');
+                if (form) {
+                  form.requestSubmit();
+                }
+              }}
+            >
+              {formTheme.button.text[formMode]}
+            </Button>
+          </SheetFooter>
         </SheetContent>
       </Sheet>
 
@@ -354,8 +336,9 @@ export default function SetItemPage() {
       <ImportDialog
         isOpen={isImportDialogOpen}
         onClose={() => setIsImportDialogOpen(false)}
-        onImport={handleImportConfirm}
-        file={null}
+        onSuccess={refreshData}
+        tableId={tableId}
+        tableName={tableName}
       />
 
       {/* Delete Confirmation Dialog */}

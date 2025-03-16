@@ -141,7 +141,7 @@ export default function SetItemForm({
     <div className="flex flex-col h-full">
       <ScrollArea className="flex-1 px-6 py-4">
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6 pb-20">
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
             <Tabs defaultValue="basic" className="w-full">
               <TabsList className="grid w-full grid-cols-3 mb-4">
                 <TabsTrigger value="basic">Basic Info</TabsTrigger>
@@ -165,26 +165,6 @@ export default function SetItemForm({
           </form>
         </Form>
       </ScrollArea>
-      
-      <div className="sticky bottom-0 px-6 py-4 border-t border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-900/80 backdrop-blur supports-[backdrop-filter]:bg-background/80">
-        <div className="flex gap-4 w-full">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            className="flex-1 border hover:bg-gray-50 dark:hover:bg-gray-800"
-          >
-            Cancel
-          </Button>
-          <Button
-            type="submit"
-            onClick={form.handleSubmit(handleSubmit)}
-            className="flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 text-white dark:text-white hover:from-purple-700 hover:to-indigo-700"
-          >
-            {mode === "add" ? "Add Set Item" : "Save Changes"}
-          </Button>
-        </div>
-      </div>
     </div>
   );
 } 

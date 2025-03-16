@@ -313,13 +313,19 @@ export function useTableData<T extends { id: string }>({ config, tableId }: UseT
     setPage(1);
   };
 
-  const handleRowSelection = (id: string) => {
+  const handleRowSelection = (id: string | 'all' | 'none') => {
     setSelectedRows(prev => {
       const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
+      if (id === 'all') {
+        data.forEach(row => next.add(row.id));
+      } else if (id === 'none') {
+        next.clear();
       } else {
-        next.add(id);
+        if (next.has(id)) {
+          next.delete(id);
+        } else {
+          next.add(id);
+        }
       }
       return next;
     });

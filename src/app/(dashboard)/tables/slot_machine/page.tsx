@@ -8,19 +8,21 @@ import { useTableData } from '@/hooks/useTableData';
 import { TableHeader } from '@/components/table/TableHeader';
 import { DataTable } from '@/components/table/DataTable';
 import { TablePagination } from '@/components/table/TablePagination';
-import { DeleteDialog, ImportDialog } from '@/components/table/TableDialogs';
+import { DeleteDialog, ImportDialog, useExport } from '@/components/table/TableDialogs';
 import {
   Sheet,
   SheetContent,
   SheetHeader,
   SheetTitle,
   SheetDescription,
+  SheetFooter,
 } from "@/components/ui/sheet";
 import { ErrorDisplay } from '@/components/ErrorDisplay';
 import { slotMachineSchema } from './schema';
 import { SlotMachineForm } from './SlotMachineForm';
 import type { FormMode } from '@/components/table/ModularForm';
 import { z } from 'zod';
+import { Button } from '@/components/ui/button';
 
 type SlotMachineFormData = z.infer<typeof slotMachineSchema>;
 
@@ -59,6 +61,7 @@ const formTheme = {
 export default function SlotMachinePage() {
   const searchParams = useSearchParams();
   const tableId = searchParams.get('id') || '';
+  const tableName = 'table_slot_machine_data';
   const { userProfile } = useStore();
   const selectedTable = userProfile?.data?.id === tableId ? {
     id: tableId,
@@ -85,6 +88,7 @@ export default function SlotMachinePage() {
     handleAddRow,
     handleEditRow,
     handleDeleteRow,
+    handleBulkDelete,
     handleDuplicateRow,
     handleAddFilter,
     handleRemoveFilter,
@@ -94,11 +98,13 @@ export default function SlotMachinePage() {
     refreshData,
   } = useTableData<SlotMachineRow>({
     config: {
-      tableName: 'table_slot_machine_data',
+      tableName,
       columns,
     },
     tableId,
   });
+
+  const handleExport = useExport({ tableId, tableName });
 
   const handleImport = () => {
     const input = document.createElement('input');
@@ -141,27 +147,6 @@ export default function SlotMachinePage() {
     }
   };
 
-  const handleExport = async () => {
-    try {
-      const response = await fetch(`/api/export?table=slot_machine&table_id=${tableId}`);
-      if (!response.ok) throw new Error('Export failed');
-
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `slot_machine_table.csv`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-
-      toast.success('Data exported successfully');
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to export data');
-    }
-  };
-
   if (error) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -177,18 +162,23 @@ export default function SlotMachinePage() {
     <div className="min-h-screen bg-gray-900">
       <TableHeader
         title={selectedTable?.name || 'Slot Machine Table'}
-        description="Manage slot machine entries and their properties"
+        description="Manage slot machines and their properties"
         columns={columns}
         filters={filters}
         selectedCount={selectedRows.size}
         onAddRow={() => {
-          setFormMode('add');
           setSelectedRow(null);
+          setFormMode('add');
           setIsFormOpen(true);
         }}
-        onImport={handleImport}
+        onImport={() => setIsImportDialogOpen(true)}
         onExport={handleExport}
         onRefresh={refreshData}
+        onBulkDelete={() => {
+          if (selectedRows.size > 0) {
+            handleDeleteRow(Array.from(selectedRows).join(','));
+          }
+        }}
         onAddFilter={handleAddFilter}
         onRemoveFilter={handleRemoveFilter}
       />
@@ -199,13 +189,6 @@ export default function SlotMachinePage() {
           data={data}
           selectedRows={selectedRows}
           onRowSelect={handleRowSelection}
-          onSelectAll={(checked) => {
-            if (checked) {
-              handleRowSelection('all');
-            } else {
-              handleRowSelection('none');
-            }
-          }}
           onEdit={(row) => {
             setSelectedRow(row);
             setFormMode('edit');
@@ -235,7 +218,7 @@ export default function SlotMachinePage() {
       <Sheet open={isFormOpen} onOpenChange={setIsFormOpen}>
         <SheetContent 
           side="right" 
-          className="w-[100vw] sm:w-[85vw] md:w-[75vw] lg:w-[65vw] xl:w-[50vw] bg-gray-900 border-gray-800 p-0"
+          className="w-[100vw] sm:w-[85vw] md:w-[75vw] lg:w-[65vw] xl:w-[50vw] bg-gray-900 border-gray-800 p-0 flex flex-col"
         >
           <SheetHeader className="px-6 py-4 border-b border-gray-200 dark:border-gray-800">
             <SheetTitle className="bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent text-2xl font-bold">
@@ -245,28 +228,58 @@ export default function SlotMachinePage() {
               {formTheme.description.text[formMode]}
             </SheetDescription>
           </SheetHeader>
-          <SlotMachineForm
-            open={isFormOpen}
-            onOpenChange={setIsFormOpen}
-            mode={formMode === 'duplicate' ? 'add' : formMode}
-            initialData={selectedRow || undefined}
-            onSubmit={(data) => {
-              switch (formMode) {
-                case 'add':
-                  handleAddRow(data);
-                  break;
-                case 'edit':
-                  if (selectedRow?.id) {
-                    handleEditRow(selectedRow.id, data);
-                  }
-                  break;
-                case 'duplicate':
-                  handleAddRow(data);
-                  break;
-              }
-              setIsFormOpen(false);
-            }}
-          />
+          
+          <div className="flex-1 overflow-y-auto">
+            <SlotMachineForm
+              open={isFormOpen}
+              onOpenChange={setIsFormOpen}
+              mode={formMode === 'duplicate' ? 'add' : formMode}
+              initialData={selectedRow || undefined}
+              onSubmit={(data) => {
+                switch (formMode) {
+                  case 'add':
+                    handleAddRow(data);
+                    break;
+                  case 'edit':
+                    if (selectedRow?.id) {
+                      handleEditRow(selectedRow.id, data);
+                    }
+                    break;
+                  case 'duplicate':
+                    handleAddRow(data);
+                    break;
+                }
+                setIsFormOpen(false);
+              }}
+            />
+          </div>
+
+          <SheetFooter className="px-6 py-4 border-t border-gray-200 dark:border-gray-800">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setSelectedRow(null);
+                setIsFormOpen(false);
+              }}
+              className="flex-1"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              className="flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700"
+              onClick={() => {
+                const form = document.querySelector('form');
+                if (form) {
+                  form.requestSubmit();
+                }
+              }}
+            >
+              {formMode === 'add' ? 'Add Slot Machine' :
+               formMode === 'edit' ? 'Save Changes' :
+               'Duplicate Slot Machine'}
+            </Button>
+          </SheetFooter>
         </SheetContent>
       </Sheet>
 
@@ -284,16 +297,10 @@ export default function SlotMachinePage() {
 
       <ImportDialog
         isOpen={isImportDialogOpen}
-        onClose={() => {
-          setFileToImport(null);
-          setIsImportDialogOpen(false);
-        }}
-        onImport={async (file) => {
-          await handleImportConfirm();
-          setFileToImport(null);
-          setIsImportDialogOpen(false);
-        }}
-        file={fileToImport}
+        onClose={() => setIsImportDialogOpen(false)}
+        onSuccess={refreshData}
+        tableId={tableId}
+        tableName={tableName}
       />
     </div>
   );

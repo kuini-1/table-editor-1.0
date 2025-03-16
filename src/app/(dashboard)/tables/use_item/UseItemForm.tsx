@@ -193,7 +193,7 @@ export default function UseItemForm({
     <div className="flex flex-col h-full">
       <ScrollArea className="flex-1 px-6 py-4">
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6 pb-20">
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
             <Tabs defaultValue="basic" className="w-full">
               <TabsList className="grid grid-cols-3 mb-4 bg-muted p-1 rounded-lg">
                 <TabsTrigger 
@@ -215,55 +215,13 @@ export default function UseItemForm({
                   Target & Range
                 </TabsTrigger>
               </TabsList>
-              <TabsList className="grid grid-cols-3 mb-4 bg-muted p-1 rounded-lg">
-                <TabsTrigger 
-                  value="requirements" 
-                  className="flex-1 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900 data-[state=active]:text-indigo-600 dark:data-[state=active]:text-indigo-400"
-                >
-                  Requirements
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="timing" 
-                  className="flex-1 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900 data-[state=active]:text-indigo-600 dark:data-[state=active]:text-indigo-400"
-                >
-                  Timing
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="range" 
-                  className="flex-1 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900 data-[state=active]:text-indigo-600 dark:data-[state=active]:text-indigo-400"
-                >
-                  Range
-                </TabsTrigger>
-              </TabsList>
-              <TabsList className="grid grid-cols-3 mb-4 bg-muted p-1 rounded-lg">
-                <TabsTrigger 
-                  value="effects" 
-                  className="flex-1 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900 data-[state=active]:text-indigo-600 dark:data-[state=active]:text-indigo-400"
-                >
-                  Effects
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="world" 
-                  className="flex-1 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900 data-[state=active]:text-indigo-600 dark:data-[state=active]:text-indigo-400"
-                >
-                  World
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="system" 
-                  className="flex-1 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900 data-[state=active]:text-indigo-600 dark:data-[state=active]:text-indigo-400"
-                >
-                  System Effects
-                </TabsTrigger>
-              </TabsList>
 
               {Object.entries(fieldsByTabAndSection).map(([tab, sections]) => (
                 <TabsContent key={tab} value={tab} className="space-y-6">
                   {Object.entries(sections).map(([section, fields]) => (
-                    <div key={section} className="mb-6 rounded-lg border-2 border-gray-200 dark:border-gray-700 p-4">
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                        {section}
-                      </h3>
-                      <div className="grid grid-cols-2 gap-4">
+                    <div key={section} className="space-y-4">
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{section}</h3>
+                      <div className="grid grid-cols-2 gap-4 p-4 border rounded-lg border-gray-200 dark:border-gray-700">
                         {fields.map((field) => renderField(field))}
                       </div>
                     </div>
@@ -274,26 +232,6 @@ export default function UseItemForm({
           </form>
         </Form>
       </ScrollArea>
-      
-      <div className="sticky bottom-0 px-6 py-4 border-t border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-900/80 backdrop-blur supports-[backdrop-filter]:bg-background/80">
-        <div className="flex gap-4 w-full">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            className="flex-1 border hover:bg-gray-50 dark:hover:bg-gray-800"
-          >
-            Cancel
-          </Button>
-          <Button
-            type="submit"
-            onClick={form.handleSubmit(handleSubmit)}
-            className="flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 text-white dark:text-white hover:from-purple-700 hover:to-indigo-700"
-          >
-            {mode === "add" ? "Add Use Item" : "Save Changes"}
-          </Button>
-        </div>
-      </div>
     </div>
   );
 } 

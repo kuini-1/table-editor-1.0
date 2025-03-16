@@ -11,12 +11,13 @@ import {
   SheetHeader,
   SheetTitle,
   SheetDescription,
+  SheetFooter,
 } from "@/components/ui/sheet";
 import { useTableData } from "@/hooks/useTableData";
 import { TableHeader } from '@/components/table/TableHeader';
 import { TablePagination } from '@/components/table/TablePagination';
 import { DataTable } from "@/components/table/DataTable";
-import { DeleteDialog, ImportDialog } from '@/components/table/TableDialogs';
+import { DeleteDialog, ImportDialog, useExport } from '@/components/table/TableDialogs';
 import { useStore } from "@/lib/store";
 import { useItemSchema } from "./schema";
 import UseItemForm from "./UseItemForm";
@@ -46,11 +47,20 @@ const formTheme = {
       duplicate: "Create a new use item based on the selected one."
     }
   },
+  button: {
+    text: {
+      add: "Add Use Item",
+      edit: "Save Changes",
+      duplicate: "Duplicate Entry"
+    },
+    className: "flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700",
+  },
 } as const;
 
 export default function UseItemPage() {
   const searchParams = useSearchParams();
   const tableId = searchParams.get('id') || '';
+  const tableName = 'table_use_item_data';
   const { userProfile } = useStore();
   const selectedTable = userProfile?.data?.id === tableId ? {
     id: tableId,
@@ -128,6 +138,7 @@ export default function UseItemPage() {
     handleAddRow,
     handleEditRow,
     handleDeleteRow,
+    handleBulkDelete,
     handleDuplicateRow,
     handleAddFilter,
     handleRemoveFilter,
@@ -137,11 +148,13 @@ export default function UseItemPage() {
     refreshData,
   } = useTableData<UseItemRow>({
     config: {
-      tableName: "table_use_item_data",
+      tableName,
       columns,
     },
     tableId,
   });
+
+  const handleExport = useExport({ tableId, tableName });
 
   const handleImport = () => {
     const input = document.createElement('input');
@@ -187,37 +200,6 @@ export default function UseItemPage() {
     }
   };
 
-  const handleExport = async () => {
-    try {
-      const response = await fetch(
-        `/api/export?table=use_item&table_id=${tableId}`,
-        {
-          method: "GET",
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to export data");
-      }
-
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `use_item_export.csv`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-
-      toast.success("Data exported successfully");
-    } catch (error) {
-      console.error("Export error:", error);
-      toast.error(error instanceof Error ? error.message : "Failed to export data");
-    }
-  };
-
   if (error) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -242,7 +224,7 @@ export default function UseItemPage() {
           setFormMode('add');
           setIsFormOpen(true);
         }}
-        onImport={handleImport}
+        onImport={() => setIsImportDialogOpen(true)}
         onExport={handleExport}
         onRefresh={refreshData}
         onBulkDelete={() => {
@@ -260,14 +242,6 @@ export default function UseItemPage() {
           data={data}
           selectedRows={selectedRows}
           onRowSelect={handleRowSelection}
-          onSelectAll={(checked) => {
-            if (checked) {
-              const allIds = data.map((row) => row.id);
-              allIds.forEach(handleRowSelection);
-            } else {
-              selectedRows.forEach((id) => handleRowSelection(id));
-            }
-          }}
           onEdit={(row) => {
             setSelectedRow(row);
             setFormMode('edit');
@@ -297,7 +271,7 @@ export default function UseItemPage() {
       <Sheet open={isFormOpen} onOpenChange={setIsFormOpen}>
         <SheetContent 
           side="right" 
-          className="w-[100vw] sm:w-[85vw] md:w-[75vw] lg:w-[65vw] xl:w-[50vw] bg-gray-900 border-gray-800 p-0"
+          className="w-[100vw] sm:w-[85vw] md:w-[75vw] lg:w-[65vw] xl:w-[50vw] bg-gray-900 border-gray-800 p-0 flex flex-col"
         >
           <SheetHeader className="px-6 py-4 border-b border-gray-200 dark:border-gray-800">
             <SheetTitle className="bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent text-2xl font-bold">
@@ -307,28 +281,56 @@ export default function UseItemPage() {
               {formTheme.description.text[formMode]}
             </SheetDescription>
           </SheetHeader>
-          <UseItemForm
-            open={isFormOpen}
-            onOpenChange={setIsFormOpen}
-            mode={formMode === 'duplicate' ? 'add' : formMode}
-            initialData={selectedRow || undefined}
-            onSubmit={(data) => {
-              switch (formMode) {
-                case 'add':
-                  handleAddRow(data as UseItemRow);
-                  break;
-                case 'edit':
-                  if (selectedRow?.id) {
-                    handleEditRow(selectedRow.id, data as UseItemRow);
-                  }
-                  break;
-                case 'duplicate':
-                  handleAddRow(data as UseItemRow);
-                  break;
-              }
-              setIsFormOpen(false);
-            }}
-          />
+          
+          <div className="flex-1 overflow-y-auto">
+            <UseItemForm
+              open={isFormOpen}
+              onOpenChange={setIsFormOpen}
+              mode={formMode === 'duplicate' ? 'add' : formMode}
+              initialData={selectedRow || undefined}
+              onSubmit={(data) => {
+                switch (formMode) {
+                  case 'add':
+                    handleAddRow(data as UseItemRow);
+                    break;
+                  case 'edit':
+                    if (selectedRow?.id) {
+                      handleEditRow(selectedRow.id, data as UseItemRow);
+                    }
+                    break;
+                  case 'duplicate':
+                    handleAddRow(data as UseItemRow);
+                    break;
+                }
+                setIsFormOpen(false);
+              }}
+            />
+          </div>
+
+          <SheetFooter className="px-6 py-4 border-t border-gray-200 dark:border-gray-800">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setSelectedRow(null);
+                setIsFormOpen(false);
+              }}
+              className="flex-1"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              className={formTheme.button.className}
+              onClick={() => {
+                const form = document.querySelector('form');
+                if (form) {
+                  form.requestSubmit();
+                }
+              }}
+            >
+              {formTheme.button.text[formMode]}
+            </Button>
+          </SheetFooter>
         </SheetContent>
       </Sheet>
 
@@ -347,8 +349,9 @@ export default function UseItemPage() {
       <ImportDialog
         isOpen={isImportDialogOpen}
         onClose={() => setIsImportDialogOpen(false)}
-        onImport={handleImportConfirm}
-        file={null}
+        onSuccess={refreshData}
+        tableId={tableId}
+        tableName={tableName}
       />
     </div>
   );

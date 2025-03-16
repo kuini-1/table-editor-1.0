@@ -8,19 +8,21 @@ import { useTableData } from '@/hooks/useTableData';
 import { TableHeader } from '@/components/table/TableHeader';
 import { DataTable } from '@/components/table/DataTable';
 import { TablePagination } from '@/components/table/TablePagination';
-import { DeleteDialog, ImportDialog } from '@/components/table/TableDialogs';
+import { DeleteDialog, ImportDialog, useExport } from '@/components/table/TableDialogs';
 import {
   Sheet,
   SheetContent,
   SheetHeader,
   SheetTitle,
   SheetDescription,
+  SheetFooter,
 } from "@/components/ui/sheet";
 import * as z from 'zod';
 import type { FormMode } from '@/components/table/ModularForm';
 import { ErrorDisplay } from '@/components/ErrorDisplay';
 import { hlsItemSchema } from './schema';
 import { HlsItemForm } from './HlsItemForm';
+import { Button } from "@/components/ui/button";
 
 type HlsItemFormData = z.infer<typeof hlsItemSchema>;
 
@@ -64,6 +66,7 @@ const columns = [
 export default function HlsItemPage() {
   const searchParams = useSearchParams();
   const tableId = searchParams.get('id') || '';
+  const tableName = 'table_hls_item_data';
   const { userProfile } = useStore();
   const selectedTable = userProfile?.data?.id === tableId ? {
     id: tableId,
@@ -76,7 +79,6 @@ export default function HlsItemPage() {
   const [selectedRow, setSelectedRow] = useState<HlsItemRow | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
-  const [fileToImport, setFileToImport] = useState<File | null>(null);
 
   const {
     data,
@@ -99,73 +101,13 @@ export default function HlsItemPage() {
     refreshData,
   } = useTableData<HlsItemRow>({
     config: {
-      tableName: 'table_hls_item_data',
+      tableName,
       columns,
     },
     tableId,
   });
 
-  const handleImport = () => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.csv,.xlsx,.xls';
-    input.onchange = async (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (file) {
-        setFileToImport(file);
-        setIsImportDialogOpen(true);
-      }
-    };
-    input.click();
-  };
-
-  const handleImportConfirm = async () => {
-    if (!fileToImport) return;
-
-    const formData = new FormData();
-    formData.append('file', fileToImport);
-    formData.append('table_id', tableId);
-
-    try {
-      const response = await fetch('/api/import', {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!response.ok) {
-        throw new Error('Import failed');
-      }
-
-      toast.success('Data imported successfully');
-      refreshData();
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to import data');
-    } finally {
-      setFileToImport(null);
-      setIsImportDialogOpen(false);
-    }
-  };
-
-  const handleExport = async () => {
-    try {
-      const response = await fetch(`/api/export?table=hls&table_id=${tableId}`);
-      if (!response.ok) throw new Error('Export failed');
-
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `hls_item_table.csv`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-
-      toast.success('Data exported successfully');
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to export data');
-    }
-  };
+  const handleExport = useExport({ tableId, tableName });
 
   if (error) {
     return (
@@ -191,7 +133,7 @@ export default function HlsItemPage() {
           setSelectedRow(null);
           setIsFormOpen(true);
         }}
-        onImport={handleImport}
+        onImport={() => setIsImportDialogOpen(true)}
         onExport={handleExport}
         onRefresh={refreshData}
         onAddFilter={handleAddFilter}
@@ -204,13 +146,6 @@ export default function HlsItemPage() {
           data={data}
           selectedRows={selectedRows}
           onRowSelect={handleRowSelection}
-          onSelectAll={(checked) => {
-            if (checked) {
-              handleRowSelection('all');
-            } else {
-              handleRowSelection('none');
-            }
-          }}
           onEdit={(row) => {
             setSelectedRow(row);
             setFormMode('edit');
@@ -240,40 +175,76 @@ export default function HlsItemPage() {
       <Sheet open={isFormOpen} onOpenChange={setIsFormOpen}>
         <SheetContent 
           side="right" 
-          className="w-[100vw] sm:w-[85vw] md:w-[75vw] lg:w-[65vw] xl:w-[50vw] bg-gray-900 border-gray-800 p-0"
+          className="w-[100vw] sm:w-[85vw] md:w-[75vw] lg:w-[65vw] xl:w-[50vw] bg-gray-900 border-gray-800 p-0 flex flex-col"
         >
           <SheetHeader className="px-6 py-4 border-b border-gray-200 dark:border-gray-800">
             <SheetTitle className="bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent text-2xl font-bold">
-              {formMode === 'add' ? 'Add HLS Item' : formMode === 'edit' ? 'Edit HLS Item' : 'Duplicate HLS Item'}
+              {formMode === 'add' ? 'Add HLS Item' : 
+               formMode === 'edit' ? 'Edit HLS Item' : 
+               'Duplicate HLS Item'}
             </SheetTitle>
             <SheetDescription className="text-gray-500 dark:text-gray-400">
-              {formMode === 'add' ? 'Create a new HLS item with the details below.' : 
+              {formMode === 'add' ? 'Create a new HLS item with the details below.' :
                formMode === 'edit' ? 'Modify the HLS item values for this entry.' :
                'Create a new entry based on the selected HLS item data.'}
             </SheetDescription>
           </SheetHeader>
-          <HlsItemForm
-            open={isFormOpen}
-            onOpenChange={setIsFormOpen}
-            mode={formMode === 'duplicate' ? 'add' : formMode}
-            initialData={selectedRow || undefined}
-            onSubmit={(data) => {
-              switch (formMode) {
-                case 'add':
-                  handleAddRow(data);
-                  break;
-                case 'edit':
-                  if (selectedRow?.id) {
-                    handleEditRow(selectedRow.id, data);
-                  }
-                  break;
-                case 'duplicate':
-                  handleAddRow(data);
-                  break;
-              }
-              setIsFormOpen(false);
-            }}
-          />
+          
+          <div className="flex-1 overflow-y-auto">
+            <HlsItemForm
+              initialData={selectedRow ?? undefined}
+              onSubmit={(data) => {
+                switch (formMode) {
+                  case 'add':
+                    handleAddRow(data);
+                    break;
+                  case 'edit':
+                    if (selectedRow?.id) {
+                      handleEditRow(selectedRow.id, data);
+                    }
+                    break;
+                  case 'duplicate':
+                    handleAddRow(data);
+                    break;
+                }
+                setIsFormOpen(false);
+              }}
+              onCancel={() => {
+                setSelectedRow(null);
+                setIsFormOpen(false);
+              }}
+              mode={formMode}
+              open={isFormOpen}
+              onOpenChange={setIsFormOpen}
+            />
+          </div>
+
+          <SheetFooter className="px-6 py-4 border-t border-gray-200 dark:border-gray-800">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setSelectedRow(null);
+                setIsFormOpen(false);
+              }}
+              className="flex-1"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              className="flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700"
+              onClick={() => {
+                const form = document.querySelector('form');
+                if (form) {
+                  form.requestSubmit();
+                }
+              }}
+            >
+              {formMode === 'add' ? 'Add HLS Item' :
+               formMode === 'edit' ? 'Save Changes' :
+               'Duplicate HLS Item'}
+            </Button>
+          </SheetFooter>
         </SheetContent>
       </Sheet>
 
@@ -290,16 +261,10 @@ export default function HlsItemPage() {
 
       <ImportDialog
         isOpen={isImportDialogOpen}
-        onClose={() => {
-          setFileToImport(null);
-          setIsImportDialogOpen(false);
-        }}
-        onImport={async (file) => {
-          await handleImportConfirm();
-          setFileToImport(null);
-          setIsImportDialogOpen(false);
-        }}
-        file={fileToImport}
+        onClose={() => setIsImportDialogOpen(false)}
+        onSuccess={refreshData}
+        tableId={tableId}
+        tableName="table_hls_item_data"
       />
     </div>
   );

@@ -391,8 +391,8 @@ export default function ItemForm({
               <div className="flex items-center h-12 px-3 bg-gray-50 dark:bg-gray-800/50 border-2 border-gray-200 dark:border-gray-700 rounded-lg transition-all duration-200">
                 <FormControl>
                   <Checkbox
-                    checked={!!formField.value}
-                    onCheckedChange={formField.onChange}
+                    checked={Boolean(formField.value)}
+                    onCheckedChange={(checked) => formField.onChange(checked)}
                     className="h-5 w-5 rounded-md border-2 border-gray-300 dark:border-gray-600 data-[state=checked]:bg-indigo-500 data-[state=checked]:border-indigo-500"
                   />
                 </FormControl>
@@ -420,8 +420,7 @@ export default function ItemForm({
             <FormControl>
               <Input
                 {...formField}
-                name={String(formField.name)}
-                value={formField.value || ''}
+                value={String(formField.value ?? '')}
                 type={config.type}
                 className="h-12 px-3 bg-gray-50 dark:bg-gray-800/50 border-2 border-gray-200 dark:border-gray-700 rounded-lg transition-all duration-200"
               />
@@ -451,7 +450,7 @@ export default function ItemForm({
     <div className="flex flex-col h-full">
       <ScrollArea className="flex-1 px-6 py-4">
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6 pb-20">
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
             <Tabs value={activeTab} onValueChange={setActiveTab}>
               <TabsList className="grid grid-cols-6 mb-4">
                 {tabs.map((tab) => (
@@ -465,38 +464,27 @@ export default function ItemForm({
                 ))}
               </TabsList>
               {tabs.map((tab) => (
-                <TabsContent key={tab.id} value={tab.id} className="space-y-6">
-                  {tab.sections && (
-                    <div className="space-y-6">
-                      {tab.sections.map((section) => renderSection(section))}
-                    </div>
-                  )}
+                <TabsContent key={tab.id} value={tab.id}>
+                  <div className="flex flex-col space-y-6">
+                    {tab.sections?.map((section) => (
+                      <div key={section.label} className="w-full">
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+                          {section.label}
+                        </h3>
+                        <div className="p-4 border rounded-lg border-gray-200 dark:border-gray-700">
+                          <div className="grid grid-cols-2 gap-4">
+                            {section.fields.map((field) => renderField(field))}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </TabsContent>
               ))}
             </Tabs>
           </form>
         </Form>
       </ScrollArea>
-      
-      <div className="sticky bottom-0 px-6 py-4 border-t border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-900/80 backdrop-blur supports-[backdrop-filter]:bg-background/80">
-        <div className="flex gap-4 w-full">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            className="flex-1 border hover:bg-gray-50 dark:hover:bg-gray-800"
-          >
-            Cancel
-          </Button>
-          <Button
-            type="submit"
-            onClick={form.handleSubmit(handleSubmit)}
-            className="flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 text-white dark:text-white hover:from-purple-700 hover:to-indigo-700"
-          >
-            {mode === "add" ? "Add Item" : "Save Changes"}
-          </Button>
-        </div>
-      </div>
     </div>
   );
 } 

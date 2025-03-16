@@ -55,6 +55,7 @@ interface ModularFormProps<T extends BaseFormData> {
   tableId: string;
   title?: string;
   description?: string;
+  showFooter?: boolean;
 }
 
 export function ModularForm<T extends BaseFormData>({
@@ -68,6 +69,7 @@ export function ModularForm<T extends BaseFormData>({
   tableId,
   title,
   description,
+  showFooter = true,
 }: ModularFormProps<T>) {
   // Create a dynamic schema based on columns
   const schemaObject: { [key: string]: z.ZodTypeAny } = {
@@ -225,24 +227,26 @@ export function ModularForm<T extends BaseFormData>({
           </ScrollArea>
         </div>
 
-        <div className="sticky bottom-0 px-6 py-4 border-t border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-900/80 backdrop-blur supports-[backdrop-filter]:bg-background/80">
-          <div className="flex gap-4 w-full">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onCancel}
-              className="flex-1 border hover:bg-gray-50 dark:hover:bg-gray-800"
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              className="flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 text-white dark:text-white hover:from-purple-700 hover:to-indigo-700"
-            >
-              {mode === 'add' ? 'Create Entry' : mode === 'edit' ? 'Save Changes' : 'Duplicate Entry'}
-            </Button>
+        {showFooter && (
+          <div className="sticky bottom-0 px-6 py-4 border-t border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-900/80 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+            <div className="flex gap-4 w-full">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onCancel}
+                className="flex-1 border hover:bg-gray-50 dark:hover:bg-gray-800"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                className="flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 text-white dark:text-white hover:from-purple-700 hover:to-indigo-700"
+              >
+                {mode === 'add' ? 'Create Entry' : mode === 'edit' ? 'Save Changes' : 'Duplicate Entry'}
+              </Button>
+            </div>
           </div>
-        </div>
+        )}
       </form>
     </Form>
   );
