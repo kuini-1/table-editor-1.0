@@ -145,8 +145,9 @@ export function ModularForm<T extends BaseFormData>({
             <FormControl>
               <Input 
                 type={column.type === 'number' ? 'number' : 'text'} 
-                {...field} 
+                name={field.name}
                 value={field.value ?? ''}
+                onChange={field.onChange}
                 placeholder={`Enter ${column.label.toLowerCase()}`}
                 className="h-12 bg-gray-50 dark:bg-gray-800/50 border-2 border-gray-200 dark:border-gray-700 rounded-lg focus:border-indigo-500 dark:focus:border-indigo-400 focus:ring-0 focus-visible:ring-0 focus:outline-none focus-visible:outline-none transition-all duration-200"
               />

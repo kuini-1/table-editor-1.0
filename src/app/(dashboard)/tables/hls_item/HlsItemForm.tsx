@@ -205,10 +205,10 @@ export function HlsItemForm({
             </FormLabel>
             <FormControl>
               <Input
-                {...formField}
-                name={String(formField.name)}
-                value={formField.value || ''}
-                type={config.type}
+                type={config.type === 'number' ? 'number' : 'text'}
+                name={formField.name}
+                value={String(formField.value ?? '')}
+                onChange={formField.onChange}
                 className="h-12 px-3 bg-gray-50 dark:bg-gray-800/50 border-2 border-gray-200 dark:border-gray-700 rounded-lg transition-all duration-200"
               />
             </FormControl>
