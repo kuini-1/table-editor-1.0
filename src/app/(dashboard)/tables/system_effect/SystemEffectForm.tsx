@@ -1,10 +1,10 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { z } from "zod";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { Button } from "@/components/ui/button";
+import { useState } from 'react';
+import { z } from 'zod';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Button } from '@/components/ui/button';
 import {
   Form,
   FormControl,
@@ -12,20 +12,20 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { toast } from "sonner";
+} from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { toast } from 'sonner';
 
-import { systemEffectSchema } from "./schema";
+import { systemEffectSchema } from './schema';
 
 type SystemEffectFormData = z.infer<typeof systemEffectSchema>;
 
 interface SystemEffectFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  mode: "add" | "edit";
+  mode: 'add' | 'edit';
   initialData?: SystemEffectFormData;
   onSubmit: (data: SystemEffectFormData) => void;
 }
@@ -46,28 +46,28 @@ export default function SystemEffectForm({
     try {
       onSubmit(data);
       form.reset();
-      toast.success(mode === "add" ? "System effect added successfully" : "System effect updated successfully");
+      toast.success(mode === 'add' ? 'System effect added successfully' : 'System effect updated successfully');
     } catch (error) {
-      toast.error("Failed to save system effect");
+      toast.error('Failed to save system effect');
       console.error(error);
     }
   };
 
   // Define field labels and types
-  const fieldConfig: Record<string, { label: string; type: "text" | "number"; tab: string; section: string }> = {
-    tblidx: { label: "ID", type: "number", tab: "basic", section: "Basic Info" },
-    wszname: { label: "Name", type: "text", tab: "basic", section: "Basic Info" },
-    byeffect_type: { label: "Effect Type", type: "number", tab: "basic", section: "Basic Info" },
-    byactive_effect_type: { label: "Active Effect Type", type: "number", tab: "basic", section: "Basic Info" },
-    effect_info_text: { label: "Effect Info", type: "text", tab: "basic", section: "Basic Info" },
-    keep_effect_name: { label: "Keep Effect Name", type: "text", tab: "effects", section: "Keep Effects" },
-    bytarget_effect_position: { label: "Target Effect Position", type: "number", tab: "effects", section: "Keep Effects" },
-    wkeep_animation_index: { label: "Keep Animation Index", type: "number", tab: "effects", section: "Keep Effects" },
-    szsuccess_effect_name: { label: "Success Effect Name", type: "text", tab: "success", section: "Success Effects" },
-    bysuccess_projectile_type: { label: "Success Projectile Type", type: "number", tab: "success", section: "Success Effects" },
-    bysuccess_effect_position: { label: "Success Effect Position", type: "number", tab: "success", section: "Success Effects" },
-    szsuccess_end_effect_name: { label: "Success End Effect Name", type: "text", tab: "success", section: "End Effects" },
-    byend_effect_position: { label: "End Effect Position", type: "number", tab: "success", section: "End Effects" },
+  const fieldConfig: Record<string, { label: string; type: 'text' | 'number'; tab: string; section: string }> = {
+    tblidx: { label: 'ID', type: 'number', tab: 'basic', section: 'Basic Info' },
+    wszname: { label: 'Name', type: 'text', tab: 'basic', section: 'Basic Info' },
+    byeffect_type: { label: 'Effect Type', type: 'number', tab: 'basic', section: 'Basic Info' },
+    byactive_effect_type: { label: 'Active Effect Type', type: 'number', tab: 'basic', section: 'Basic Info' },
+    effect_info_text: { label: 'Effect Info', type: 'text', tab: 'basic', section: 'Basic Info' },
+    keep_effect_name: { label: 'Keep Effect Name', type: 'text', tab: 'effects', section: 'Keep Effects' },
+    bytarget_effect_position: { label: 'Target Effect Position', type: 'number', tab: 'effects', section: 'Keep Effects' },
+    wkeep_animation_index: { label: 'Keep Animation Index', type: 'number', tab: 'effects', section: 'Keep Effects' },
+    szsuccess_effect_name: { label: 'Success Effect Name', type: 'text', tab: 'success', section: 'Success Effects' },
+    bysuccess_projectile_type: { label: 'Success Projectile Type', type: 'number', tab: 'success', section: 'Success Effects' },
+    bysuccess_effect_position: { label: 'Success Effect Position', type: 'number', tab: 'success', section: 'Success Effects' },
+    szsuccess_end_effect_name: { label: 'Success End Effect Name', type: 'text', tab: 'success', section: 'End Effects' },
+    byend_effect_position: { label: 'End Effect Position', type: 'number', tab: 'success', section: 'End Effects' },
   };
 
   // Function to render a field

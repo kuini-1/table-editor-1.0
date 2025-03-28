@@ -95,46 +95,46 @@ export function DungeonForm({
 
   const tabs = [
     {
-      id: "basic",
-      label: "Basic Info",
+      id: 'basic',
+      label: 'Basic Info',
       sections: [
         {
-          label: "Basic Information",
-          fields: ["tblidx", "bydungeontype", "bymaxmember", "linkworld"]
+          label: 'Basic Information',
+          fields: ['tblidx', 'bydungeontype', 'bymaxmember', 'linkworld']
         }
       ]
     },
     {
-      id: "requirements",
-      label: "Requirements",
+      id: 'requirements',
+      label: 'Requirements',
       sections: [
         {
-          label: "Level Requirements",
-          fields: ["byminlevel", "bymaxlevel"]
+          label: 'Level Requirements',
+          fields: ['byminlevel', 'bymaxlevel']
         },
         {
-          label: "Other Requirements",
-          fields: ["needitemtblidx"]
+          label: 'Other Requirements',
+          fields: ['needitemtblidx']
         }
       ]
     },
     {
-      id: "rewards",
-      label: "Rewards",
+      id: 'rewards',
+      label: 'Rewards',
       sections: [
         {
-          label: "Reward Settings",
-          fields: ["dwhonorpoint"]
+          label: 'Reward Settings',
+          fields: ['dwhonorpoint']
         }
       ]
     },
     {
-      id: "other",
-      label: "Other",
+      id: 'other',
+      label: 'Other',
       sections: [
         {
-          label: "Additional Settings",
-          fields: ["wpstblidx", "opencine", "groupidx"]
+          label: 'Additional Settings',
+          fields: ['wpstblidx', 'opencine', 'groupidx']
         }
       ]
     }

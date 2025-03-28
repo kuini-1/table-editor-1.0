@@ -1,10 +1,10 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { z } from "zod";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { Button } from "@/components/ui/button";
+import { useState } from 'react';
+import { z } from 'zod';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Button } from '@/components/ui/button';
 import {
   Form,
   FormControl,
@@ -12,21 +12,21 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { toast } from "sonner";
-import { Checkbox } from "@/components/ui/checkbox";
+} from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { toast } from 'sonner';
+import { Checkbox } from '@/components/ui/checkbox';
 
-import { slotMachineItemSchema } from "./schema";
+import { slotMachineItemSchema } from './schema';
 
 type SlotMachineItemFormData = z.infer<typeof slotMachineItemSchema>;
 
 interface SlotMachineItemFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  mode: "add" | "edit";
+  mode: 'add' | 'edit';
   initialData?: SlotMachineItemFormData;
   onSubmit: (data: SlotMachineItemFormData) => void;
 }
@@ -47,22 +47,22 @@ export default function SlotMachineItemForm({
     try {
       onSubmit(data);
       form.reset();
-      toast.success(mode === "add" ? "Slot machine item added successfully" : "Slot machine item updated successfully");
+      toast.success(mode === 'add' ? 'Slot machine item added successfully' : 'Slot machine item updated successfully');
     } catch (error) {
-      toast.error("Failed to save slot machine item");
+      toast.error('Failed to save slot machine item');
       console.error(error);
     }
   };
 
   // Define field labels and types
-  const fieldConfig: Record<string, { label: string; type: "text" | "number" | "boolean"; tab: string; section: string }> = {
-    tblidx: { label: "ID", type: "number", tab: "basic", section: "Basic Info" },
-    wsznametext: { label: "Name", type: "text", tab: "basic", section: "Basic Info" },
-    bactive: { label: "Active", type: "boolean", tab: "basic", section: "Basic Info" },
-    slotmachinetblidx: { label: "Slot Machine ID", type: "number", tab: "details", section: "Item Details" },
-    cashitemtblidx: { label: "Cash Item ID", type: "number", tab: "details", section: "Item Details" },
-    bystackcount: { label: "Stack Count", type: "number", tab: "details", section: "Item Details" },
-    bypercent: { label: "Percent", type: "number", tab: "details", section: "Item Details" },
+  const fieldConfig: Record<string, { label: string; type: 'text' | 'number' | 'boolean'; tab: string; section: string }> = {
+    tblidx: { label: 'ID', type: 'number', tab: 'basic', section: 'Basic Info' },
+    wsznametext: { label: 'Name', type: 'text', tab: 'basic', section: 'Basic Info' },
+    bactive: { label: 'Active', type: 'boolean', tab: 'basic', section: 'Basic Info' },
+    slotmachinetblidx: { label: 'Slot Machine ID', type: 'number', tab: 'details', section: 'Item Details' },
+    cashitemtblidx: { label: 'Cash Item ID', type: 'number', tab: 'details', section: 'Item Details' },
+    bystackcount: { label: 'Stack Count', type: 'number', tab: 'details', section: 'Item Details' },
+    bypercent: { label: 'Percent', type: 'number', tab: 'details', section: 'Item Details' },
   };
 
   // Function to render a field

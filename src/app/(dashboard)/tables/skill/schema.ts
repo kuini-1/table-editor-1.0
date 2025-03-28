@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from 'zod';
 
 // Define the schema for the skill table
 export const skillSchema = z.object({

@@ -1,12 +1,12 @@
-import { Button } from "@/components/ui/button";
-import { ChevronFirst, ChevronLast, ChevronLeft, ChevronRight } from "lucide-react";
+import { Button } from '@/components/ui/button';
+import { ChevronFirst, ChevronLast, ChevronLeft, ChevronRight } from 'lucide-react';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from '@/components/ui/select';
 
 interface TablePaginationProps {
   currentPage: number;

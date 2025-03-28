@@ -1,6 +1,6 @@
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Edit, Copy, Trash2 } from "lucide-react";
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Edit, Copy, Trash2 } from 'lucide-react';
 
 interface Column {
   key: string;
@@ -12,10 +12,10 @@ interface DataTableProps<T> {
   columns: Column[];
   data: T[];
   selectedRows: Set<string>;
-  onRowSelect: (id: string | 'all' | 'none') => void;
+  onRowSelect: (rowId: string) => void;
   onEdit: (row: T) => void;
-  onDuplicate: (row: T) => void;
   onDelete: (row: T) => void;
+  onDuplicate: (row: T) => void;
 }
 
 export function DataTable<T extends { id: string }>({
@@ -24,11 +24,11 @@ export function DataTable<T extends { id: string }>({
   selectedRows,
   onRowSelect,
   onEdit,
-  onDuplicate,
   onDelete,
+  onDuplicate,
 }: DataTableProps<T>) {
   const handleSelectAll = (checked: boolean) => {
-    onRowSelect(checked ? 'all' : 'none');
+    onRowSelect('all');
   };
 
   const handleSelectRow = (id: string) => {

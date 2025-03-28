@@ -32,7 +32,7 @@ export function ItemBagListForm({
   onSubmit,
   mode,
 }: ItemBagListFormProps) {
-  const [activeTab, setActiveTab] = useState("basic");
+  const [activeTab, setActiveTab] = useState('basic');
 
   const form = useForm<NewItemBagListFormData>({
     resolver: zodResolver(newItemBagListSchema),
@@ -131,18 +131,18 @@ export function ItemBagListForm({
 
   const tabs = [
     {
-      id: "basic",
-      label: "Basic Info",
+      id: 'basic',
+      label: 'Basic Info',
       sections: [
         {
-          label: "Basic Information",
-          fields: ["tblidx", "wszname", "bylevel", "benchant_able", "dwitemcount", "dwtotalprob"]
+          label: 'Basic Information',
+          fields: ['tblidx', 'wszname', 'bylevel', 'benchant_able', 'dwitemcount', 'dwtotalprob']
         }
       ]
     },
     {
-      id: "items",
-      label: "Items",
+      id: 'items',
+      label: 'Items',
       sections: Array.from({ length: 20 }, (_, i) => ({
         label: `Item ${i}`,
         fields: [`aitem_${i}`, `adwprob_${i}`]

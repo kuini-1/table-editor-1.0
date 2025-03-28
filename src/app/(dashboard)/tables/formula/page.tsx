@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { toast } from 'sonner';
 import { useStore } from '@/lib/store';
 import { useTableData } from '@/hooks/useTableData';
 import { TableHeader } from '@/components/table/TableHeader';
@@ -16,8 +15,8 @@ import {
   SheetTitle,
   SheetDescription,
   SheetFooter,
-} from "@/components/ui/sheet";
-import { Button } from "@/components/ui/button";
+} from '@/components/ui/sheet';
+import { Button } from '@/components/ui/button';
 import type { FormMode } from '@/components/table/ModularForm';
 import { ErrorDisplay } from '@/components/ErrorDisplay';
 import { FormulaForm } from './FormulaForm';
@@ -42,7 +41,6 @@ export default function FormulaPage() {
 
   const {
     data,
-    loading,
     error,
     totalRows,
     page,
@@ -53,7 +51,6 @@ export default function FormulaPage() {
     handleEditRow,
     handleDeleteRow,
     handleBulkDelete,
-    handleDuplicateRow,
     handleAddFilter,
     handleRemoveFilter,
     handlePageChange,

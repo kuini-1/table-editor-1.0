@@ -1,10 +1,10 @@
 'use client';
 
-import { useState } from "react";
-import { z } from "zod";
-import { useSearchParams } from "next/navigation";
-import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
+import { useState } from 'react';
+import { z } from 'zod';
+import { useSearchParams } from 'next/navigation';
+import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
 import {
   Sheet,
   SheetContent,
@@ -12,15 +12,15 @@ import {
   SheetTitle,
   SheetDescription,
   SheetFooter,
-} from "@/components/ui/sheet";
-import { useTableData } from "@/hooks/useTableData";
+} from '@/components/ui/sheet';
+import { useTableData } from '@/hooks/useTableData';
 import { TableHeader } from '@/components/table/TableHeader';
 import { TablePagination } from '@/components/table/TablePagination';
-import { DataTable } from "@/components/table/DataTable";
+import { DataTable } from '@/components/table/DataTable';
 import { DeleteDialog, ImportDialog, useExport } from '@/components/table/TableDialogs';
-import { useStore } from "@/lib/store";
-import { skillSchema } from "./schema";
-import SkillForm from "./SkillForm";
+import { useStore } from '@/lib/store';
+import { skillSchema } from './schema';
+import SkillForm from './SkillForm';
 import { ErrorDisplay } from '@/components/ErrorDisplay';
 
 type SkillFormData = z.infer<typeof skillSchema>;
@@ -35,25 +35,25 @@ type FormMode = 'add' | 'edit' | 'duplicate';
 const formTheme = {
   title: {
     text: {
-      add: "Add New Skill",
-      edit: "Edit Skill",
-      duplicate: "Duplicate Skill"
+      add: 'Add New Skill',
+      edit: 'Edit Skill',
+      duplicate: 'Duplicate Skill'
     }
   },
   description: {
     text: {
-      add: "Add a new skill to the database.",
-      edit: "Edit the selected skill's details.",
-      duplicate: "Create a new skill based on the selected one."
+      add: 'Add a new skill to the database.',
+      edit: 'Edit the selected skill\'s details.',
+      duplicate: 'Create a new skill based on the selected one.'
     }
   },
   button: {
     text: {
-      add: "Add Skill",
-      edit: "Save Changes",
-      duplicate: "Duplicate Entry"
+      add: 'Add Skill',
+      edit: 'Save Changes',
+      duplicate: 'Duplicate Entry'
     },
-    className: "flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700",
+    className: 'flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700',
   },
 } as const;
 
@@ -77,63 +77,63 @@ export default function SkillPage() {
   // Define columns for the data table
   const columns = [
     {
-      key: "tblidx",
-      label: "ID",
-      type: "number" as const,
+      key: 'tblidx',
+      label: 'ID',
+      type: 'number' as const,
       validation: skillSchema.shape.tblidx,
     },
     {
-      key: "skill_name",
-      label: "Skill Name",
-      type: "text" as const,
+      key: 'skill_name',
+      label: 'Skill Name',
+      type: 'text' as const,
       validation: skillSchema.shape.skill_name,
     },
     {
-      key: "wsznametext",
-      label: "Display Name",
-      type: "text" as const,
+      key: 'wsznametext',
+      label: 'Display Name',
+      type: 'text' as const,
       validation: skillSchema.shape.wsznametext,
     },
     {
-      key: "byskill_class",
-      label: "Skill Class",
-      type: "number" as const,
+      key: 'byskill_class',
+      label: 'Skill Class',
+      type: 'number' as const,
       validation: skillSchema.shape.byskill_class,
     },
     {
-      key: "byskill_type",
-      label: "Skill Type",
-      type: "number" as const,
+      key: 'byskill_type',
+      label: 'Skill Type',
+      type: 'number' as const,
       validation: skillSchema.shape.byskill_type,
     },
     {
-      key: "byskill_active_type",
-      label: "Active Type",
-      type: "number" as const,
+      key: 'byskill_active_type',
+      label: 'Active Type',
+      type: 'number' as const,
       validation: skillSchema.shape.byskill_active_type,
     },
     {
-      key: "byskill_grade",
-      label: "Grade",
-      type: "number" as const,
+      key: 'byskill_grade',
+      label: 'Grade',
+      type: 'number' as const,
       validation: skillSchema.shape.byskill_grade,
     },
     {
-      key: "byrequire_train_level",
-      label: "Required Level",
-      type: "number" as const,
+      key: 'byrequire_train_level',
+      label: 'Required Level',
+      type: 'number' as const,
       validation: skillSchema.shape.byrequire_train_level,
     },
     {
-      key: "bvalidity_able",
-      label: "Validity",
-      type: "number" as const,
+      key: 'bvalidity_able',
+      label: 'Validity',
+      type: 'number' as const,
       validation: skillSchema.shape.bvalidity_able,
     },
     {
-      key: "szicon_name",
-      label: "Icon",
-      type: "text" as const,
+      key: 'szicon_name',
+      label: 'Icon',
+      type: 'text' as const,
       validation: skillSchema.shape.szicon_name,
     },
   ];
@@ -186,32 +186,32 @@ export default function SkillPage() {
   // Handle import confirmation
   const handleImportConfirm = async (file: File) => {
     if (!file) {
-      toast.error("Please select a file to import");
+      toast.error('Please select a file to import');
       return;
     }
 
     try {
       const formData = new FormData();
-      formData.append("file", file);
-      formData.append("tableName", "skill");
-      formData.append("tableId", tableId);
+      formData.append('file', file);
+      formData.append('tableName', 'skill');
+      formData.append('tableId', tableId);
 
-      const response = await fetch("/api/import", {
-        method: "POST",
+      const response = await fetch('/api/import', {
+        method: 'POST',
         body: formData,
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to import data");
+        throw new Error(errorData.error || 'Failed to import data');
       }
 
-      toast.success("Data imported successfully");
+      toast.success('Data imported successfully');
       refreshData();
       setIsImportDialogOpen(false);
     } catch (error) {
-      console.error("Import error:", error);
-      toast.error(error instanceof Error ? error.message : "Failed to import data");
+      console.error('Import error:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to import data');
     }
   };
 
@@ -369,7 +369,7 @@ export default function SkillPage() {
             setIsDeleteDialogOpen(false);
           }
         }}
-        itemName={selectedRow?.skill_name || "this skill"}
+        itemName={selectedRow?.skill_name || 'this skill'}
       />
     </div>
   );

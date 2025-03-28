@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   Form,
   FormControl,
@@ -12,7 +12,7 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form";
+} from '@/components/ui/form';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
 import {
   Dialog,
@@ -25,11 +25,11 @@ import {
   DialogPortal,
   DialogOverlay,
   DialogClose,
-} from "@/components/ui/dialog";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import * as z from "zod";
-import { toast } from "sonner";
+} from '@/components/ui/dialog';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
+import * as z from 'zod';
+import { toast } from 'sonner';
 
 interface SubOwnerProfile {
   id: string;
@@ -123,17 +123,17 @@ export default function UsersPage() {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      email: "",
-      full_name: "",
-      password: "",
+      email: '',
+      full_name: '',
+      password: '',
     },
   });
 
   const editForm = useForm<z.infer<typeof editFormSchema>>({
     resolver: zodResolver(editFormSchema),
     defaultValues: {
-      email: "",
-      full_name: "",
+      email: '',
+      full_name: '',
     },
   });
 

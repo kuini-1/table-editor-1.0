@@ -29,7 +29,10 @@ interface FormulaFormProps {
 export function FormulaForm({
   initialData,
   onSubmit,
+  onCancel,
   mode,
+  open,
+  onOpenChange,
 }: FormulaFormProps) {
   const form = useForm<FormulaFormData>({
     resolver: zodResolver(newFormulaSchema),
@@ -117,22 +120,22 @@ export function FormulaForm({
 
   const tabs = [
     {
-      id: "basic",
-      label: "Basic Info",
+      id: 'basic',
+      label: 'Basic Info',
       sections: [
         {
-          label: "Basic Information",
-          fields: ["tblidx", "bvalidity_able"]
+          label: 'Basic Information',
+          fields: ['tblidx', 'bvalidity_able']
         }
       ]
     },
     {
-      id: "rates",
-      label: "Rates",
+      id: 'rates',
+      label: 'Rates',
       sections: [
         {
-          label: "Rate Settings",
-          fields: ["afrate_0", "afrate_1", "afrate_2", "afrate_3"]
+          label: 'Rate Settings',
+          fields: ['afrate_0', 'afrate_1', 'afrate_2', 'afrate_3']
         }
       ]
     }

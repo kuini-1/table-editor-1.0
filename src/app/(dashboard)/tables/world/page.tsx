@@ -12,7 +12,7 @@ import { DeleteDialog, ImportDialog, useExport } from '@/components/table/TableD
 import { useTableData } from '@/hooks/useTableData';
 import { useStore } from '@/lib/store';
 import { ErrorDisplay } from '@/components/ErrorDisplay';
-import { Button } from "@/components/ui/button";
+import { Button } from '@/components/ui/button';
 import {
   Sheet,
   SheetContent,
@@ -20,7 +20,7 @@ import {
   SheetTitle,
   SheetDescription,
   SheetFooter,
-} from "@/components/ui/sheet";
+} from '@/components/ui/sheet';
 import { toast } from 'sonner';
 
 type WorldData = z.infer<typeof worldSchema> & { id: string };
@@ -30,25 +30,25 @@ type FormMode = 'add' | 'edit' | 'duplicate';
 const formTheme = {
   title: {
     text: {
-      add: "Add New World",
-      edit: "Edit World",
-      duplicate: "Duplicate World"
+      add: 'Add New World',
+      edit: 'Edit World',
+      duplicate: 'Duplicate World'
     }
   },
   description: {
     text: {
-      add: "Add a new world to the database.",
-      edit: "Edit the selected world's details.",
-      duplicate: "Create a new world based on the selected one."
+      add: 'Add a new world to the database.',
+      edit: 'Edit the selected world\'s details.',
+      duplicate: 'Create a new world based on the selected one.'
     }
   },
   button: {
     text: {
-      add: "Add World",
-      edit: "Save Changes",
-      duplicate: "Duplicate World"
+      add: 'Add World',
+      edit: 'Save Changes',
+      duplicate: 'Duplicate World'
     },
-    className: "flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700",
+    className: 'flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700',
   },
 } as const;
 
@@ -147,32 +147,32 @@ export default function WorldPage() {
 
   const handleImportConfirm = async (file: File) => {
     if (!file) {
-      toast.error("Please select a file to import");
+      toast.error('Please select a file to import');
       return;
     }
 
     try {
       const formData = new FormData();
-      formData.append("file", file);
-      formData.append("tableName", "world");
-      formData.append("tableId", tableId);
+      formData.append('file', file);
+      formData.append('tableName', 'world');
+      formData.append('tableId', tableId);
 
-      const response = await fetch("/api/import", {
-        method: "POST",
+      const response = await fetch('/api/import', {
+        method: 'POST',
         body: formData,
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to import data");
+        throw new Error(errorData.error || 'Failed to import data');
       }
 
-      toast.success("Data imported successfully");
+      toast.success('Data imported successfully');
       refreshData();
       setIsImportDialogOpen(false);
     } catch (error) {
-      console.error("Import error:", error);
-      toast.error(error instanceof Error ? error.message : "Failed to import data");
+      console.error('Import error:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to import data');
     }
   };
 
@@ -324,7 +324,7 @@ export default function WorldPage() {
             setSelectedRow(null);
           }
         }}
-        itemName={selectedRow?.szname || "this world"}
+        itemName={selectedRow?.szname || 'this world'}
       />
 
       <ImportDialog

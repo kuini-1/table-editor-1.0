@@ -1,10 +1,10 @@
-"use client";
-import { useState } from "react";
-import { z } from "zod";
-import { useRouter, useSearchParams } from "next/navigation";
-import { toast } from "sonner";
-import { createClient } from "@/lib/supabase/client";
-import { Button } from "@/components/ui/button";
+'use client';
+import { useState } from 'react';
+import { z } from 'zod';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { toast } from 'sonner';
+import { createClient } from '@/lib/supabase/client';
+import { Button } from '@/components/ui/button';
 import {
   Sheet,
   SheetContent,
@@ -12,18 +12,18 @@ import {
   SheetTitle,
   SheetDescription,
   SheetFooter,
-} from "@/components/ui/sheet";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { DataTable } from "@/components/table/DataTable";
-import { useTableData } from "@/hooks/useTableData";
+} from '@/components/ui/sheet';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { DataTable } from '@/components/table/DataTable';
+import { useTableData } from '@/hooks/useTableData';
 import { TableHeader } from '@/components/table/TableHeader';
 import { TablePagination } from '@/components/table/TablePagination';
 import { DeleteDialog, ImportDialog, useExport } from '@/components/table/TableDialogs';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useStore } from "@/lib/store";
-import { itemTableSchema } from "./schema";
-import ItemForm from "./ItemForm";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useStore } from '@/lib/store';
+import { itemTableSchema } from './schema';
+import ItemForm from './ItemForm';
 import { ErrorDisplay } from '@/components/ErrorDisplay';
 
 type ItemTableFormData = z.infer<typeof itemTableSchema>;
@@ -38,25 +38,25 @@ type FormMode = 'add' | 'edit' | 'duplicate';
 const formTheme = {
   title: {
     text: {
-      add: "Add New Item",
-      edit: "Edit Item",
-      duplicate: "Duplicate Item"
+      add: 'Add New Item',
+      edit: 'Edit Item',
+      duplicate: 'Duplicate Item'
     }
   },
   description: {
     text: {
-      add: "Add a new item to the database.",
-      edit: "Edit the selected item's details.",
-      duplicate: "Create a new item based on the selected one."
+      add: 'Add a new item to the database.',
+      edit: 'Edit the selected item\'s details.',
+      duplicate: 'Create a new item based on the selected one.'
     }
   },
   button: {
     text: {
-      add: "Add Item",
-      edit: "Save Changes",
-      duplicate: "Duplicate Entry"
+      add: 'Add Item',
+      edit: 'Save Changes',
+      duplicate: 'Duplicate Entry'
     },
-    className: "flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700",
+    className: 'flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700',
   },
 } as const;
 
@@ -83,99 +83,99 @@ export default function ItemTablePage() {
   // Define columns for the data table
   const columns = [
     {
-      key: "tblidx",
-      label: "ID",
-      type: "number" as const,
+      key: 'tblidx',
+      label: 'ID',
+      type: 'number' as const,
       validation: itemTableSchema.shape.tblidx,
     },
     {
-      key: "name",
-      label: "Name",
-      type: "text" as const,
+      key: 'name',
+      label: 'Name',
+      type: 'text' as const,
       validation: itemTableSchema.shape.name,
     },
     {
-      key: "wsznametext",
-      label: "Display Name",
-      type: "text" as const,
+      key: 'wsznametext',
+      label: 'Display Name',
+      type: 'text' as const,
       validation: itemTableSchema.shape.wsznametext,
     },
     {
-      key: "szicon_name",
-      label: "Icon Name",
-      type: "text" as const,
+      key: 'szicon_name',
+      label: 'Icon Name',
+      type: 'text' as const,
       validation: itemTableSchema.shape.szicon_name,
     },
     {
-      key: "byitem_type",
-      label: "Item Type",
-      type: "number" as const,
+      key: 'byitem_type',
+      label: 'Item Type',
+      type: 'number' as const,
       validation: itemTableSchema.shape.byitem_type,
     },
     {
-      key: "byequip_type",
-      label: "Equip Type",
-      type: "number" as const,
+      key: 'byequip_type',
+      label: 'Equip Type',
+      type: 'number' as const,
       validation: itemTableSchema.shape.byequip_type,
     },
     {
-      key: "byrank",
-      label: "Rank",
-      type: "number" as const,
+      key: 'byrank',
+      label: 'Rank',
+      type: 'number' as const,
       validation: itemTableSchema.shape.byrank,
     },
     {
-      key: "dwcost",
-      label: "Cost",
-      type: "number" as const,
+      key: 'dwcost',
+      label: 'Cost',
+      type: 'number' as const,
       validation: itemTableSchema.shape.dwcost,
     },
     {
-      key: "dwsell_price",
-      label: "Sell Price",
-      type: "number" as const,
+      key: 'dwsell_price',
+      label: 'Sell Price',
+      type: 'number' as const,
       validation: itemTableSchema.shape.dwsell_price,
     },
     {
-      key: "bvalidity_able",
-      label: "Valid",
-      type: "boolean" as const,
+      key: 'bvalidity_able',
+      label: 'Valid',
+      type: 'boolean' as const,
       validation: itemTableSchema.shape.bvalidity_able,
     },
     {
-      key: "biscanhaveoption",
-      label: "Can Have Option",
-      type: "boolean" as const,
+      key: 'biscanhaveoption',
+      label: 'Can Have Option',
+      type: 'boolean' as const,
       validation: itemTableSchema.shape.biscanhaveoption,
     },
     {
-      key: "bcreatesuperiorable",
-      label: "Can Create Superior",
-      type: "boolean" as const,
+      key: 'bcreatesuperiorable',
+      label: 'Can Create Superior',
+      type: 'boolean' as const,
       validation: itemTableSchema.shape.bcreatesuperiorable,
     },
     {
-      key: "bcreateexcellentable",
-      label: "Can Create Excellent",
-      type: "boolean" as const,
+      key: 'bcreateexcellentable',
+      label: 'Can Create Excellent',
+      type: 'boolean' as const,
       validation: itemTableSchema.shape.bcreateexcellentable,
     },
     {
-      key: "bcreaterareable",
-      label: "Can Create Rare",
-      type: "boolean" as const,
+      key: 'bcreaterareable',
+      label: 'Can Create Rare',
+      type: 'boolean' as const,
       validation: itemTableSchema.shape.bcreaterareable,
     },
     {
-      key: "bcreatelegendaryable",
-      label: "Can Create Legendary",
-      type: "boolean" as const,
+      key: 'bcreatelegendaryable',
+      label: 'Can Create Legendary',
+      type: 'boolean' as const,
       validation: itemTableSchema.shape.bcreatelegendaryable,
     },
     {
-      key: "biscanrenewal",
-      label: "Can Renewal",
-      type: "boolean" as const,
+      key: 'biscanrenewal',
+      label: 'Can Renewal',
+      type: 'boolean' as const,
       validation: itemTableSchema.shape.biscanrenewal,
     },
   ];
@@ -183,33 +183,33 @@ export default function ItemTablePage() {
   // Define filter definitions for the data table
   const filterDefinitions = [
     {
-      key: "tblidx",
-      label: "ID",
-      type: "number" as const,
+      key: 'tblidx',
+      label: 'ID',
+      type: 'number' as const,
       validation: itemTableSchema.shape.tblidx,
     },
     {
-      key: "name",
-      label: "Name",
-      type: "text" as const,
+      key: 'name',
+      label: 'Name',
+      type: 'text' as const,
       validation: itemTableSchema.shape.name,
     },
     {
-      key: "byitem_type",
-      label: "Item Type",
-      type: "number" as const,
+      key: 'byitem_type',
+      label: 'Item Type',
+      type: 'number' as const,
       validation: itemTableSchema.shape.byitem_type,
     },
     {
-      key: "byrank",
-      label: "Rank",
-      type: "number" as const,
+      key: 'byrank',
+      label: 'Rank',
+      type: 'number' as const,
       validation: itemTableSchema.shape.byrank,
     },
     {
-      key: "bvalidity_able",
-      label: "Valid",
-      type: "boolean" as const,
+      key: 'bvalidity_able',
+      label: 'Valid',
+      type: 'boolean' as const,
       validation: itemTableSchema.shape.bvalidity_able,
     },
   ];
@@ -217,134 +217,134 @@ export default function ItemTablePage() {
   // Define tabs for the form
   const tabs = [
     {
-      id: "basic",
-      label: "Basic Info",
+      id: 'basic',
+      label: 'Basic Info',
       fields: [
-        "tblidx",
-        "name",
-        "wsznametext",
-        "szicon_name",
-        "bymodel_type",
-        "szmodel",
-        "szsub_weapon_act_model",
-        "byitem_type",
-        "byequip_type",
-        "dwequip_slot_type_bit_flag",
-        "wfunction_bit_flag",
-        "bymax_stack",
-        "byrank",
-        "dwweight",
-        "dwcost",
-        "dwsell_price",
-        "bvalidity_able",
-        "note",
+        'tblidx',
+        'name',
+        'wsznametext',
+        'szicon_name',
+        'bymodel_type',
+        'szmodel',
+        'szsub_weapon_act_model',
+        'byitem_type',
+        'byequip_type',
+        'dwequip_slot_type_bit_flag',
+        'wfunction_bit_flag',
+        'bymax_stack',
+        'byrank',
+        'dwweight',
+        'dwcost',
+        'dwsell_price',
+        'bvalidity_able',
+        'note',
       ],
     },
     {
-      id: "attributes",
-      label: "Attributes",
+      id: 'attributes',
+      label: 'Attributes',
       fields: [
-        "bydurability",
-        "bydurability_count",
-        "bybattle_attribute",
-        "wphysical_offence",
-        "wenergy_offence",
-        "wphysical_defence",
-        "wenergy_defence",
-        "fattack_range_bonus",
-        "wattack_speed_rate",
-        "fattack_physical_revision",
-        "fattack_energy_revision",
-        "fdefence_physical_revision",
-        "fdefence_energy_revision",
+        'bydurability',
+        'bydurability_count',
+        'bybattle_attribute',
+        'wphysical_offence',
+        'wenergy_offence',
+        'wphysical_defence',
+        'wenergy_defence',
+        'fattack_range_bonus',
+        'wattack_speed_rate',
+        'fattack_physical_revision',
+        'fattack_energy_revision',
+        'fdefence_physical_revision',
+        'fdefence_energy_revision',
       ],
     },
     {
-      id: "requirements",
-      label: "Requirements",
+      id: 'requirements',
+      label: 'Requirements',
       fields: [
-        "byneed_min_level",
-        "byneed_max_level",
-        "dwneed_class_bit_flag",
-        "dwneed_gender_bit_flag",
-        "byclass_special",
-        "byrace_special",
-        "wneed_str",
-        "wneed_con",
-        "wneed_foc",
-        "wneed_dex",
-        "wneed_sol",
-        "wneed_eng",
-        "byrestricttype",
-        "byneedfunction",
+        'byneed_min_level',
+        'byneed_max_level',
+        'dwneed_class_bit_flag',
+        'dwneed_gender_bit_flag',
+        'byclass_special',
+        'byrace_special',
+        'wneed_str',
+        'wneed_con',
+        'wneed_foc',
+        'wneed_dex',
+        'wneed_sol',
+        'wneed_eng',
+        'byrestricttype',
+        'byneedfunction',
       ],
     },
     {
-      id: "options",
-      label: "Options",
+      id: 'options',
+      label: 'Options',
       fields: [
-        "biscanhaveoption",
-        "item_option_tblidx",
-        "byitemgroup",
-        "charm_tblidx",
-        "wcostumehidebitflag",
-        "needitemtblidx",
-        "set_item_tblidx",
-        "use_item_tblidx",
+        'biscanhaveoption',
+        'item_option_tblidx',
+        'byitemgroup',
+        'charm_tblidx',
+        'wcostumehidebitflag',
+        'needitemtblidx',
+        'set_item_tblidx',
+        'use_item_tblidx',
       ],
     },
     {
-      id: "scouter",
-      label: "Scouter",
+      id: 'scouter',
+      label: 'Scouter',
       fields: [
-        "bybag_size",
-        "wscouter_watt",
-        "dwscouter_maxpower",
-        "byscouter_parts_type1",
-        "byscouter_parts_type2",
-        "byscouter_parts_type3",
-        "byscouter_parts_type4",
+        'bybag_size',
+        'wscouter_watt',
+        'dwscouter_maxpower',
+        'byscouter_parts_type1',
+        'byscouter_parts_type2',
+        'byscouter_parts_type3',
+        'byscouter_parts_type4',
       ],
     },
     {
-      id: "enhancement",
-      label: "Enhancement",
+      id: 'enhancement',
+      label: 'Enhancement',
       fields: [
-        "bcreatesuperiorable",
-        "bcreateexcellentable",
-        "bcreaterareable",
-        "bcreatelegendaryable",
-        "enchantratetblidx",
-        "excellenttblidx",
-        "raretblidx",
-        "legendarytblidx",
-        "biscanrenewal",
+        'bcreatesuperiorable',
+        'bcreateexcellentable',
+        'bcreaterareable',
+        'bcreatelegendaryable',
+        'enchantratetblidx',
+        'excellenttblidx',
+        'raretblidx',
+        'legendarytblidx',
+        'biscanrenewal',
       ],
     },
     {
-      id: "duration",
-      label: "Duration",
+      id: 'duration',
+      label: 'Duration',
       fields: [
-        "commonpoint",
-        "bycommonpointtype",
-        "dwusedurationmax",
-        "bydurationtype",
-        "contentstblidx",
-        "dwdurationgroup",
+        'commonpoint',
+        'bycommonpointtype',
+        'dwusedurationmax',
+        'bydurationtype',
+        'contentstblidx',
+        'dwdurationgroup',
       ],
     },
     {
-      id: "disassembly",
-      label: "Disassembly",
+      id: 'disassembly',
+      label: 'Disassembly',
       fields: [
-        "wdisassemble_bit_flag",
-        "bydisassemblenormalmin",
-        "bydisassemblenormalmax",
-        "bydisassembleuppermin",
-        "bydisassembleuppermax",
-        "bydropvisual",
-        "byusedisassemble",
-        "bydroplevel",
+        'wdisassemble_bit_flag',
+        'bydisassemblenormalmin',
+        'bydisassemblenormalmax',
+        'bydisassembleuppermin',
+        'bydisassembleuppermax',
+        'bydropvisual',
+        'byusedisassemble',
+        'bydroplevel',
       ],
     },
   ];
@@ -398,7 +398,7 @@ export default function ItemTablePage() {
   // Handle import confirmation
   const handleImportConfirm = async (file: File) => {
     if (!file) {
-      toast.error("Please select a file to import");
+      toast.error('Please select a file to import');
       return;
     }
 
@@ -406,27 +406,27 @@ export default function ItemTablePage() {
 
     try {
       const formData = new FormData();
-      formData.append("file", file);
-      formData.append("tableName", "item");
-      formData.append("tableId", tableId);
+      formData.append('file', file);
+      formData.append('tableName', 'item');
+      formData.append('tableId', tableId);
 
-      const response = await fetch("/api/import", {
-        method: "POST",
+      const response = await fetch('/api/import', {
+        method: 'POST',
         body: formData,
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to import data");
+        throw new Error(errorData.error || 'Failed to import data');
       }
 
-      toast.success("Data imported successfully");
+      toast.success('Data imported successfully');
       refreshData();
       setIsImportDialogOpen(false);
       setImportFile(null);
     } catch (error) {
-      console.error("Import error:", error);
-      toast.error(error instanceof Error ? error.message : "Failed to import data");
+      console.error('Import error:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to import data');
     } finally {
       setIsImporting(false);
     }
@@ -586,7 +586,7 @@ export default function ItemTablePage() {
             setIsDeleteDialogOpen(false);
           }
         }}
-        itemName={selectedRow?.name || "this item"}
+        itemName={selectedRow?.name || 'this item'}
       />
     </div>
   );

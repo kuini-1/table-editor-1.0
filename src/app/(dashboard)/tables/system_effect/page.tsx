@@ -1,10 +1,10 @@
 'use client';
 
-import { useState } from "react";
-import { z } from "zod";
-import { useSearchParams } from "next/navigation";
-import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
+import { useState } from 'react';
+import { z } from 'zod';
+import { useSearchParams } from 'next/navigation';
+import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
 import {
   Sheet,
   SheetContent,
@@ -12,15 +12,15 @@ import {
   SheetTitle,
   SheetDescription,
   SheetFooter,
-} from "@/components/ui/sheet";
-import { useTableData } from "@/hooks/useTableData";
+} from '@/components/ui/sheet';
+import { useTableData } from '@/hooks/useTableData';
 import { TableHeader } from '@/components/table/TableHeader';
 import { TablePagination } from '@/components/table/TablePagination';
-import { DataTable } from "@/components/table/DataTable";
+import { DataTable } from '@/components/table/DataTable';
 import { DeleteDialog, ImportDialog, useExport } from '@/components/table/TableDialogs';
-import { useStore } from "@/lib/store";
-import { systemEffectSchema } from "./schema";
-import SystemEffectForm from "./SystemEffectForm";
+import { useStore } from '@/lib/store';
+import { systemEffectSchema } from './schema';
+import SystemEffectForm from './SystemEffectForm';
 import { ErrorDisplay } from '@/components/ErrorDisplay';
 
 type SystemEffectFormData = z.infer<typeof systemEffectSchema>;
@@ -35,16 +35,16 @@ type FormMode = 'add' | 'edit' | 'duplicate';
 const formTheme = {
   title: {
     text: {
-      add: "Add New System Effect",
-      edit: "Edit System Effect",
-      duplicate: "Duplicate System Effect"
+      add: 'Add New System Effect',
+      edit: 'Edit System Effect',
+      duplicate: 'Duplicate System Effect'
     }
   },
   description: {
     text: {
-      add: "Add a new system effect to the database.",
-      edit: "Edit the selected system effect's details.",
-      duplicate: "Create a new system effect based on the selected one."
+      add: 'Add a new system effect to the database.',
+      edit: 'Edit the selected system effect\'s details.',
+      duplicate: 'Create a new system effect based on the selected one.'
     }
   },
 } as const;
@@ -69,57 +69,57 @@ export default function SystemEffectPage() {
   // Define columns for the data table
   const columns = [
     {
-      key: "tblidx",
-      label: "ID",
-      type: "number" as const,
+      key: 'tblidx',
+      label: 'ID',
+      type: 'number' as const,
       validation: systemEffectSchema.shape.tblidx,
     },
     {
-      key: "wszname",
-      label: "Name",
-      type: "text" as const,
+      key: 'wszname',
+      label: 'Name',
+      type: 'text' as const,
       validation: systemEffectSchema.shape.wszname,
     },
     {
-      key: "byeffect_type",
-      label: "Effect Type",
-      type: "number" as const,
+      key: 'byeffect_type',
+      label: 'Effect Type',
+      type: 'number' as const,
       validation: systemEffectSchema.shape.byeffect_type,
     },
     {
-      key: "byactive_effect_type",
-      label: "Active Effect Type",
-      type: "number" as const,
+      key: 'byactive_effect_type',
+      label: 'Active Effect Type',
+      type: 'number' as const,
       validation: systemEffectSchema.shape.byactive_effect_type,
     },
     {
-      key: "effect_info_text",
-      label: "Effect Info",
-      type: "text" as const,
+      key: 'effect_info_text',
+      label: 'Effect Info',
+      type: 'text' as const,
       validation: systemEffectSchema.shape.effect_info_text,
     },
     {
-      key: "keep_effect_name",
-      label: "Keep Effect Name",
-      type: "text" as const,
+      key: 'keep_effect_name',
+      label: 'Keep Effect Name',
+      type: 'text' as const,
       validation: systemEffectSchema.shape.keep_effect_name,
     },
     {
-      key: "bytarget_effect_position",
-      label: "Target Effect Position",
-      type: "number" as const,
+      key: 'bytarget_effect_position',
+      label: 'Target Effect Position',
+      type: 'number' as const,
       validation: systemEffectSchema.shape.bytarget_effect_position,
     },
     {
-      key: "szsuccess_effect_name",
-      label: "Success Effect Name",
-      type: "text" as const,
+      key: 'szsuccess_effect_name',
+      label: 'Success Effect Name',
+      type: 'text' as const,
       validation: systemEffectSchema.shape.szsuccess_effect_name,
     },
     {
-      key: "bysuccess_projectile_type",
-      label: "Success Projectile Type",
-      type: "number" as const,
+      key: 'bysuccess_projectile_type',
+      label: 'Success Projectile Type',
+      type: 'number' as const,
       validation: systemEffectSchema.shape.bysuccess_projectile_type,
     },
   ];
@@ -169,32 +169,32 @@ export default function SystemEffectPage() {
 
   const handleImportConfirm = async (file: File) => {
     if (!file) {
-      toast.error("Please select a file to import");
+      toast.error('Please select a file to import');
       return;
     }
 
     try {
       const formData = new FormData();
-      formData.append("file", file);
-      formData.append("tableName", "system_effect");
-      formData.append("tableId", tableId);
+      formData.append('file', file);
+      formData.append('tableName', 'system_effect');
+      formData.append('tableId', tableId);
 
-      const response = await fetch("/api/import", {
-        method: "POST",
+      const response = await fetch('/api/import', {
+        method: 'POST',
         body: formData,
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to import data");
+        throw new Error(errorData.error || 'Failed to import data');
       }
 
-      toast.success("Data imported successfully");
+      toast.success('Data imported successfully');
       refreshData();
       setIsImportDialogOpen(false);
     } catch (error) {
-      console.error("Import error:", error);
-      toast.error(error instanceof Error ? error.message : "Failed to import data");
+      console.error('Import error:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to import data');
     }
   };
 
@@ -339,7 +339,7 @@ export default function SystemEffectPage() {
             setIsDeleteDialogOpen(false);
           }
         }}
-        itemName={selectedRow?.wszname || "this system effect"}
+        itemName={selectedRow?.wszname || 'this system effect'}
       />
 
       <ImportDialog

@@ -131,7 +131,7 @@ export default function DashboardLayout({
       
       // Clear all cookies
       const cookies = document.cookie.split(';');
-      for (let cookie of cookies) {
+      for (const cookie of cookies) {
         const cookieName = cookie.split('=')[0].trim();
         // Set cookie expiry to past date and clear value
         document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`;
@@ -183,7 +183,7 @@ export default function DashboardLayout({
     return (
       <div className="min-h-screen bg-gray-50">
         {/* Minimal loading state */}
-        <div className={`fixed inset-y-0 left-0 z-50 flex flex-col h-full w-16 bg-white border-r border-gray-200`}>
+        <div className={'fixed inset-y-0 left-0 z-50 flex flex-col h-full w-16 bg-white border-r border-gray-200'}>
           <div className="flex items-center h-16 flex-shrink-0 px-4 border-b border-gray-200">
             <span className="text-xl font-bold text-gray-900">TE</span>
           </div>

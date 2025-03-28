@@ -1,10 +1,10 @@
 'use client';
 
-import { useState } from "react";
-import { z } from "zod";
-import { useSearchParams } from "next/navigation";
-import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
+import { useState } from 'react';
+import { z } from 'zod';
+import { useSearchParams } from 'next/navigation';
+import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
 import {
   Sheet,
   SheetContent,
@@ -12,15 +12,15 @@ import {
   SheetTitle,
   SheetDescription,
   SheetFooter,
-} from "@/components/ui/sheet";
-import { useTableData } from "@/hooks/useTableData";
+} from '@/components/ui/sheet';
+import { useTableData } from '@/hooks/useTableData';
 import { TableHeader } from '@/components/table/TableHeader';
 import { TablePagination } from '@/components/table/TablePagination';
-import { DataTable } from "@/components/table/DataTable";
+import { DataTable } from '@/components/table/DataTable';
 import { DeleteDialog, ImportDialog, useExport } from '@/components/table/TableDialogs';
-import { useStore } from "@/lib/store";
-import { useItemSchema } from "./schema";
-import UseItemForm from "./UseItemForm";
+import { useStore } from '@/lib/store';
+import { useItemSchema } from './schema';
+import UseItemForm from './UseItemForm';
 import { ErrorDisplay } from '@/components/ErrorDisplay';
 
 type UseItemFormData = z.infer<typeof useItemSchema>;
@@ -35,25 +35,25 @@ type FormMode = 'add' | 'edit' | 'duplicate';
 const formTheme = {
   title: {
     text: {
-      add: "Add New Use Item",
-      edit: "Edit Use Item",
-      duplicate: "Duplicate Use Item"
+      add: 'Add New Use Item',
+      edit: 'Edit Use Item',
+      duplicate: 'Duplicate Use Item'
     }
   },
   description: {
     text: {
-      add: "Add a new use item to the database.",
-      edit: "Edit the selected use item's details.",
-      duplicate: "Create a new use item based on the selected one."
+      add: 'Add a new use item to the database.',
+      edit: 'Edit the selected use item\'s details.',
+      duplicate: 'Create a new use item based on the selected one.'
     }
   },
   button: {
     text: {
-      add: "Add Use Item",
-      edit: "Save Changes",
-      duplicate: "Duplicate Entry"
+      add: 'Add Use Item',
+      edit: 'Save Changes',
+      duplicate: 'Duplicate Entry'
     },
-    className: "flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700",
+    className: 'flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700',
   },
 } as const;
 
@@ -77,51 +77,51 @@ export default function UseItemPage() {
   // Define columns for the data table
   const columns = [
     {
-      key: "tblidx",
-      label: "ID",
-      type: "number" as const,
+      key: 'tblidx',
+      label: 'ID',
+      type: 'number' as const,
       validation: useItemSchema.shape.tblidx,
     },
     {
-      key: "byuse_item_active_type",
-      label: "Active Type",
-      type: "number" as const,
+      key: 'byuse_item_active_type',
+      label: 'Active Type',
+      type: 'number' as const,
       validation: useItemSchema.shape.byuse_item_active_type,
     },
     {
-      key: "bybuff_group",
-      label: "Buff Group",
-      type: "number" as const,
+      key: 'bybuff_group',
+      label: 'Buff Group',
+      type: 'number' as const,
       validation: useItemSchema.shape.bybuff_group,
     },
     {
-      key: "bybuffkeeptype",
-      label: "Buff Keep Type",
-      type: "number" as const,
+      key: 'bybuffkeeptype',
+      label: 'Buff Keep Type',
+      type: 'number' as const,
       validation: useItemSchema.shape.bybuffkeeptype,
     },
     {
-      key: "use_info_text",
-      label: "Info Text",
-      type: "text" as const,
+      key: 'use_info_text',
+      label: 'Info Text',
+      type: 'text' as const,
       validation: useItemSchema.shape.use_info_text,
     },
     {
-      key: "dwcool_time",
-      label: "Cool Time",
-      type: "number" as const,
+      key: 'dwcool_time',
+      label: 'Cool Time',
+      type: 'number' as const,
       validation: useItemSchema.shape.dwcool_time,
     },
     {
-      key: "dwkeep_time",
-      label: "Keep Time",
-      type: "number" as const,
+      key: 'dwkeep_time',
+      label: 'Keep Time',
+      type: 'number' as const,
       validation: useItemSchema.shape.dwkeep_time,
     },
     {
-      key: "byuse_range_max",
-      label: "Use Range Max",
-      type: "number" as const,
+      key: 'byuse_range_max',
+      label: 'Use Range Max',
+      type: 'number' as const,
       validation: useItemSchema.shape.byuse_range_max,
     },
   ];
@@ -171,32 +171,32 @@ export default function UseItemPage() {
 
   const handleImportConfirm = async (file: File) => {
     if (!file) {
-      toast.error("Please select a file to import");
+      toast.error('Please select a file to import');
       return;
     }
 
     try {
       const formData = new FormData();
-      formData.append("file", file);
-      formData.append("tableName", "use_item");
-      formData.append("tableId", tableId);
+      formData.append('file', file);
+      formData.append('tableName', 'use_item');
+      formData.append('tableId', tableId);
 
-      const response = await fetch("/api/import", {
-        method: "POST",
+      const response = await fetch('/api/import', {
+        method: 'POST',
         body: formData,
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to import data");
+        throw new Error(errorData.error || 'Failed to import data');
       }
 
-      toast.success("Data imported successfully");
+      toast.success('Data imported successfully');
       refreshData();
       setIsImportDialogOpen(false);
     } catch (error) {
-      console.error("Import error:", error);
-      toast.error(error instanceof Error ? error.message : "Failed to import data");
+      console.error('Import error:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to import data');
     }
   };
 
@@ -343,7 +343,7 @@ export default function UseItemPage() {
             setIsDeleteDialogOpen(false);
           }
         }}
-        itemName={`Use Item ${selectedRow?.tblidx || ""}`}
+        itemName={`Use Item ${selectedRow?.tblidx || ''}`}
       />
 
       <ImportDialog

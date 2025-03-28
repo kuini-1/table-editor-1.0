@@ -1,10 +1,10 @@
-import { createServerClient } from "@supabase/ssr";
-import { NextResponse, type NextRequest } from "next/server";
-import { CookieOptions } from "@supabase/ssr";
+import { createServerClient } from '@supabase/ssr';
+import { NextResponse, type NextRequest } from 'next/server';
+import { CookieOptions } from '@supabase/ssr';
 
 export async function updateSession(request: NextRequest) {
   // Create a response with the request headers
-  let supabaseResponse = NextResponse.next({
+  const supabaseResponse = NextResponse.next({
     request: {
       headers: request.headers,
     },

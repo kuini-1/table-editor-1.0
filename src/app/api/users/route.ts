@@ -35,7 +35,7 @@ export async function POST(request: Request) {
     if (existingProfile) {
       console.log('Found existing profile:', existingProfile);
       return NextResponse.json(
-        { error: "A user with this email address has already been registered (found in profiles)" },
+        { error: 'A user with this email address has already been registered (found in profiles)' },
         { status: 400 }
       );
     }
@@ -61,7 +61,7 @@ export async function POST(request: Request) {
       if (deleteError) {
         console.log('Failed to delete orphaned auth user:', deleteError);
         return NextResponse.json(
-          { error: "Failed to clean up existing user record. Please try again." },
+          { error: 'Failed to clean up existing user record. Please try again.' },
           { status: 400 }
         );
       }

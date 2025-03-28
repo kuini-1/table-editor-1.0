@@ -31,7 +31,7 @@ export function ItemGroupListForm({
   onSubmit,
   mode,
 }: ItemGroupListFormProps) {
-  const [activeTab, setActiveTab] = useState("basic");
+  const [activeTab, setActiveTab] = useState('basic');
 
   const form = useForm<ItemGroupListFormData>({
     resolver: zodResolver(itemGroupListSchema),
@@ -135,42 +135,42 @@ export function ItemGroupListForm({
 
   const tabs = [
     {
-      id: "basic",
-      label: "Basic Info",
+      id: 'basic',
+      label: 'Basic Info',
       sections: [
         {
-          label: "Basic Information",
-          fields: ["tblidx", "wszname", "bylevel", "bytry_count"]
+          label: 'Basic Information',
+          fields: ['tblidx', 'wszname', 'bylevel', 'bytry_count']
         }
       ]
     },
     {
-      id: "mob",
-      label: "Mob Settings",
+      id: 'mob',
+      label: 'Mob Settings',
       sections: [
         {
-          label: "Mob Configuration",
-          fields: ["mob_index", "dwmob_type", "dwworld_rule_type", "dwinterval"]
+          label: 'Mob Configuration',
+          fields: ['mob_index', 'dwmob_type', 'dwworld_rule_type', 'dwinterval']
         }
       ]
     },
     {
-      id: "drop",
-      label: "Drop Settings",
+      id: 'drop',
+      label: 'Drop Settings',
       sections: [
         {
-          label: "Drop Rates",
-          fields: ["dwsuperior", "dwexcellent", "dwrare", "dwlegendary", "dwno_drop", "dwzenny"]
+          label: 'Drop Rates',
+          fields: ['dwsuperior', 'dwexcellent', 'dwrare', 'dwlegendary', 'dwno_drop', 'dwzenny']
         }
       ]
     },
     {
-      id: "itembag",
-      label: "Item Bags",
+      id: 'itembag',
+      label: 'Item Bags',
       sections: [
         {
-          label: "Item Bag Settings",
-          fields: ["dwitembagcount", "dwtotalprob"]
+          label: 'Item Bag Settings',
+          fields: ['dwitembagcount', 'dwtotalprob']
         }
       ]
     }

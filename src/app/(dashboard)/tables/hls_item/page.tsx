@@ -16,13 +16,13 @@ import {
   SheetTitle,
   SheetDescription,
   SheetFooter,
-} from "@/components/ui/sheet";
+} from '@/components/ui/sheet';
 import * as z from 'zod';
 import type { FormMode } from '@/components/table/ModularForm';
 import { ErrorDisplay } from '@/components/ErrorDisplay';
 import { hlsItemSchema } from './schema';
 import { HlsItemForm } from './HlsItemForm';
-import { Button } from "@/components/ui/button";
+import { Button } from '@/components/ui/button';
 
 type HlsItemFormData = z.infer<typeof hlsItemSchema>;
 

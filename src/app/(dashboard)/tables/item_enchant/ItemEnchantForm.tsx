@@ -32,7 +32,7 @@ export function ItemEnchantForm({
   onSubmit,
   mode,
 }: ItemEnchantFormProps) {
-  const [activeTab, setActiveTab] = useState("basic");
+  const [activeTab, setActiveTab] = useState('basic');
 
   const form = useForm<ItemEnchantFormData>({
     resolver: zodResolver(itemEnchantSchema),
@@ -151,46 +151,46 @@ export function ItemEnchantForm({
 
   const tabs = [
     {
-      id: "basic",
-      label: "Basic Info",
+      id: 'basic',
+      label: 'Basic Info',
       sections: [
         {
-          label: "Basic Information",
-          fields: ["tblidx", "wszname", "setblidx", "bsetype"]
+          label: 'Basic Information',
+          fields: ['tblidx', 'wszname', 'setblidx', 'bsetype']
         }
       ]
     },
     {
-      id: "level",
-      label: "Level & Type",
+      id: 'level',
+      label: 'Level & Type',
       sections: [
         {
-          label: "Level Range",
-          fields: ["byminlevel", "bymaxlevel"]
+          label: 'Level Range',
+          fields: ['byminlevel', 'bymaxlevel']
         },
         {
-          label: "Type Settings",
-          fields: ["byrvtype", "byexclidx"]
+          label: 'Type Settings',
+          fields: ['byrvtype', 'byexclidx']
         }
       ]
     },
     {
-      id: "enchant",
-      label: "Enchant",
+      id: 'enchant',
+      label: 'Enchant',
       sections: [
         {
-          label: "Enchant Settings",
-          fields: ["byfrequency", "wenchant_value", "bykind", "dwequip", "bygroupno", "wmaxvalue"]
+          label: 'Enchant Settings',
+          fields: ['byfrequency', 'wenchant_value', 'bykind', 'dwequip', 'bygroupno', 'wmaxvalue']
         }
       ]
     },
     {
-      id: "flags",
-      label: "Flags",
+      id: 'flags',
+      label: 'Flags',
       sections: [
         {
-          label: "Item Flags",
-          fields: ["bissuperior", "bisexcellent", "bisrare", "bislegendary"]
+          label: 'Item Flags',
+          fields: ['bissuperior', 'bisexcellent', 'bisrare', 'bislegendary']
         }
       ]
     }

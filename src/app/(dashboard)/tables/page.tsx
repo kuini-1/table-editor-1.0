@@ -11,9 +11,9 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+} from '@/components/ui/dropdown-menu';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store';
 interface ProfileResponse {
@@ -480,20 +480,20 @@ export default function TablesPage() {
   };
 
   const getPermissionBadge = (type: string, enabled: boolean, onClick?: () => void) => {
-    const baseClasses = "px-2 py-1 text-xs font-medium rounded transition-all duration-200";
+    const baseClasses = 'px-2 py-1 text-xs font-medium rounded transition-all duration-200';
     const colors = {
       GET: enabled 
-        ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-400" 
-        : "bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-500 opacity-50",
+        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-400' 
+        : 'bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-500 opacity-50',
       PUT: enabled 
-        ? "bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-400" 
-        : "bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-500 opacity-50",
+        ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-400' 
+        : 'bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-500 opacity-50',
       POST: enabled 
-        ? "bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-400" 
-        : "bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-500 opacity-50",
+        ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-400' 
+        : 'bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-500 opacity-50',
       DELETE: enabled 
-        ? "bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-400" 
-        : "bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-500 opacity-50",
+        ? 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-400' 
+        : 'bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-500 opacity-50',
     };
 
     return (

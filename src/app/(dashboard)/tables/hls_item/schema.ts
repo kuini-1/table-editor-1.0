@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from 'zod';
 
 export const hlsItemSchema = z.object({
   table_id: z.string().uuid(),
