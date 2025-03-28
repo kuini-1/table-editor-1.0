@@ -1,10 +1,10 @@
 'use client';
 
-import { useState } from 'react';
-import { z } from 'zod';
-import { useSearchParams } from 'next/navigation';
-import { toast } from 'sonner';
-import { Button } from '@/components/ui/button';
+import { useState } from "react";
+import { z } from "zod";
+import { useSearchParams } from "next/navigation";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import {
   Sheet,
   SheetContent,
@@ -12,15 +12,15 @@ import {
   SheetTitle,
   SheetDescription,
   SheetFooter,
-} from '@/components/ui/sheet';
-import { useTableData } from '@/hooks/useTableData';
+} from "@/components/ui/sheet";
+import { useTableData } from "@/hooks/useTableData";
 import { TableHeader } from '@/components/table/TableHeader';
 import { TablePagination } from '@/components/table/TablePagination';
-import { DataTable } from '@/components/table/DataTable';
+import { DataTable } from "@/components/table/DataTable";
 import { DeleteDialog, ImportDialog, useExport } from '@/components/table/TableDialogs';
-import { useStore } from '@/lib/store';
-import { slotMachineItemSchema } from './schema';
-import SlotMachineItemForm from './SlotMachineItemForm';
+import { useStore } from "@/lib/store";
+import { slotMachineItemSchema } from "./schema";
+import SlotMachineItemForm from "./SlotMachineItemForm";
 import { ErrorDisplay } from '@/components/ErrorDisplay';
 
 type SlotMachineItemFormData = z.infer<typeof slotMachineItemSchema>;
@@ -35,16 +35,16 @@ type FormMode = 'add' | 'edit' | 'duplicate';
 const formTheme = {
   title: {
     text: {
-      add: 'Add New Slot Machine Item',
-      edit: 'Edit Slot Machine Item',
-      duplicate: 'Duplicate Slot Machine Item'
+      add: "Add New Slot Machine Item",
+      edit: "Edit Slot Machine Item",
+      duplicate: "Duplicate Slot Machine Item"
     }
   },
   description: {
     text: {
-      add: 'Add a new slot machine item to the database.',
-      edit: 'Edit the selected slot machine item\'s details.',
-      duplicate: 'Create a new slot machine item based on the selected one.'
+      add: "Add a new slot machine item to the database.",
+      edit: "Edit the selected slot machine item's details.",
+      duplicate: "Create a new slot machine item based on the selected one."
     }
   },
 } as const;
@@ -69,45 +69,45 @@ export default function SlotMachineItemPage() {
   // Define columns for the data table
   const columns = [
     {
-      key: 'tblidx',
-      label: 'ID',
-      type: 'number' as const,
+      key: "tblidx",
+      label: "ID",
+      type: "number" as const,
       validation: slotMachineItemSchema.shape.tblidx,
     },
     {
-      key: 'wsznametext',
-      label: 'Name',
-      type: 'text' as const,
+      key: "wsznametext",
+      label: "Name",
+      type: "text" as const,
       validation: slotMachineItemSchema.shape.wsznametext,
     },
     {
-      key: 'bactive',
-      label: 'Active',
-      type: 'boolean' as const,
+      key: "bactive",
+      label: "Active",
+      type: "boolean" as const,
       validation: slotMachineItemSchema.shape.bactive,
     },
     {
-      key: 'slotmachinetblidx',
-      label: 'Slot Machine ID',
-      type: 'number' as const,
+      key: "slotmachinetblidx",
+      label: "Slot Machine ID",
+      type: "number" as const,
       validation: slotMachineItemSchema.shape.slotmachinetblidx,
     },
     {
-      key: 'cashitemtblidx',
-      label: 'Cash Item ID',
-      type: 'number' as const,
+      key: "cashitemtblidx",
+      label: "Cash Item ID",
+      type: "number" as const,
       validation: slotMachineItemSchema.shape.cashitemtblidx,
     },
     {
-      key: 'bystackcount',
-      label: 'Stack Count',
-      type: 'number' as const,
+      key: "bystackcount",
+      label: "Stack Count",
+      type: "number" as const,
       validation: slotMachineItemSchema.shape.bystackcount,
     },
     {
-      key: 'bypercent',
-      label: 'Percent',
-      type: 'number' as const,
+      key: "bypercent",
+      label: "Percent",
+      type: "number" as const,
       validation: slotMachineItemSchema.shape.bypercent,
     },
   ];
@@ -157,32 +157,32 @@ export default function SlotMachineItemPage() {
 
   const handleImportConfirm = async (file: File) => {
     if (!file) {
-      toast.error('Please select a file to import');
+      toast.error("Please select a file to import");
       return;
     }
 
     try {
       const formData = new FormData();
-      formData.append('file', file);
-      formData.append('tableName', 'slot_machine_item');
-      formData.append('tableId', tableId);
+      formData.append("file", file);
+      formData.append("tableName", "slot_machine_item");
+      formData.append("tableId", tableId);
 
-      const response = await fetch('/api/import', {
-        method: 'POST',
+      const response = await fetch("/api/import", {
+        method: "POST",
         body: formData,
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to import data');
+        throw new Error(errorData.error || "Failed to import data");
       }
 
-      toast.success('Data imported successfully');
+      toast.success("Data imported successfully");
       refreshData();
       setIsImportDialogOpen(false);
     } catch (error) {
-      console.error('Import error:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to import data');
+      console.error("Import error:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to import data");
     }
   };
 
@@ -331,7 +331,7 @@ export default function SlotMachineItemPage() {
             setIsDeleteDialogOpen(false);
           }
         }}
-        itemName={selectedRow?.wsznametext || 'this slot machine item'}
+        itemName={selectedRow?.wsznametext || "this slot machine item"}
       />
 
       <ImportDialog

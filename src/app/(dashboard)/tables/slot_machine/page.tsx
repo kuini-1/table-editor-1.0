@@ -16,7 +16,7 @@ import {
   SheetTitle,
   SheetDescription,
   SheetFooter,
-} from '@/components/ui/sheet';
+} from "@/components/ui/sheet";
 import { ErrorDisplay } from '@/components/ErrorDisplay';
 import { slotMachineSchema } from './schema';
 import { SlotMachineForm } from './SlotMachineForm';
@@ -44,16 +44,16 @@ const columns = [
 const formTheme = {
   title: {
     text: {
-      add: 'Add Slot Machine',
-      edit: 'Edit Slot Machine',
-      duplicate: 'Duplicate Slot Machine'
+      add: "Add Slot Machine",
+      edit: "Edit Slot Machine",
+      duplicate: "Duplicate Slot Machine"
     }
   },
   description: {
     text: {
-      add: 'Create a new slot machine entry with the details below.',
-      edit: 'Modify the slot machine values for this entry.',
-      duplicate: 'Create a new entry based on the selected slot machine data.'
+      add: "Create a new slot machine entry with the details below.",
+      edit: "Modify the slot machine values for this entry.",
+      duplicate: "Create a new entry based on the selected slot machine data."
     }
   },
 } as const;
@@ -292,7 +292,7 @@ export default function SlotMachinePage() {
             setIsDeleteDialogOpen(false);
           }
         }}
-        itemName={selectedRow?.dwname || 'this slot machine'}
+        itemName={selectedRow?.dwname || "this slot machine"}
       />
 
       <ImportDialog

@@ -1,9 +1,9 @@
-'use client';
-import { useState } from 'react';
-import { z } from 'zod';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { Button } from '@/components/ui/button';
+"use client";
+import { useState } from "react";
+import { z } from "zod";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
@@ -11,21 +11,21 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ScrollArea } from '@/components/ui/scroll-area';
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 // Import the schema from the page file
-import { itemOptionSchema } from './schema';
+import { itemOptionSchema } from "./schema";
 
 type ItemOptionFormData = z.infer<typeof itemOptionSchema>;
 
 interface ItemOptionFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  mode: 'add' | 'edit';
+  mode: "add" | "edit";
   initialData?: ItemOptionFormData;
   onSubmit: (data: ItemOptionFormData) => void;
 }
@@ -37,7 +37,7 @@ export function ItemOptionForm({
   initialData,
   onSubmit,
 }: ItemOptionFormProps) {
-  const [activeTab, setActiveTab] = useState('basic');
+  const [activeTab, setActiveTab] = useState("basic");
 
   const form = useForm<ItemOptionFormData>({
     resolver: zodResolver(itemOptionSchema),
@@ -50,77 +50,77 @@ export function ItemOptionForm({
 
   // Define field labels and types
   const fieldConfig = {
-    tblidx: { label: 'ID', type: 'number' as const },
-    wszoption_name: { label: 'Option Name', type: 'text' as const },
-    bvalidity_able: { label: 'Validity', type: 'number' as const },
-    byoption_rank: { label: 'Option Rank', type: 'number' as const },
-    byitem_group: { label: 'Item Group', type: 'number' as const },
-    bymaxquality: { label: 'Max Quality', type: 'number' as const },
-    byquality: { label: 'Quality', type: 'number' as const },
-    byqualityindex: { label: 'Quality Index', type: 'number' as const },
-    dwcost: { label: 'Cost', type: 'number' as const },
-    bylevel: { label: 'Level', type: 'number' as const },
-    activeeffect: { label: 'Active Effect', type: 'number' as const },
-    factiverate: { label: 'Active Rate', type: 'number' as const },
-    sznote: { label: 'Note', type: 'text' as const },
-    system_effect_0: { label: 'System Effect', type: 'text' as const },
-    bappliedinpercent_0: { label: 'Applied in Percent', type: 'boolean' as const },
-    nvalue_0: { label: 'Value', type: 'number' as const },
-    byscouterinfo_0: { label: 'Scouter Info', type: 'number' as const },
-    system_effect_1: { label: 'System Effect', type: 'text' as const },
-    bappliedinpercent_1: { label: 'Applied in Percent', type: 'boolean' as const },
-    nvalue_1: { label: 'Value', type: 'number' as const },
-    byscouterinfo_1: { label: 'Scouter Info', type: 'number' as const },
-    system_effect_2: { label: 'System Effect', type: 'text' as const },
-    bappliedinpercent_2: { label: 'Applied in Percent', type: 'boolean' as const },
-    nvalue_2: { label: 'Value', type: 'number' as const },
-    byscouterinfo_2: { label: 'Scouter Info', type: 'number' as const },
-    system_effect_3: { label: 'System Effect', type: 'text' as const },
-    bappliedinpercent_3: { label: 'Applied in Percent', type: 'boolean' as const },
-    nvalue_3: { label: 'Value', type: 'number' as const },
-    byscouterinfo_3: { label: 'Scouter Info', type: 'number' as const },
+    tblidx: { label: "ID", type: "number" as const },
+    wszoption_name: { label: "Option Name", type: "text" as const },
+    bvalidity_able: { label: "Validity", type: "number" as const },
+    byoption_rank: { label: "Option Rank", type: "number" as const },
+    byitem_group: { label: "Item Group", type: "number" as const },
+    bymaxquality: { label: "Max Quality", type: "number" as const },
+    byquality: { label: "Quality", type: "number" as const },
+    byqualityindex: { label: "Quality Index", type: "number" as const },
+    dwcost: { label: "Cost", type: "number" as const },
+    bylevel: { label: "Level", type: "number" as const },
+    activeeffect: { label: "Active Effect", type: "number" as const },
+    factiverate: { label: "Active Rate", type: "number" as const },
+    sznote: { label: "Note", type: "text" as const },
+    system_effect_0: { label: "System Effect", type: "text" as const },
+    bappliedinpercent_0: { label: "Applied in Percent", type: "boolean" as const },
+    nvalue_0: { label: "Value", type: "number" as const },
+    byscouterinfo_0: { label: "Scouter Info", type: "number" as const },
+    system_effect_1: { label: "System Effect", type: "text" as const },
+    bappliedinpercent_1: { label: "Applied in Percent", type: "boolean" as const },
+    nvalue_1: { label: "Value", type: "number" as const },
+    byscouterinfo_1: { label: "Scouter Info", type: "number" as const },
+    system_effect_2: { label: "System Effect", type: "text" as const },
+    bappliedinpercent_2: { label: "Applied in Percent", type: "boolean" as const },
+    nvalue_2: { label: "Value", type: "number" as const },
+    byscouterinfo_2: { label: "Scouter Info", type: "number" as const },
+    system_effect_3: { label: "System Effect", type: "text" as const },
+    bappliedinpercent_3: { label: "Applied in Percent", type: "boolean" as const },
+    nvalue_3: { label: "Value", type: "number" as const },
+    byscouterinfo_3: { label: "Scouter Info", type: "number" as const },
   };
 
   // Define tabs with their sections
   const tabs = [
     {
-      id: 'basic',
-      label: 'Basic Info',
+      id: "basic",
+      label: "Basic Info",
       fields: [
-        'tblidx',
-        'wszoption_name',
-        'bvalidity_able',
-        'byoption_rank',
-        'byitem_group',
-        'bymaxquality',
-        'byquality',
-        'byqualityindex',
-        'dwcost',
-        'bylevel',
-        'activeeffect',
-        'factiverate',
-        'sznote'
+        "tblidx",
+        "wszoption_name",
+        "bvalidity_able",
+        "byoption_rank",
+        "byitem_group",
+        "bymaxquality",
+        "byquality",
+        "byqualityindex",
+        "dwcost",
+        "bylevel",
+        "activeeffect",
+        "factiverate",
+        "sznote"
       ]
     },
     {
-      id: 'effects',
-      label: 'System Effects',
+      id: "effects",
+      label: "System Effects",
       effectSets: [
         {
-          label: 'Effect 1',
-          fields: ['system_effect_0', 'bappliedinpercent_0', 'nvalue_0', 'byscouterinfo_0']
+          label: "Effect 1",
+          fields: ["system_effect_0", "bappliedinpercent_0", "nvalue_0", "byscouterinfo_0"]
         },
         {
-          label: 'Effect 2',
-          fields: ['system_effect_1', 'bappliedinpercent_1', 'nvalue_1', 'byscouterinfo_1']
+          label: "Effect 2",
+          fields: ["system_effect_1", "bappliedinpercent_1", "nvalue_1", "byscouterinfo_1"]
         },
         {
-          label: 'Effect 3',
-          fields: ['system_effect_2', 'bappliedinpercent_2', 'nvalue_2', 'byscouterinfo_2']
+          label: "Effect 3",
+          fields: ["system_effect_2", "bappliedinpercent_2", "nvalue_2", "byscouterinfo_2"]
         },
         {
-          label: 'Effect 4',
-          fields: ['system_effect_3', 'bappliedinpercent_3', 'nvalue_3', 'byscouterinfo_3']
+          label: "Effect 4",
+          fields: ["system_effect_3", "bappliedinpercent_3", "nvalue_3", "byscouterinfo_3"]
         }
       ]
     }

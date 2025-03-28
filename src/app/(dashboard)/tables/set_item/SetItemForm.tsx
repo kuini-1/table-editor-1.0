@@ -1,9 +1,9 @@
-'use client';
-import { useState } from 'react';
-import { z } from 'zod';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { Button } from '@/components/ui/button';
+"use client";
+import { useState } from "react";
+import { z } from "zod";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
@@ -11,22 +11,22 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { Checkbox } from '@/components/ui/checkbox';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { toast } from 'sonner';
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { toast } from "sonner";
 
 // Import the schema from the page file
-import { setItemSchema } from './schema';
+import { setItemSchema } from "./schema";
 
 type SetItemFormData = z.infer<typeof setItemSchema>;
 
 interface SetItemFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  mode: 'add' | 'edit';
+  mode: "add" | "edit";
   initialData?: SetItemFormData;
   onSubmit: (data: SetItemFormData) => void;
 }
@@ -47,22 +47,22 @@ export default function SetItemForm({
     try {
       onSubmit(data);
       form.reset();
-      toast.success(mode === 'add' ? 'Set item added successfully' : 'Set item updated successfully');
+      toast.success(mode === "add" ? "Set item added successfully" : "Set item updated successfully");
     } catch (error) {
-      toast.error('Failed to save set item');
+      toast.error("Failed to save set item");
       console.error(error);
     }
   };
 
   // Define field labels and types
-  const fieldConfig: Record<string, { label: string; type: 'text' | 'number' | 'boolean'; tab: string; section: string }> = {
-    tblidx: { label: 'ID', type: 'number', tab: 'basic', section: 'Basic Info' },
-    bvalidity_able: { label: 'Validity', type: 'boolean', tab: 'basic', section: 'Basic Info' },
-    semisetoption: { label: 'Semi Set Option', type: 'number', tab: 'options', section: 'Set Options' },
-    fullsetoption: { label: 'Full Set Option', type: 'number', tab: 'options', section: 'Set Options' },
-    aitemtblidx_0: { label: 'Item 1 ID', type: 'number', tab: 'items', section: 'Set Items' },
-    aitemtblidx_1: { label: 'Item 2 ID', type: 'number', tab: 'items', section: 'Set Items' },
-    aitemtblidx_2: { label: 'Item 3 ID', type: 'number', tab: 'items', section: 'Set Items' },
+  const fieldConfig: Record<string, { label: string; type: "text" | "number" | "boolean"; tab: string; section: string }> = {
+    tblidx: { label: "ID", type: "number", tab: "basic", section: "Basic Info" },
+    bvalidity_able: { label: "Validity", type: "boolean", tab: "basic", section: "Basic Info" },
+    semisetoption: { label: "Semi Set Option", type: "number", tab: "options", section: "Set Options" },
+    fullsetoption: { label: "Full Set Option", type: "number", tab: "options", section: "Set Options" },
+    aitemtblidx_0: { label: "Item 1 ID", type: "number", tab: "items", section: "Set Items" },
+    aitemtblidx_1: { label: "Item 2 ID", type: "number", tab: "items", section: "Set Items" },
+    aitemtblidx_2: { label: "Item 3 ID", type: "number", tab: "items", section: "Set Items" },
   };
 
   // Function to render a field based on its type

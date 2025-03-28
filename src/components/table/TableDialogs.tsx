@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -7,13 +7,13 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { ModularForm, Column as ModularFormColumn } from './ModularForm';
-import { cn } from '@/lib/utils';
-import { Upload, File as FileIcon, X } from 'lucide-react';
-import { toast } from 'sonner';
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { ModularForm, Column as ModularFormColumn } from "./ModularForm";
+import { cn } from "@/lib/utils";
+import { Upload, File as FileIcon, X } from "lucide-react";
+import { toast } from "sonner";
 
 export interface Column {
   key: string;
@@ -155,12 +155,12 @@ export function ImportDialog({
         <div className="grid gap-6 py-4">
           <div
             className={cn(
-              'relative flex flex-col items-center justify-center w-full min-h-[200px] rounded-lg border-2 border-dashed transition-colors duration-200 ease-in-out',
+              "relative flex flex-col items-center justify-center w-full min-h-[200px] rounded-lg border-2 border-dashed transition-colors duration-200 ease-in-out",
               isDragging
-                ? 'border-primary bg-primary/5'
-                : 'border-muted-foreground/25 hover:border-primary/50',
-              file && !error && 'border-primary/50 bg-primary/5',
-              error && 'border-destructive/50 bg-destructive/5'
+                ? "border-primary bg-primary/5"
+                : "border-muted-foreground/25 hover:border-primary/50",
+              file && !error && "border-primary/50 bg-primary/5",
+              error && "border-destructive/50 bg-destructive/5"
             )}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
@@ -218,7 +218,7 @@ export function ImportDialog({
               className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700"
               disabled={isLoading || !!error}
             >
-              {isLoading ? 'Importing...' : 'Import'}
+              {isLoading ? "Importing..." : "Import"}
             </Button>
           )}
         </DialogFooter>
@@ -238,7 +238,7 @@ export function DeleteDialog({
   isOpen,
   onClose,
   onConfirm,
-  itemName = 'this item',
+  itemName = "this item",
 }: DeleteDialogProps) {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>

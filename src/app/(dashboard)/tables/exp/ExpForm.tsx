@@ -1,7 +1,7 @@
-import { ModularForm } from '@/components/table/ModularForm';
-import type { FormMode } from '@/components/table/ModularForm';
-import type { ExpTableFormData } from './schema';
-import { columns } from './schema';
+import { ModularForm } from "@/components/table/ModularForm";
+import type { FormMode } from "@/components/table/ModularForm";
+import type { ExpTableFormData } from "./schema";
+import { columns } from "./schema";
 
 const expTableSections = [
   {

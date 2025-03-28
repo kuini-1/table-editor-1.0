@@ -42,7 +42,7 @@ export function QuestProbabilityForm({
   const basicFields = {
     sections: [
       {
-        title: 'Basic Information',
+        title: "Basic Information",
         fields: [
           { key: 'tblidx', label: 'TBLIDX', type: 'number' },
           { key: 'wszname', label: 'Name', type: 'text' },
@@ -50,7 +50,7 @@ export function QuestProbabilityForm({
         ],
       },
       {
-        title: 'Settings',
+        title: "Settings",
         fields: [
           { key: 'eusetype', label: 'Use Type', type: 'number' },
           { key: 'byprobabilitytype', label: 'Probability Type', type: 'number' },
@@ -66,11 +66,11 @@ export function QuestProbabilityForm({
     sections: Array.from({ length: 50 }, (_, index) => ({
       title: `Probability Set ${index}`,
       fields: [
-        { key: `bytype_probability_${index}`, label: 'Type', type: 'number' },
-        { key: `tblidx_probability_${index}`, label: 'TBLIDX', type: 'number' },
-        { key: `dwminvalue_probability_${index}`, label: 'Min Value', type: 'number' },
-        { key: `dwmaxvalue_probability_${index}`, label: 'Max Value', type: 'number' },
-        { key: `dwrate_probability_${index}`, label: 'Rate', type: 'number' },
+        { key: `bytype_probability_${index}`, label: `Type`, type: 'number' },
+        { key: `tblidx_probability_${index}`, label: `TBLIDX`, type: 'number' },
+        { key: `dwminvalue_probability_${index}`, label: `Min Value`, type: 'number' },
+        { key: `dwmaxvalue_probability_${index}`, label: `Max Value`, type: 'number' },
+        { key: `dwrate_probability_${index}`, label: `Rate`, type: 'number' },
       ],
     })),
   };

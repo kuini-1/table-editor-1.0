@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { z } from 'zod';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { Button } from '@/components/ui/button';
+import { useState } from "react";
+import { z } from "zod";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
@@ -12,13 +12,13 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { Checkbox } from '@/components/ui/checkbox';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-import { hlsItemSchema } from '@/app/(dashboard)/tables/hls_item/schema';
+import { hlsItemSchema } from "@/app/(dashboard)/tables/hls_item/schema";
 
 type HlsItemFormData = z.infer<typeof hlsItemSchema>;
 
@@ -26,7 +26,7 @@ interface HlsItemFormProps {
   initialData?: HlsItemFormData;
   onSubmit: (data: HlsItemFormData) => void;
   onCancel: () => void;
-  mode: 'add' | 'edit' | 'duplicate';
+  mode: "add" | "edit" | "duplicate";
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
@@ -39,7 +39,7 @@ export function HlsItemForm({
   open,
   onOpenChange,
 }: HlsItemFormProps) {
-  const [activeTab, setActiveTab] = useState('basic');
+  const [activeTab, setActiveTab] = useState("basic");
 
   const form = useForm<HlsItemFormData>({
     resolver: zodResolver(hlsItemSchema),
@@ -51,108 +51,108 @@ export function HlsItemForm({
   };
 
   // Define field labels and types
-  const fieldConfig: Record<string, { label: string; type: 'text' | 'number' | 'boolean' }> = {
-    tblidx: { label: 'ID', type: 'number' },
-    wszname: { label: 'Name', type: 'text' },
-    wszcjiproductid: { label: 'Product ID', type: 'text' },
-    szicon_name: { label: 'Icon Name', type: 'text' },
-    whlsitemtype: { label: 'Item Type', type: 'number' },
-    byhlsdurationtype: { label: 'Duration Type', type: 'number' },
-    dwhlsdurationtime: { label: 'Duration Time', type: 'number' },
-    idxnametext: { label: 'Name Text Index', type: 'number' },
-    idxnotetext: { label: 'Note Text Index', type: 'number' },
-    itemtblidx: { label: 'Main Item ID', type: 'number' },
-    bonsale: { label: 'On Sale', type: 'boolean' },
-    byselltype: { label: 'Sell Type', type: 'number' },
-    dwcash: { label: 'Cash', type: 'number' },
-    bydiscount: { label: 'Discount', type: 'number' },
-    bystackcount: { label: 'Stack Count', type: 'number' },
-    wdisplaybitflag: { label: 'Display Bit Flag', type: 'number' },
-    byquicklink: { label: 'Quick Link', type: 'number' },
-    dwpriority: { label: 'Priority', type: 'number' },
-    bydisplayconsumetype: { label: 'Display Consume Type', type: 'number' },
-    byyadrattype: { label: 'Yadrat Type', type: 'number' },
-    itemtblidx_0: { label: 'Item ID', type: 'number' },
-    bystackcount_0: { label: 'Stack Count', type: 'number' },
-    itemtblidx_1: { label: 'Item ID', type: 'number' },
-    bystackcount_1: { label: 'Stack Count', type: 'number' },
-    itemtblidx_2: { label: 'Item ID', type: 'number' },
-    bystackcount_2: { label: 'Stack Count', type: 'number' },
-    itemtblidx_3: { label: 'Item ID', type: 'number' },
-    bystackcount_3: { label: 'Stack Count', type: 'number' },
-    itemtblidx_4: { label: 'Item ID', type: 'number' },
-    bystackcount_4: { label: 'Stack Count', type: 'number' },
+  const fieldConfig: Record<string, { label: string; type: "text" | "number" | "boolean" }> = {
+    tblidx: { label: "ID", type: "number" },
+    wszname: { label: "Name", type: "text" },
+    wszcjiproductid: { label: "Product ID", type: "text" },
+    szicon_name: { label: "Icon Name", type: "text" },
+    whlsitemtype: { label: "Item Type", type: "number" },
+    byhlsdurationtype: { label: "Duration Type", type: "number" },
+    dwhlsdurationtime: { label: "Duration Time", type: "number" },
+    idxnametext: { label: "Name Text Index", type: "number" },
+    idxnotetext: { label: "Note Text Index", type: "number" },
+    itemtblidx: { label: "Main Item ID", type: "number" },
+    bonsale: { label: "On Sale", type: "boolean" },
+    byselltype: { label: "Sell Type", type: "number" },
+    dwcash: { label: "Cash", type: "number" },
+    bydiscount: { label: "Discount", type: "number" },
+    bystackcount: { label: "Stack Count", type: "number" },
+    wdisplaybitflag: { label: "Display Bit Flag", type: "number" },
+    byquicklink: { label: "Quick Link", type: "number" },
+    dwpriority: { label: "Priority", type: "number" },
+    bydisplayconsumetype: { label: "Display Consume Type", type: "number" },
+    byyadrattype: { label: "Yadrat Type", type: "number" },
+    itemtblidx_0: { label: "Item ID", type: "number" },
+    bystackcount_0: { label: "Stack Count", type: "number" },
+    itemtblidx_1: { label: "Item ID", type: "number" },
+    bystackcount_1: { label: "Stack Count", type: "number" },
+    itemtblidx_2: { label: "Item ID", type: "number" },
+    bystackcount_2: { label: "Stack Count", type: "number" },
+    itemtblidx_3: { label: "Item ID", type: "number" },
+    bystackcount_3: { label: "Stack Count", type: "number" },
+    itemtblidx_4: { label: "Item ID", type: "number" },
+    bystackcount_4: { label: "Stack Count", type: "number" },
   };
 
   // Define tabs with their sections
   const tabs = [
     {
-      id: 'basic',
-      label: 'Basic Info',
+      id: "basic",
+      label: "Basic Info",
       sections: [
         {
-          label: 'Basic Information',
+          label: "Basic Information",
           fields: [
-            'tblidx',
-            'wszname',
-            'wszcjiproductid',
-            'szicon_name',
-            'whlsitemtype',
-            'byhlsdurationtype',
-            'dwhlsdurationtime',
-            'idxnametext',
-            'idxnotetext'
+            "tblidx",
+            "wszname",
+            "wszcjiproductid",
+            "szicon_name",
+            "whlsitemtype",
+            "byhlsdurationtype",
+            "dwhlsdurationtime",
+            "idxnametext",
+            "idxnotetext"
           ]
         },
         {
-          label: 'Sale Settings',
+          label: "Sale Settings",
           fields: [
-            'bonsale',
-            'byselltype',
-            'dwcash',
-            'bydiscount',
-            'bystackcount'
+            "bonsale",
+            "byselltype",
+            "dwcash",
+            "bydiscount",
+            "bystackcount"
           ]
         },
         {
-          label: 'Display Settings',
+          label: "Display Settings",
           fields: [
-            'wdisplaybitflag',
-            'byquicklink',
-            'dwpriority',
-            'bydisplayconsumetype',
-            'byyadrattype'
+            "wdisplaybitflag",
+            "byquicklink",
+            "dwpriority",
+            "bydisplayconsumetype",
+            "byyadrattype"
           ]
         }
       ]
     },
     {
-      id: 'items',
-      label: 'Item Bundles',
+      id: "items",
+      label: "Item Bundles",
       itemSets: [
         {
-          label: 'Main Item',
-          fields: ['itemtblidx', 'bystackcount']
+          label: "Main Item",
+          fields: ["itemtblidx", "bystackcount"]
         },
         {
-          label: 'Bundle Item 1',
-          fields: ['itemtblidx_0', 'bystackcount_0']
+          label: "Bundle Item 1",
+          fields: ["itemtblidx_0", "bystackcount_0"]
         },
         {
-          label: 'Bundle Item 2',
-          fields: ['itemtblidx_1', 'bystackcount_1']
+          label: "Bundle Item 2",
+          fields: ["itemtblidx_1", "bystackcount_1"]
         },
         {
-          label: 'Bundle Item 3',
-          fields: ['itemtblidx_2', 'bystackcount_2']
+          label: "Bundle Item 3",
+          fields: ["itemtblidx_2", "bystackcount_2"]
         },
         {
-          label: 'Bundle Item 4',
-          fields: ['itemtblidx_3', 'bystackcount_3']
+          label: "Bundle Item 4",
+          fields: ["itemtblidx_3", "bystackcount_3"]
         },
         {
-          label: 'Bundle Item 5',
-          fields: ['itemtblidx_4', 'bystackcount_4']
+          label: "Bundle Item 5",
+          fields: ["itemtblidx_4", "bystackcount_4"]
         }
       ]
     }

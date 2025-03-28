@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 // Define the schema for the set_item table
 export const setItemSchema = z.object({

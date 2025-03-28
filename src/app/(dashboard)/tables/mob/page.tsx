@@ -1,10 +1,10 @@
 'use client';
 
-import { useState } from 'react';
-import { z } from 'zod';
-import { useSearchParams } from 'next/navigation';
-import { toast } from 'sonner';
-import { Button } from '@/components/ui/button';
+import { useState } from "react";
+import { z } from "zod";
+import { useSearchParams } from "next/navigation";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import {
   Sheet,
   SheetContent,
@@ -12,15 +12,15 @@ import {
   SheetTitle,
   SheetDescription,
   SheetFooter,
-} from '@/components/ui/sheet';
-import { useTableData } from '@/hooks/useTableData';
+} from "@/components/ui/sheet";
+import { useTableData } from "@/hooks/useTableData";
 import { TableHeader } from '@/components/table/TableHeader';
 import { TablePagination } from '@/components/table/TablePagination';
-import { DataTable } from '@/components/table/DataTable';
+import { DataTable } from "@/components/table/DataTable";
 import { DeleteDialog, ImportDialog, useExport } from '@/components/table/TableDialogs';
-import { useStore } from '@/lib/store';
-import { mobSchema } from './schema';
-import { MobForm } from './MobForm';
+import { useStore } from "@/lib/store";
+import { mobSchema } from "./schema";
+import { MobForm } from "./MobForm";
 import { ErrorDisplay } from '@/components/ErrorDisplay';
 
 type MobFormData = z.infer<typeof mobSchema>;
@@ -35,25 +35,25 @@ type FormMode = 'add' | 'edit' | 'duplicate';
 const formTheme = {
   title: {
     text: {
-      add: 'Add New Mob',
-      edit: 'Edit Mob',
-      duplicate: 'Duplicate Mob'
+      add: "Add New Mob",
+      edit: "Edit Mob",
+      duplicate: "Duplicate Mob"
     }
   },
   description: {
     text: {
-      add: 'Add a new mob to the database.',
-      edit: 'Edit the selected mob\'s details.',
-      duplicate: 'Create a new mob based on the selected one.'
+      add: "Add a new mob to the database.",
+      edit: "Edit the selected mob's details.",
+      duplicate: "Create a new mob based on the selected one."
     }
   },
   button: {
     text: {
-      add: 'Add Mob',
-      edit: 'Save Changes',
-      duplicate: 'Duplicate Entry'
+      add: "Add Mob",
+      edit: "Save Changes",
+      duplicate: "Duplicate Entry"
     },
-    className: 'flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700',
+    className: "flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700",
   },
 } as const;
 
@@ -77,63 +77,63 @@ export default function MobPage() {
   // Define columns for the data table
   const columns = [
     {
-      key: 'tblidx',
-      label: 'ID',
-      type: 'number' as const,
+      key: "tblidx",
+      label: "ID",
+      type: "number" as const,
       validation: mobSchema.shape.tblidx,
     },
     {
-      key: 'name',
-      label: 'Name',
-      type: 'text' as const,
+      key: "name",
+      label: "Name",
+      type: "text" as const,
       validation: mobSchema.shape.name,
     },
     {
-      key: 'wsznametext',
-      label: 'Display Name',
-      type: 'text' as const,
+      key: "wsznametext",
+      label: "Display Name",
+      type: "text" as const,
       validation: mobSchema.shape.wsznametext,
     },
     {
-      key: 'bylevel',
-      label: 'Level',
-      type: 'number' as const,
+      key: "bylevel",
+      label: "Level",
+      type: "number" as const,
       validation: mobSchema.shape.bylevel,
     },
     {
-      key: 'bygrade',
-      label: 'Grade',
-      type: 'number' as const,
+      key: "bygrade",
+      label: "Grade",
+      type: "number" as const,
       validation: mobSchema.shape.bygrade,
     },
     {
-      key: 'dwbasic_lp',
-      label: 'LP',
-      type: 'number' as const,
+      key: "dwbasic_lp",
+      label: "LP",
+      type: "number" as const,
       validation: mobSchema.shape.dwbasic_lp,
     },
     {
-      key: 'wbasic_physical_offence',
-      label: 'Physical Offense',
-      type: 'number' as const,
+      key: "wbasic_physical_offence",
+      label: "Physical Offense",
+      type: "number" as const,
       validation: mobSchema.shape.wbasic_physical_offence,
     },
     {
-      key: 'wbasic_energy_offence',
-      label: 'Energy Offense',
-      type: 'number' as const,
+      key: "wbasic_energy_offence",
+      label: "Energy Offense",
+      type: "number" as const,
       validation: mobSchema.shape.wbasic_energy_offence,
     },
     {
-      key: 'bvalidity_able',
-      label: 'Valid',
-      type: 'boolean' as const,
+      key: "bvalidity_able",
+      label: "Valid",
+      type: "boolean" as const,
       validation: mobSchema.shape.bvalidity_able,
     },
     {
-      key: 'dwexp',
-      label: 'EXP',
-      type: 'number' as const,
+      key: "dwexp",
+      label: "EXP",
+      type: "number" as const,
       validation: mobSchema.shape.dwexp,
     },
   ];
@@ -186,32 +186,32 @@ export default function MobPage() {
   // Handle import confirmation
   const handleImportConfirm = async (file: File) => {
     if (!file) {
-      toast.error('Please select a file to import');
+      toast.error("Please select a file to import");
       return;
     }
 
     try {
       const formData = new FormData();
-      formData.append('file', file);
-      formData.append('tableName', 'mob');
-      formData.append('tableId', tableId);
+      formData.append("file", file);
+      formData.append("tableName", "mob");
+      formData.append("tableId", tableId);
 
-      const response = await fetch('/api/import', {
-        method: 'POST',
+      const response = await fetch("/api/import", {
+        method: "POST",
         body: formData,
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to import data');
+        throw new Error(errorData.error || "Failed to import data");
       }
 
-      toast.success('Data imported successfully');
+      toast.success("Data imported successfully");
       refreshData();
       setIsImportDialogOpen(false);
     } catch (error) {
-      console.error('Import error:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to import data');
+      console.error("Import error:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to import data");
     }
   };
 
@@ -369,7 +369,7 @@ export default function MobPage() {
             setIsDeleteDialogOpen(false);
           }
         }}
-        itemName={selectedRow?.name || 'this mob'}
+        itemName={selectedRow?.name || "this mob"}
       />
     </div>
   );

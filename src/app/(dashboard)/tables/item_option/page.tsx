@@ -1,10 +1,10 @@
 'use client';
 
-import { useState } from 'react';
-import { z } from 'zod';
-import { useSearchParams } from 'next/navigation';
-import { toast } from 'sonner';
-import { Button } from '@/components/ui/button';
+import { useState } from "react";
+import { z } from "zod";
+import { useSearchParams } from "next/navigation";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import {
   Sheet,
   SheetContent,
@@ -12,15 +12,15 @@ import {
   SheetTitle,
   SheetDescription,
   SheetFooter,
-} from '@/components/ui/sheet';
-import { useTableData } from '@/hooks/useTableData';
+} from "@/components/ui/sheet";
+import { useTableData } from "@/hooks/useTableData";
 import { TableHeader } from '@/components/table/TableHeader';
 import { TablePagination } from '@/components/table/TablePagination';
-import { DataTable } from '@/components/table/DataTable';
+import { DataTable } from "@/components/table/DataTable";
 import { DeleteDialog, ImportDialog, useExport } from '@/components/table/TableDialogs';
-import { useStore } from '@/lib/store';
-import { itemOptionSchema } from './schema';
-import { ItemOptionForm } from './ItemOptionForm';
+import { useStore } from "@/lib/store";
+import { itemOptionSchema } from "./schema";
+import { ItemOptionForm } from "./ItemOptionForm";
 import { ErrorDisplay } from '@/components/ErrorDisplay';
 
 type ItemOptionFormData = z.infer<typeof itemOptionSchema>;
@@ -35,25 +35,25 @@ type FormMode = 'add' | 'edit' | 'duplicate';
 const formTheme = {
   title: {
     text: {
-      add: 'Add New Item Option',
-      edit: 'Edit Item Option',
-      duplicate: 'Duplicate Item Option'
+      add: "Add New Item Option",
+      edit: "Edit Item Option",
+      duplicate: "Duplicate Item Option"
     }
   },
   description: {
     text: {
-      add: 'Add a new item option to the database.',
-      edit: 'Edit the selected item option\'s details.',
-      duplicate: 'Create a new item option based on the selected one.'
+      add: "Add a new item option to the database.",
+      edit: "Edit the selected item option's details.",
+      duplicate: "Create a new item option based on the selected one."
     }
   },
   button: {
     text: {
-      add: 'Add Item Option',
-      edit: 'Save Changes',
-      duplicate: 'Duplicate Entry'
+      add: "Add Item Option",
+      edit: "Save Changes",
+      duplicate: "Duplicate Entry"
     },
-    className: 'flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700',
+    className: "flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700",
   },
 } as const;
 
@@ -77,63 +77,63 @@ export default function ItemOptionPage() {
   // Define columns for the data table
   const columns = [
     {
-      key: 'tblidx',
-      label: 'ID',
-      type: 'number' as const,
+      key: "tblidx",
+      label: "ID",
+      type: "number" as const,
       validation: itemOptionSchema.shape.tblidx,
     },
     {
-      key: 'wszoption_name',
-      label: 'Option Name',
-      type: 'text' as const,
+      key: "wszoption_name",
+      label: "Option Name",
+      type: "text" as const,
       validation: itemOptionSchema.shape.wszoption_name,
     },
     {
-      key: 'byoption_rank',
-      label: 'Rank',
-      type: 'number' as const,
+      key: "byoption_rank",
+      label: "Rank",
+      type: "number" as const,
       validation: itemOptionSchema.shape.byoption_rank,
     },
     {
-      key: 'byitem_group',
-      label: 'Item Group',
-      type: 'number' as const,
+      key: "byitem_group",
+      label: "Item Group",
+      type: "number" as const,
       validation: itemOptionSchema.shape.byitem_group,
     },
     {
-      key: 'bvalidity_able',
-      label: 'Validity',
-      type: 'number' as const,
+      key: "bvalidity_able",
+      label: "Validity",
+      type: "number" as const,
       validation: itemOptionSchema.shape.bvalidity_able,
     },
     {
-      key: 'dwcost',
-      label: 'Cost',
-      type: 'number' as const,
+      key: "dwcost",
+      label: "Cost",
+      type: "number" as const,
       validation: itemOptionSchema.shape.dwcost,
     },
     {
-      key: 'bylevel',
-      label: 'Level',
-      type: 'number' as const,
+      key: "bylevel",
+      label: "Level",
+      type: "number" as const,
       validation: itemOptionSchema.shape.bylevel,
     },
     {
-      key: 'system_effect_0',
-      label: 'Effect 1',
-      type: 'text' as const,
+      key: "system_effect_0",
+      label: "Effect 1",
+      type: "text" as const,
       validation: itemOptionSchema.shape.system_effect_0,
     },
     {
-      key: 'bappliedinpercent_0',
-      label: '% Effect 1',
-      type: 'boolean' as const,
+      key: "bappliedinpercent_0",
+      label: "% Effect 1",
+      type: "boolean" as const,
       validation: itemOptionSchema.shape.bappliedinpercent_0,
     },
     {
-      key: 'nvalue_0',
-      label: 'Value 1',
-      type: 'number' as const,
+      key: "nvalue_0",
+      label: "Value 1",
+      type: "number" as const,
       validation: itemOptionSchema.shape.nvalue_0,
     },
   ];
@@ -319,7 +319,7 @@ export default function ItemOptionPage() {
             setIsDeleteDialogOpen(false);
           }
         }}
-        itemName={selectedRow?.wszoption_name || 'this item option'}
+        itemName={selectedRow?.wszoption_name || "this item option"}
       />
     </div>
   );

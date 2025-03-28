@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 // Define the schema for the mob table
 export const mobSchema = z.object({

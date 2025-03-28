@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/client';
+import { createClient } from "@/lib/supabase/client";
 
 export async function getUserRole() {
   try {
@@ -20,7 +20,7 @@ export async function getUserRole() {
       .single();
 
     if (profileError) {
-      console.error('Error fetching profile:', profileError);
+      console.error("Error fetching profile:", profileError);
       return null;
     }
 
@@ -28,7 +28,7 @@ export async function getUserRole() {
     return profile?.role || null;
 
   } catch (error) {
-    console.error('Error getting user role:', error);
+    console.error("Error getting user role:", error);
     return null;
   }
 }

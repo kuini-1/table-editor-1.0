@@ -1,4 +1,4 @@
-import * as z from 'zod';
+import * as z from "zod";
 
 export const useItemSchema = z.object({
   table_id: z.string().uuid().nullable(),

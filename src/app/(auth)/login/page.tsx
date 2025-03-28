@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useTheme } from 'next-themes';
-import { createClient } from '@/lib/supabase/client';
+import { createClient } from "@/lib/supabase/client";
 import OneTapComponent from '@/components/OneTapComponent';
 import Image from 'next/image';
 
@@ -18,7 +18,7 @@ export default function LoginPage() {
   const { theme, setTheme } = useTheme();
   const supabase = createClient();
   const searchParams = useSearchParams();
-  const next = searchParams.get('next');
+  const next = searchParams.get("next");
   const [isGoogleLoading, setIsGoogleLoading] = useState<boolean>(false);
   
   // Handle theme hydration

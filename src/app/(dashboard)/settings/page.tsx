@@ -3,13 +3,13 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Separator } from '@/components/ui/separator';
-import { LogOut, Loader2, User, Building2, Mail, Lock, CreditCard, Shield, Bell, Settings2 } from 'lucide-react';
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Separator } from "@/components/ui/separator";
+import { LogOut, Loader2, User, Building2, Mail, Lock, CreditCard, Shield, Bell, Settings2 } from "lucide-react";
 
 interface UserProfile {
   id: string;
@@ -21,29 +21,29 @@ interface UserProfile {
 
 const sidebarNavItems = [
   {
-    title: 'Profile',
+    title: "Profile",
     icon: User,
-    href: '#profile',
+    href: "#profile",
   },
   {
-    title: 'Password',
+    title: "Password",
     icon: Lock,
-    href: '#password',
+    href: "#password",
   },
   {
-    title: 'Subscription',
+    title: "Subscription",
     icon: CreditCard,
-    href: '#subscription',
+    href: "#subscription",
   },
   {
-    title: 'Security',
+    title: "Security",
     icon: Shield,
-    href: '#security',
+    href: "#security",
   },
   {
-    title: 'Notifications',
+    title: "Notifications",
     icon: Bell,
-    href: '#notifications',
+    href: "#notifications",
   },
 ];
 
@@ -54,7 +54,7 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [activeSection, setActiveSection] = useState('profile');
+  const [activeSection, setActiveSection] = useState("profile");
 
   const [formData, setFormData] = useState({
     full_name: '',
@@ -261,7 +261,7 @@ export default function SettingsPage() {
         </aside>
 
         <div className="flex-1 lg:max-w-2xl">
-          {activeSection === 'profile' && (
+          {activeSection === "profile" && (
             <Card className="border-none shadow-lg bg-gradient-to-br from-white to-gray-50/50 dark:from-gray-900 dark:to-gray-800/50">
               <CardHeader>
                 <CardTitle>Personal Information</CardTitle>
@@ -345,7 +345,7 @@ export default function SettingsPage() {
             </Card>
           )}
 
-          {activeSection === 'password' && (
+          {activeSection === "password" && (
             <Card className="border-none shadow-lg bg-gradient-to-br from-white to-gray-50/50 dark:from-gray-900 dark:to-gray-800/50">
               <CardHeader>
                 <CardTitle>Change Password</CardTitle>
@@ -434,7 +434,7 @@ export default function SettingsPage() {
             </Card>
           )}
 
-          {activeSection === 'subscription' && (
+          {activeSection === "subscription" && (
             <Card className="border-none shadow-lg bg-gradient-to-br from-white to-gray-50/50 dark:from-gray-900 dark:to-gray-800/50">
               <CardHeader>
                 <CardTitle>Subscription Plan</CardTitle>
@@ -495,7 +495,7 @@ export default function SettingsPage() {
             </Card>
           )}
 
-          {activeSection === 'security' && (
+          {activeSection === "security" && (
             <Card className="border-none shadow-lg bg-gradient-to-br from-white to-gray-50/50 dark:from-gray-900 dark:to-gray-800/50">
               <CardHeader>
                 <CardTitle>Security Settings</CardTitle>
@@ -524,7 +524,7 @@ export default function SettingsPage() {
             </Card>
           )}
 
-          {activeSection === 'notifications' && (
+          {activeSection === "notifications" && (
             <Card className="border-none shadow-lg bg-gradient-to-br from-white to-gray-50/50 dark:from-gray-900 dark:to-gray-800/50">
               <CardHeader>
                 <CardTitle>Notification Preferences</CardTitle>

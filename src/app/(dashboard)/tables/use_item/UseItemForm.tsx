@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { z } from 'zod';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { Button } from '@/components/ui/button';
+import { useState } from "react";
+import { z } from "zod";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
@@ -12,21 +12,21 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { toast } from 'sonner';
-import { Checkbox } from '@/components/ui/checkbox';
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { toast } from "sonner";
+import { Checkbox } from "@/components/ui/checkbox";
 
-import { useItemSchema } from './schema';
+import { useItemSchema } from "./schema";
 
 type UseItemFormData = z.infer<typeof useItemSchema>;
 
 interface UseItemFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  mode: 'add' | 'edit';
+  mode: "add" | "edit";
   initialData?: UseItemFormData;
   onSubmit: (data: UseItemFormData) => void;
 }
@@ -47,74 +47,74 @@ export default function UseItemForm({
     try {
       onSubmit(data);
       form.reset();
-      toast.success(mode === 'add' ? 'Use item added successfully' : 'Use item updated successfully');
+      toast.success(mode === "add" ? "Use item added successfully" : "Use item updated successfully");
     } catch (error) {
-      toast.error('Failed to save use item');
+      toast.error("Failed to save use item");
       console.error(error);
     }
   };
 
   // Define field labels and types
-  const fieldConfig: Record<string, { label: string; type: 'text' | 'number' | 'boolean'; tab: string; section: string }> = {
-    tblidx: { label: 'ID', type: 'number', tab: 'basic', section: 'Basic Info' },
-    byuse_item_active_type: { label: 'Active Type', type: 'number', tab: 'basic', section: 'Basic Info' },
-    bybuff_group: { label: 'Buff Group', type: 'number', tab: 'basic', section: 'Basic Info' },
-    bybuffkeeptype: { label: 'Buff Keep Type', type: 'number', tab: 'basic', section: 'Basic Info' },
-    use_info_text: { label: 'Info Text', type: 'text', tab: 'basic', section: 'Basic Info' },
+  const fieldConfig: Record<string, { label: string; type: "text" | "number" | "boolean"; tab: string; section: string }> = {
+    tblidx: { label: "ID", type: "number", tab: "basic", section: "Basic Info" },
+    byuse_item_active_type: { label: "Active Type", type: "number", tab: "basic", section: "Basic Info" },
+    bybuff_group: { label: "Buff Group", type: "number", tab: "basic", section: "Basic Info" },
+    bybuffkeeptype: { label: "Buff Keep Type", type: "number", tab: "basic", section: "Basic Info" },
+    use_info_text: { label: "Info Text", type: "text", tab: "basic", section: "Basic Info" },
     
-    dwcool_time_bit_flag: { label: 'Cool Time Bit Flag', type: 'number', tab: 'flags', section: 'Flags' },
-    wfunction_bit_flag: { label: 'Function Bit Flag', type: 'number', tab: 'flags', section: 'Flags' },
-    dwuse_restriction_rule_bit_flag: { label: 'Use Restriction Rule', type: 'number', tab: 'flags', section: 'Flags' },
-    dwuse_allow_rule_bit_flag: { label: 'Use Allow Rule', type: 'number', tab: 'flags', section: 'Flags' },
-    wneed_state_bit_flag: { label: 'Need State Flag', type: 'number', tab: 'flags', section: 'Flags' },
+    dwcool_time_bit_flag: { label: "Cool Time Bit Flag", type: "number", tab: "flags", section: "Flags" },
+    wfunction_bit_flag: { label: "Function Bit Flag", type: "number", tab: "flags", section: "Flags" },
+    dwuse_restriction_rule_bit_flag: { label: "Use Restriction Rule", type: "number", tab: "flags", section: "Flags" },
+    dwuse_allow_rule_bit_flag: { label: "Use Allow Rule", type: "number", tab: "flags", section: "Flags" },
+    wneed_state_bit_flag: { label: "Need State Flag", type: "number", tab: "flags", section: "Flags" },
     
-    byappoint_target: { label: 'Appoint Target', type: 'number', tab: 'target', section: 'Target Settings' },
-    byapply_target: { label: 'Apply Target', type: 'number', tab: 'target', section: 'Target Settings' },
-    dwapply_target_index: { label: 'Apply Target Index', type: 'number', tab: 'target', section: 'Target Settings' },
-    byapply_target_max: { label: 'Apply Target Max', type: 'number', tab: 'target', section: 'Target Settings' },
-    byapply_range: { label: 'Apply Range', type: 'number', tab: 'target', section: 'Range Settings' },
-    byapply_area_size_1: { label: 'Area Size 1', type: 'number', tab: 'target', section: 'Range Settings' },
-    byapply_area_size_2: { label: 'Area Size 2', type: 'number', tab: 'target', section: 'Range Settings' },
+    byappoint_target: { label: "Appoint Target", type: "number", tab: "target", section: "Target Settings" },
+    byapply_target: { label: "Apply Target", type: "number", tab: "target", section: "Target Settings" },
+    dwapply_target_index: { label: "Apply Target Index", type: "number", tab: "target", section: "Target Settings" },
+    byapply_target_max: { label: "Apply Target Max", type: "number", tab: "target", section: "Target Settings" },
+    byapply_range: { label: "Apply Range", type: "number", tab: "target", section: "Range Settings" },
+    byapply_area_size_1: { label: "Area Size 1", type: "number", tab: "target", section: "Range Settings" },
+    byapply_area_size_2: { label: "Area Size 2", type: "number", tab: "target", section: "Range Settings" },
     
-    dwrequire_lp: { label: 'Required LP', type: 'number', tab: 'requirements', section: 'Requirements' },
-    wrequire_ep: { label: 'Required EP', type: 'number', tab: 'requirements', section: 'Requirements' },
-    byrequire_rp_ball: { label: 'Required RP Ball', type: 'number', tab: 'requirements', section: 'Requirements' },
-    requiredquestid: { label: 'Required Quest ID', type: 'number', tab: 'requirements', section: 'Requirements' },
+    dwrequire_lp: { label: "Required LP", type: "number", tab: "requirements", section: "Requirements" },
+    wrequire_ep: { label: "Required EP", type: "number", tab: "requirements", section: "Requirements" },
+    byrequire_rp_ball: { label: "Required RP Ball", type: "number", tab: "requirements", section: "Requirements" },
+    requiredquestid: { label: "Required Quest ID", type: "number", tab: "requirements", section: "Requirements" },
     
-    fcasting_time: { label: 'Casting Time', type: 'number', tab: 'timing', section: 'Timing' },
-    dwcastingtimeinmillisecs: { label: 'Casting Time (ms)', type: 'number', tab: 'timing', section: 'Timing' },
-    dwcool_time: { label: 'Cool Time', type: 'number', tab: 'timing', section: 'Timing' },
-    dwcooltimeinmillisecs: { label: 'Cool Time (ms)', type: 'number', tab: 'timing', section: 'Timing' },
-    dwkeep_time: { label: 'Keep Time', type: 'number', tab: 'timing', section: 'Timing' },
-    dwkeeptimeinmillisecs: { label: 'Keep Time (ms)', type: 'number', tab: 'timing', section: 'Timing' },
-    bkeep_effect: { label: 'Keep Effect', type: 'boolean', tab: 'timing', section: 'Effects' },
+    fcasting_time: { label: "Casting Time", type: "number", tab: "timing", section: "Timing" },
+    dwcastingtimeinmillisecs: { label: "Casting Time (ms)", type: "number", tab: "timing", section: "Timing" },
+    dwcool_time: { label: "Cool Time", type: "number", tab: "timing", section: "Timing" },
+    dwcooltimeinmillisecs: { label: "Cool Time (ms)", type: "number", tab: "timing", section: "Timing" },
+    dwkeep_time: { label: "Keep Time", type: "number", tab: "timing", section: "Timing" },
+    dwkeeptimeinmillisecs: { label: "Keep Time (ms)", type: "number", tab: "timing", section: "Timing" },
+    bkeep_effect: { label: "Keep Effect", type: "boolean", tab: "timing", section: "Effects" },
     
-    byuse_range_min: { label: 'Use Range Min', type: 'number', tab: 'range', section: 'Range' },
-    fuse_range_min: { label: 'Use Range Min (Float)', type: 'number', tab: 'range', section: 'Range' },
-    byuse_range_max: { label: 'Use Range Max', type: 'number', tab: 'range', section: 'Range' },
-    fuse_range_max: { label: 'Use Range Max (Float)', type: 'number', tab: 'range', section: 'Range' },
+    byuse_range_min: { label: "Use Range Min", type: "number", tab: "range", section: "Range" },
+    fuse_range_min: { label: "Use Range Min (Float)", type: "number", tab: "range", section: "Range" },
+    byuse_range_max: { label: "Use Range Max", type: "number", tab: "range", section: "Range" },
+    fuse_range_max: { label: "Use Range Max (Float)", type: "number", tab: "range", section: "Range" },
     
-    szcasting_effect: { label: 'Casting Effect', type: 'text', tab: 'effects', section: 'Effects' },
-    szaction_effect: { label: 'Action Effect', type: 'text', tab: 'effects', section: 'Effects' },
-    wcasting_animation_start: { label: 'Casting Animation Start', type: 'number', tab: 'effects', section: 'Animations' },
-    wcasting_animation_loop: { label: 'Casting Animation Loop', type: 'number', tab: 'effects', section: 'Animations' },
-    waction_animation_index: { label: 'Action Animation Index', type: 'number', tab: 'effects', section: 'Animations' },
-    waction_loop_animation_index: { label: 'Action Loop Animation', type: 'number', tab: 'effects', section: 'Animations' },
-    waction_end_animation_index: { label: 'Action End Animation', type: 'number', tab: 'effects', section: 'Animations' },
-    bycastingeffectposition: { label: 'Casting Effect Position', type: 'number', tab: 'effects', section: 'Positions' },
-    byactioneffectposition: { label: 'Action Effect Position', type: 'number', tab: 'effects', section: 'Positions' },
+    szcasting_effect: { label: "Casting Effect", type: "text", tab: "effects", section: "Effects" },
+    szaction_effect: { label: "Action Effect", type: "text", tab: "effects", section: "Effects" },
+    wcasting_animation_start: { label: "Casting Animation Start", type: "number", tab: "effects", section: "Animations" },
+    wcasting_animation_loop: { label: "Casting Animation Loop", type: "number", tab: "effects", section: "Animations" },
+    waction_animation_index: { label: "Action Animation Index", type: "number", tab: "effects", section: "Animations" },
+    waction_loop_animation_index: { label: "Action Loop Animation", type: "number", tab: "effects", section: "Animations" },
+    waction_end_animation_index: { label: "Action End Animation", type: "number", tab: "effects", section: "Animations" },
+    bycastingeffectposition: { label: "Casting Effect Position", type: "number", tab: "effects", section: "Positions" },
+    byactioneffectposition: { label: "Action Effect Position", type: "number", tab: "effects", section: "Positions" },
     
-    useworldtblidx: { label: 'World Table ID', type: 'number', tab: 'world', section: 'World Settings' },
-    fuseloc_x: { label: 'Use Location X', type: 'number', tab: 'world', section: 'Location' },
-    fuseloc_z: { label: 'Use Location Z', type: 'number', tab: 'world', section: 'Location' },
-    fuseloc_radius: { label: 'Use Location Radius', type: 'number', tab: 'world', section: 'Location' },
+    useworldtblidx: { label: "World Table ID", type: "number", tab: "world", section: "World Settings" },
+    fuseloc_x: { label: "Use Location X", type: "number", tab: "world", section: "Location" },
+    fuseloc_z: { label: "Use Location Z", type: "number", tab: "world", section: "Location" },
+    fuseloc_radius: { label: "Use Location Radius", type: "number", tab: "world", section: "Location" },
     
-    asystem_effect_0: { label: 'System Effect 1', type: 'number', tab: 'system', section: 'System Effect 1' },
-    abysystem_effect_type_0: { label: 'Effect Type 1', type: 'number', tab: 'system', section: 'System Effect 1' },
-    asystem_effect_value_0: { label: 'Effect Value 1', type: 'number', tab: 'system', section: 'System Effect 1' },
-    asystem_effect_1: { label: 'System Effect 2', type: 'number', tab: 'system', section: 'System Effect 2' },
-    abysystem_effect_type_1: { label: 'Effect Type 2', type: 'number', tab: 'system', section: 'System Effect 2' },
-    asystem_effect_value_1: { label: 'Effect Value 2', type: 'number', tab: 'system', section: 'System Effect 2' },
+    asystem_effect_0: { label: "System Effect 1", type: "number", tab: "system", section: "System Effect 1" },
+    abysystem_effect_type_0: { label: "Effect Type 1", type: "number", tab: "system", section: "System Effect 1" },
+    asystem_effect_value_0: { label: "Effect Value 1", type: "number", tab: "system", section: "System Effect 1" },
+    asystem_effect_1: { label: "System Effect 2", type: "number", tab: "system", section: "System Effect 2" },
+    abysystem_effect_type_1: { label: "Effect Type 2", type: "number", tab: "system", section: "System Effect 2" },
+    asystem_effect_value_1: { label: "Effect Value 2", type: "number", tab: "system", section: "System Effect 2" },
   };
 
   // Function to render a field
