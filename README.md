@@ -1,36 +1,11 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Table Editor
 
-## Getting Started
+## Overview
+The Table Editor is a robust platform designed for managing and editing over 60 game tables. With role-based access control, the system allows Owners to manage all aspects of the tables, including creating, updating, reading, and deleting data. Sub Owners can be assigned specific permissions, providing flexibility in managing the content. Stripe integration ensures Owners have access to premium features by securing their subscription.
 
-First, run the development server:
-
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
-
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Features
+- **Owner Role:** Full control over all tables, including the ability to manage CRUD operations and permissions for Sub Owners.
+- **Sub Owner Role:** Limited access, with customizable permissions set by the Owner for each table.
+- **60+ Game Tables:** Owners can manage over 60 different game tables, all with CRUD capabilities.
+- **Stripe Integration:** Secure access to premium features through Stripe subscription.
+- **Sub Owner Management:** Owners can create and manage Sub Owners to delegate table access.
