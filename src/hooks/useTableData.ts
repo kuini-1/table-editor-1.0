@@ -76,6 +76,7 @@ export function useTableData<T extends { id: string }>({ config, tableId }: UseT
 
       return result;
     } catch (error) {
+      console.error('Error checking permission:', error);
       return false;
     }
   }, [tableId, supabase, permissionCache]);
