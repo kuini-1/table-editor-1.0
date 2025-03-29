@@ -3,7 +3,6 @@ import { useState } from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
@@ -32,9 +31,7 @@ interface ItemFormProps {
 }
 
 export default function ItemForm({
-  open,
   onOpenChange,
-  mode,
   initialData,
   onSubmit,
 }: ItemFormProps) {
@@ -51,6 +48,7 @@ export default function ItemForm({
       onOpenChange(false);
       form.reset();
     } catch (error) {
+      console.error("Error submitting form:", error);
       toast.error("Failed to submit form");
     }
   };
@@ -430,20 +428,6 @@ export default function ItemForm({
           </FormItem>
         )}
       />
-    );
-  };
-
-  // Function to render a section
-  const renderSection = (section: { label: string; fields: string[] }) => {
-    return (
-      <div key={section.label} className="mb-6 rounded-lg border-2 border-gray-200 dark:border-gray-700 p-4 w-full">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-          {section.label}
-        </h3>
-        <div className="grid grid-cols-2 gap-x-4 gap-y-6">
-          {section.fields.map((field) => renderField(field))}
-        </div>
-      </div>
     );
   };
 

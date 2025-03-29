@@ -29,7 +29,6 @@ interface FormulaFormProps {
 export function FormulaForm({
   initialData,
   onSubmit,
-  mode,
 }: FormulaFormProps) {
   const form = useForm<FormulaFormData>({
     resolver: zodResolver(newFormulaSchema),

@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { toast } from 'sonner';
 import { useStore } from '@/lib/store';
 import { useTableData } from '@/hooks/useTableData';
 import { TableHeader } from '@/components/table/TableHeader';
@@ -20,7 +19,7 @@ import {
 import { Button } from "@/components/ui/button";
 import type { FormMode } from '@/components/table/ModularForm';
 import { ErrorDisplay } from '@/components/ErrorDisplay';
-import { itemEnchantSchema, type ItemEnchantFormData, columns } from './schema';
+import { type ItemEnchantFormData, columns } from './schema';
 import { ItemEnchantForm } from './ItemEnchantForm';
 
 export default function ItemEnchantPage() {
@@ -42,7 +41,6 @@ export default function ItemEnchantPage() {
 
   const {
     data,
-    loading,
     error,
     totalRows,
     page,
@@ -53,7 +51,6 @@ export default function ItemEnchantPage() {
     handleEditRow,
     handleDeleteRow,
     handleBulkDelete,
-    handleDuplicateRow,
     handleAddFilter,
     handleRemoveFilter,
     handlePageChange,
@@ -118,8 +115,7 @@ export default function ItemEnchantPage() {
             setIsFormOpen(true);
           }}
           onDuplicate={(row) => {
-            const { id, ...rest } = row;
-            setSelectedRow({ ...rest, id: '' } as ItemEnchantFormData);
+            setSelectedRow(row as ItemEnchantFormData);
             setFormMode('duplicate');
             setIsFormOpen(true);
           }}

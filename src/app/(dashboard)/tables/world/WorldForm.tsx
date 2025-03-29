@@ -49,10 +49,6 @@ interface TabDefinition {
 export function WorldForm({
   initialData,
   onSubmit,
-  onCancel,
-  mode,
-  open,
-  onOpenChange,
 }: WorldFormProps) {
   const [activeTab, setActiveTab] = useState('basic');
 

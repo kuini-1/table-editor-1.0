@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import * as z from 'zod';
 import {
   Dialog,
   DialogContent,
@@ -8,8 +9,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { ModularForm, Column as ModularFormColumn } from "./ModularForm";
 import { cn } from "@/lib/utils";
 import { Upload, File as FileIcon, X } from "lucide-react";
@@ -19,7 +18,7 @@ export interface Column {
   key: string;
   label: string;
   type?: 'text' | 'number' | 'boolean';
-  validation?: any;
+  validation?: z.ZodTypeAny;
 }
 
 interface BaseFormData {
@@ -324,8 +323,8 @@ export function useExport({ tableId, tableName }: ExportDialogProps) {
       document.body.removeChild(a);
 
       toast.success('Data exported successfully');
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to export data');
+    } catch (error: object | unknown) {
+      toast.error(error instanceof Error ? error.message : 'Failed to export data');
     }
   };
 

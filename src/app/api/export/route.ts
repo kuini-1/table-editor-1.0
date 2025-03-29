@@ -1,6 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
-import { createClient as createServiceClient } from '@supabase/supabase-js';
-import { cookies } from 'next/headers';
+import { createClient as createServiceClient, SupabaseClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
@@ -16,7 +15,7 @@ interface StorageFile {
   updated_at: string;
   created_at: string;
   last_accessed_at: string;
-  metadata: any;
+  metadata: Record<string, unknown>;
 }
 
 const LOCK_FILE = path.join(process.cwd(), 'exports', '.lock');
@@ -42,10 +41,10 @@ async function verifyConvertExecutable() {
   }
 
   try {
-    const stats = fs.statSync(exePath);
     fs.accessSync(exePath, fs.constants.X_OK);
     return true;
   } catch (error) {
+    console.error('Error verifying convert executable:', error);
     return false;
   }
 }
@@ -59,9 +58,9 @@ async function acquireLock(): Promise<boolean> {
       const lockFileHandle = fs.openSync(LOCK_FILE, 'wx');
       fs.closeSync(lockFileHandle);
       return true;
-    } catch (error: any) {
+    } catch (error: object | unknown) {
       // If file exists, wait and retry
-      if (error.code === 'EEXIST') {
+      if (error instanceof Error && 'code' in error && error.code === 'EEXIST') {
         await sleep(RETRY_INTERVAL);
         retries++;
         continue;
@@ -83,7 +82,7 @@ function releaseLock() {
   }
 }
 
-async function cleanupExistingFiles(supabase: any, userId: string, userDir: string) {
+async function cleanupExistingFiles(supabase: SupabaseClient, userId: string, userDir: string) {
   // Clean up local directory if it exists
   if (fs.existsSync(userDir)) {
     fs.rmSync(userDir, { recursive: true, force: true });
@@ -112,7 +111,7 @@ async function cleanupExistingFiles(supabase: any, userId: string, userDir: stri
   }
 }
 
-async function ensureExportsBucket(supabase: any) {
+async function ensureExportsBucket() {
   try {
     const serviceClient = getServiceClient();
     
@@ -138,6 +137,7 @@ async function ensureExportsBucket(supabase: any) {
     
     return true;
   } catch (error) {
+    console.error('Error ensuring exports bucket:', error);
     return false;
   }
 }
@@ -161,7 +161,7 @@ export async function GET(req: Request) {
   try {
     const supabase = createClient();
     
-    if (!await ensureExportsBucket(supabase)) {
+    if (!await ensureExportsBucket()) {
       return NextResponse.json({
         error: 'Storage configuration error',
         details: 'Failed to configure storage bucket'
@@ -210,11 +210,11 @@ export async function GET(req: Request) {
     try {
       await cleanupExistingFiles(supabase, user.id, userDir);
       fs.mkdirSync(userDir, { recursive: true });
-    } catch (fsError: any) {
+    } catch (fsError: object | unknown) {
       console.error('File system error:', fsError);
       return NextResponse.json({
         error: 'Failed to prepare export directory',
-        details: fsError.message
+        details: fsError instanceof Error ? fsError.message : 'Unknown error'
       }, { status: 500 });
     }
 
@@ -244,11 +244,11 @@ export async function GET(req: Request) {
     const csvPath = path.join(userDir, `${table}.csv`);
     try {
       fs.writeFileSync(csvPath, csvData);
-    } catch (writeError: any) {
+    } catch (writeError: object | unknown) {
       console.error('File write error:', writeError);
       return NextResponse.json({
         error: 'Failed to write CSV file',
-        details: writeError.message
+        details: writeError instanceof Error ? writeError.message : 'Unknown error'
       }, { status: 500 });
     }
 
@@ -260,11 +260,11 @@ export async function GET(req: Request) {
       if (csvLines.length < 2) { // At least header + one data row
         throw new Error('CSV file has insufficient data');
       }
-    } catch (csvError: any) {
+    } catch (csvError: object | unknown) {
       console.error('CSV verification failed:', csvError);
       return NextResponse.json({
         error: 'Invalid CSV data',
-        details: csvError.message
+        details: csvError instanceof Error ? csvError.message : 'Unknown error'
       }, { status: 500 });
     }
 
@@ -275,7 +275,7 @@ export async function GET(req: Request) {
         // Clean up if lock fails
         fs.unlinkSync(csvPath);
         fs.rmdirSync(userDir);
-      } catch (cleanupError: any) {
+      } catch (cleanupError: object | unknown) {
         console.error('Cleanup error after lock failure:', cleanupError);
       }
       return NextResponse.json({
@@ -295,7 +295,7 @@ export async function GET(req: Request) {
 
       try {
         // Execute with output capture and working directory set
-        const { stdout, stderr } = await execAsync(
+        await execAsync(
           `"${exePath}" "${table}" "${user.id}" "rdf"`, 
           { 
             cwd: workingDir,
@@ -307,13 +307,13 @@ export async function GET(req: Request) {
             }
           }
         );
-      } catch (execError: any) {
+      } catch (execError: object | unknown) {
         console.error('Conversion execution error:', execError);
         // Log more details about the error
-        if (execError.code) console.error('Exit code:', execError.code);
-        if (execError.signal) console.error('Signal:', execError.signal);
-        if (execError.killed) console.error('Process was killed');
-        throw new Error(`Conversion process failed: ${execError.message}`);
+        if (execError instanceof Error && 'code' in execError) console.error('Exit code:', execError.code);
+        if (execError instanceof Error && 'signal' in execError) console.error('Signal:', execError.signal);
+        if (execError instanceof Error && 'killed' in execError) console.error('Process was killed');
+        throw new Error(`Conversion process failed: ${execError instanceof Error ? execError.message : 'Unknown error'}`);
       }
 
       // Verify RDF file was created
@@ -360,22 +360,22 @@ export async function GET(req: Request) {
         downloadUrl: publicUrl
       });
 
-    } catch (processError: any) {
+    } catch (processError: object | unknown) {
       console.error('Processing error:', processError);
       return NextResponse.json({
         error: 'Export processing failed',
-        details: processError.message
+        details: processError instanceof Error ? processError.message : 'Unknown error'
       }, { status: 500 });
     } finally {
       releaseLock();
     }
 
-  } catch (error: any) {
+  } catch (error: object | unknown) {
     console.error('Unexpected export error:', error);
     return NextResponse.json({
       error: 'Internal server error',
-      details: error.message,
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      details: error instanceof Error ? error.message : 'Unknown error',
+      stack: process.env.NODE_ENV === 'development' ? (error as Error).stack : undefined
     }, { status: 500 });
   }
 } 

@@ -9,21 +9,11 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store';
-interface ProfileResponse {
-  email: string;
-  full_name: string | null;
-}
-
-interface UserResponse {
-  profile: ProfileResponse;
-}
 
 interface ActivityLogResponse {
   id: string;
@@ -96,63 +86,6 @@ export interface SubOwnerPermission {
   };
 }
 
-interface SubOwnerPermissionWithTable {
-  id: string;
-  can_get: boolean;
-  can_put: boolean;
-  can_post: boolean;
-  can_delete: boolean;
-  table: {
-    id: string;
-    name: string;
-    type: string;
-    owner_id: string;
-  };
-}
-
-type DatabaseSubOwnerPermission = {
-  can_get: boolean;
-  can_put: boolean;
-  can_post: boolean;
-  can_delete: boolean;
-  table: {
-    id: string;
-    name: string;
-    type: string;
-    owner_id: string;
-  };
-}
-
-interface OwnerTableResponse {
-  id: string;
-  can_get: boolean;
-  can_put: boolean;
-  can_post: boolean;
-  can_delete: boolean;
-  table: {
-    id: string;
-    name: string;
-    type: string;
-    owner_id: string;
-  } | null;
-}
-
-interface PermissionResponse {
-  id: string;
-  table_id: string;
-  sub_owner_id: string;
-  can_get: boolean;
-  can_put: boolean;
-  can_post: boolean;
-  can_delete: boolean;
-  sub_owner: {
-    profile: {
-      email: string;
-      full_name: string | null;
-    };
-  };
-}
-
 export interface DatabaseTable {
   id: string;
   name: string;
@@ -166,15 +99,6 @@ export interface DatabaseTable {
   };
   subAccounts?: SubOwnerPermission[];
   activity_logs?: ActivityLog[];
-}
-
-interface DatabasePermission {
-  id: string;
-  can_get: boolean;
-  can_put: boolean;
-  can_post: boolean;
-  can_delete: boolean;
-  table: DatabaseTable;
 }
 
 interface CachedTables {
@@ -218,7 +142,6 @@ export default function TablesPage() {
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
   const [cachedTables, setCachedTables] = useState<CachedTables | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const router = useRouter();
   const supabase = createClient();
   const [isLoadingMoreLogs, setIsLoadingMoreLogs] = useState(false);
   const [hasMoreLogs, setHasMoreLogs] = useState(true);
@@ -403,9 +326,9 @@ export default function TablesPage() {
       });
       setTables(formattedTables);
       setLoading(false);
-    } catch (err: any) {
+    } catch (err: object | unknown) {
       console.error('Error:', err);
-      setError(err.message || 'Failed to fetch data');
+      setError(err instanceof Error ? err.message : 'Failed to fetch data');
       setLoading(false);
     }
   };
@@ -508,39 +431,6 @@ export default function TablesPage() {
     );
   };
 
-  const toggleTablePermission = async (table: Table, permissionType: 'can_get' | 'can_put' | 'can_post' | 'can_delete') => {
-    try {
-      const updatedTables = tables.map(t => {
-        if (t.id === table.id) {
-          return {
-            ...t,
-            permissions: {
-              can_get: t.permissions?.can_get || false,
-              can_put: t.permissions?.can_put || false,
-              can_post: t.permissions?.can_post || false,
-              can_delete: t.permissions?.can_delete || false,
-              [permissionType]: !t.permissions?.[permissionType]
-            }
-          };
-        }
-        return t;
-      });
-      setTables(updatedTables);
-
-      // In a real application, you would update the database here
-      // const { error } = await createClient
-      //   .from('tables')
-      //   .update({ [`permissions.${permissionType}`]: !table.permissions?.[permissionType] })
-      //   .eq('id', table.id);
-      
-      // if (error) throw error;
-    } catch (err) {
-      console.error('Error updating table permission:', err);
-      // Revert the change if the update fails
-      setTables(tables);
-    }
-  };
-
   const toggleSubAccountPermission = async (account: SubOwnerPermission, permissionType: 'can_get' | 'can_put' | 'can_post' | 'can_delete') => {
     try {
       const supabase = createClient();
@@ -573,7 +463,7 @@ export default function TablesPage() {
     }
   };
 
-  const fetchActivityLogs = async (tableId: string, isLoadMore: boolean = false) => {
+  const fetchActivityLogs = useCallback(async (tableId: string, isLoadMore: boolean = false) => {
     try {
       setIsLoadingMoreLogs(isLoadMore);
       const currentLogs = isLoadMore ? activityLogs : [];
@@ -635,7 +525,7 @@ export default function TablesPage() {
     } finally {
       setIsLoadingMoreLogs(false);
     }
-  };
+  }, [activityLogs, cachedTables, supabase]);
 
   // Add scroll handler for infinite scrolling
   const handleActivityLogScroll = useCallback(() => {
@@ -645,7 +535,7 @@ export default function TablesPage() {
     if (scrollHeight - scrollTop <= clientHeight * 1.5) {
       fetchActivityLogs(selectedTable.id, true);
     }
-  }, [hasMoreLogs, isLoadingMoreLogs, selectedTable]);
+  }, [hasMoreLogs, isLoadingMoreLogs, selectedTable, fetchActivityLogs]);
 
   useEffect(() => {
     const scrollContainer = activityLogRef.current;
@@ -654,31 +544,6 @@ export default function TablesPage() {
       return () => scrollContainer.removeEventListener('scroll', handleActivityLogScroll);
     }
   }, [handleActivityLogScroll]);
-
-  const logActivity = async (action: 'POST' | 'PUT' | 'DELETE', details: string) => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('No user found');
-
-      const { error } = await supabase
-        .from('activity_logs')
-        .insert([{
-          action,
-          details,
-          user_id: selectedTable?.id || '',
-          table_id: selectedTable?.id || ''
-        }]);
-
-      if (error) throw error;
-
-      // Refresh logs after inserting
-      if (selectedTable) {
-        fetchActivityLogs(selectedTable.id);
-      }
-    } catch (err) {
-      console.error('Error logging activity:', err);
-    }
-  };
 
   // Filter tables based on search term
   const filteredTables = tables.filter(table => 

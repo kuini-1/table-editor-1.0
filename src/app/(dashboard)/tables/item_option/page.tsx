@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { z } from "zod";
 import { useSearchParams } from "next/navigation";
-import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -141,7 +140,6 @@ export default function ItemOptionPage() {
   // Use the custom hook to fetch and manage data
   const {
     data,
-    loading,
     error,
     totalRows,
     page,
@@ -151,8 +149,6 @@ export default function ItemOptionPage() {
     handleAddRow,
     handleEditRow,
     handleDeleteRow,
-    handleBulkDelete,
-    handleDuplicateRow,
     handleAddFilter,
     handleRemoveFilter,
     handlePageChange,

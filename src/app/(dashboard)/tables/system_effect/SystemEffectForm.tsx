@@ -1,10 +1,8 @@
 "use client";
 
-import { useState } from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
@@ -31,8 +29,6 @@ interface SystemEffectFormProps {
 }
 
 export default function SystemEffectForm({
-  open,
-  onOpenChange,
   mode,
   initialData,
   onSubmit,

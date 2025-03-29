@@ -28,7 +28,6 @@ interface DungeonFormProps {
 export function DungeonForm({
   initialData,
   onSubmit,
-  mode,
 }: DungeonFormProps) {
   const form = useForm<DungeonFormData>({
     resolver: zodResolver(newDungeonSchema),

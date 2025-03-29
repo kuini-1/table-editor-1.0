@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Form,
   FormControl,
@@ -22,38 +21,12 @@ import {
   DialogFooter,
   DialogDescription,
   DialogTrigger,
-  DialogPortal,
-  DialogOverlay,
   DialogClose,
 } from "@/components/ui/dialog";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { toast } from "sonner";
-
-interface SubOwnerProfile {
-  id: string;
-  email: string;
-  full_name: string | null;
-  created_at: string;
-}
-
-interface TablePermission {
-  table: {
-    id: string;
-    name: string;
-  };
-  can_get: boolean;
-  can_put: boolean;
-  can_post: boolean;
-  can_delete: boolean;
-}
-
-interface SubOwner {
-  id: string;
-  profile: SubOwnerProfile;
-  permissions: TablePermission[];
-}
 
 interface User {
   id: string;
@@ -116,7 +89,6 @@ export default function UsersPage() {
   const [error, setError] = useState<string | null>(null);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [cachedUsers, setCachedUsers] = useState<CachedUsers | null>(null);
-  const [open, setOpen] = useState(false);
 
   const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
@@ -208,9 +180,9 @@ export default function UsersPage() {
       });
       setUsers(formattedUsers);
       setLoading(false);
-    } catch (err: any) {
+    } catch (err: object | unknown) {
       console.error('Error:', err);
-      setError(err.message || 'Failed to fetch users');
+      setError(err instanceof Error ? err.message : 'Failed to fetch users');
       setLoading(false);
     }
   };
@@ -255,15 +227,14 @@ export default function UsersPage() {
 
       // Clear form and close dialog
       form.reset();
-      setOpen(false);
 
       // Refresh the users list
       await fetchUsers();
       
       toast.success('User created successfully');
-    } catch (err: any) {
+    } catch (err: object | unknown) {
       console.error('Error creating user:', err);
-      setError(err.message);
+      setError(err instanceof Error ? err.message : 'Failed to create user');
       // Keep the dialog open when there's an error
       return;
     } finally {
@@ -293,9 +264,9 @@ export default function UsersPage() {
           timestamp: Date.now()
         });
       }
-    } catch (err: any) {
+    } catch (err: object | unknown) {
       console.error('Error:', err);
-      setError(err.message || 'Failed to delete user');
+      setError(err instanceof Error ? err.message : 'Failed to delete user');
     }
   };
 
@@ -340,9 +311,9 @@ export default function UsersPage() {
 
       setSelectedUserId(null);
       editForm.reset();
-    } catch (err: any) {
+    } catch (err: object | unknown) {
       console.error('Error:', err);
-      setError(err.message || 'Failed to update user');
+      setError(err instanceof Error ? err.message : 'Failed to update user');
     }
   };
 
@@ -512,7 +483,7 @@ export default function UsersPage() {
           <DialogHeader>
             <DialogTitle>Edit User</DialogTitle>
             <DialogDescription>
-              Update the user's information and settings.
+              Update the user&apos;s information and settings.
             </DialogDescription>
           </DialogHeader>
           <Form {...editForm}>

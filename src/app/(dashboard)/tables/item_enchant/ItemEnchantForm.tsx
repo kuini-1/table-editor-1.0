@@ -30,7 +30,6 @@ interface ItemEnchantFormProps {
 export function ItemEnchantForm({
   initialData,
   onSubmit,
-  mode,
 }: ItemEnchantFormProps) {
   const [activeTab, setActiveTab] = useState("basic");
 

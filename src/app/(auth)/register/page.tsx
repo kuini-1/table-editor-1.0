@@ -86,9 +86,9 @@ export default function RegisterPage() {
 
         router.push(`/verify-email?email=${encodeURIComponent(email)}`);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Registration error:', err);
-      setError(err.message || 'Failed to create account. Please try again.');
+      setError(err instanceof Error ? err.message : 'Failed to create account. Please try again.');
     } finally {
       setLoading(false);
     }

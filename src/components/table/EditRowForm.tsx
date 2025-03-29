@@ -38,7 +38,6 @@ export function EditRowForm<T extends BaseFormData>({
   initialData,
   onSubmit,
   onCancel,
-  tableId,
 }: EditRowFormProps<T>) {
   // Create a dynamic schema based on columns
   const schemaObject: { [key: string]: z.ZodTypeAny } = {
@@ -61,7 +60,6 @@ export function EditRowForm<T extends BaseFormData>({
   const form = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: {
-      table_id: tableId,
       ...initialData,
     },
   });

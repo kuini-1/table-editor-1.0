@@ -45,7 +45,6 @@ export default function QuestProbabilityPage() {
 
   const {
     data,
-    loading,
     error,
     totalRows,
     page,
@@ -56,7 +55,6 @@ export default function QuestProbabilityPage() {
     handleEditRow,
     handleDeleteRow,
     handleBulkDelete,
-    handleDuplicateRow,
     handleAddFilter,
     handleRemoveFilter,
     handlePageChange,
@@ -121,8 +119,7 @@ export default function QuestProbabilityPage() {
             setIsFormOpen(true);
           }}
           onDuplicate={(row) => {
-            const { id, ...rest } = row;
-            setSelectedRow({ ...rest, id: '' } as QuestProbabilityRow);
+            setSelectedRow(row as QuestProbabilityRow);
             setFormMode('duplicate');
             setIsFormOpen(true);
           }}

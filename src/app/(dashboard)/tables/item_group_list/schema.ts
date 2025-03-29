@@ -2,7 +2,7 @@ import * as z from 'zod';
 
 // Helper function to create item bag fields
 const createItemBagFields = (indices: number[]) => {
-  const fields: Record<string, z.ZodType<any>> = {};
+  const fields: Record<string, z.ZodType<number | null>> = {};
   indices.forEach((index) => {
     fields[`aitembag_${index}`] = z.number().nullable();
     fields[`adwprob_${index}`] = z.number().nullable();

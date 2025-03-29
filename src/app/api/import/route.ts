@@ -5,6 +5,16 @@ import path from 'path';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import Papa from 'papaparse';
+import { SupabaseClient } from '@supabase/supabase-js';
+
+interface StorageFile {
+  name: string;
+  id: string;
+  updated_at: string;
+  created_at: string;
+  last_accessed_at: string;
+  metadata: Record<string, unknown>;
+}
 
 const execAsync = promisify(exec);
 
@@ -39,8 +49,8 @@ async function acquireLock(): Promise<boolean> {
       fs.closeSync(lockFileHandle);
       console.log('Lock acquired successfully');
       return true;
-    } catch (error: any) {
-      if (error.code === 'EEXIST') {
+    } catch (error: object | unknown) {
+      if (error instanceof Error && 'code' in error && error.code === 'EEXIST') {
         console.log(`Lock acquisition attempt ${retries + 1}/${MAX_RETRIES} failed, retrying...`);
         await new Promise(resolve => setTimeout(resolve, RETRY_INTERVAL));
         retries++;
@@ -68,7 +78,7 @@ function releaseLock() {
   }
 }
 
-async function cleanupExistingFiles(supabase: any, userId: string, userDir: string) {
+async function cleanupExistingFiles(supabase: SupabaseClient, userId: string, userDir: string) {
   console.log('Starting cleanup for user:', userId);
   if (fs.existsSync(userDir)) {
     console.log('Removing existing user directory:', userDir);
@@ -89,7 +99,7 @@ async function cleanupExistingFiles(supabase: any, userId: string, userDir: stri
     console.log(`Found ${files.length} files to remove from storage`);
     const { error: removeError } = await supabase.storage
       .from('exports')
-      .remove(files.map((file: any) => `${userId}/${file.name}`));
+      .remove(files.map((file: StorageFile) => `${userId}/${file.name}`));
       
     if (removeError) {
       console.error('Error removing files from storage:', removeError);
@@ -158,11 +168,11 @@ export async function POST(req: Request) {
       await cleanupExistingFiles(supabase, user.id, userDir);
       fs.mkdirSync(userDir, { recursive: true });
       console.log('User directory created successfully');
-    } catch (fsError: any) {
+    } catch (fsError: object | unknown) {
       console.error('File system error during directory setup:', fsError);
       return NextResponse.json({
         error: 'Failed to prepare import directory',
-        details: fsError.message
+        details: fsError instanceof Error ? fsError.message : 'Unknown error'
       }, { status: 500 });
     }
 
@@ -173,11 +183,11 @@ export async function POST(req: Request) {
       const buffer = Buffer.from(await file.arrayBuffer());
       fs.writeFileSync(rdfPath, buffer);
       console.log('RDF file written successfully');
-    } catch (writeError: any) {
+    } catch (writeError: object | unknown) {
       console.error('Error writing RDF file:', writeError);
       return NextResponse.json({
         error: 'Failed to write RDF file',
-        details: writeError.message
+        details: writeError instanceof Error ? writeError.message : 'Unknown error'
       }, { status: 500 });
     }
 
@@ -201,7 +211,7 @@ export async function POST(req: Request) {
         console.log('Cleaning up after lock acquisition failure');
         fs.unlinkSync(rdfPath);
         fs.rmdirSync(userDir);
-      } catch (cleanupError: any) {
+      } catch (cleanupError: object | unknown) {
         console.error('Cleanup error after lock failure:', cleanupError);
       }
       return NextResponse.json({
@@ -243,9 +253,9 @@ export async function POST(req: Request) {
         
         console.log('Conversion stdout:', stdout);
         if (stderr) console.error('Conversion stderr:', stderr);
-      } catch (execError: any) {
+      } catch (execError: object | unknown) {
         console.error('Conversion execution error:', execError);
-        throw new Error(`Conversion failed: ${execError.message}`);
+        throw new Error(`Conversion failed: ${execError instanceof Error ? execError.message : 'Unknown error'}`);
       }
 
       // Add delay and verification
@@ -297,8 +307,8 @@ export async function POST(req: Request) {
 
       // Prepare records for insertion
       console.log('Preparing records for insertion');
-      const recordsToInsert = records.map((record: any) => {
-        const lowercaseRecord: any = {};
+      const recordsToInsert = (records as Record<string, unknown>[]).map((record: Record<string, unknown>) => {
+        const lowercaseRecord: Record<string, unknown> = {};
         for (const key in record) {
           const lowercaseKey = key.toLowerCase();
           let value = record[key];
@@ -349,13 +359,13 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ success: true });
 
-  } catch (error: any) {
+  } catch (error: object | unknown) {
     console.error('Import process error:', error);
-    console.error('Error stack trace:', error.stack);
+    console.error('Error stack trace:', error instanceof Error ? error.stack : 'No stack trace available');
     return NextResponse.json({
       error: 'Import failed',
-      details: error.message,
-      stack: error.stack
+      details: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : 'No stack trace available'
     }, { status: 500 });
   }
 } 

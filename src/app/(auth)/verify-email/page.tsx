@@ -51,7 +51,7 @@ export default function VerifyEmailPage() {
 
         <div className="mt-8 space-y-4 text-gray-600">
           <div className="text-sm text-center space-y-1">
-            <p>Didn't receive the email?</p>
+            <p>Didn&apos;t receive the email?</p>
             <p>
               • Check your spam folder
             </p>

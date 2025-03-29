@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { toast } from 'sonner';
 import { useStore } from '@/lib/store';
 import { useTableData } from '@/hooks/useTableData';
 import { TableHeader } from '@/components/table/TableHeader';
@@ -20,7 +19,7 @@ import {
 import { Button } from "@/components/ui/button";
 import type { FormMode } from '@/components/table/ModularForm';
 import { ErrorDisplay } from '@/components/ErrorDisplay';
-import { itemMixExpSchema, columns } from './schema';
+import { columns } from './schema';
 import { ItemMixExpForm } from './ItemMixExpForm';
 import type { ItemMixExpFormData } from './schema';
 
@@ -47,7 +46,6 @@ export default function ItemMixExpPage() {
 
   const {
     data,
-    loading,
     error,
     totalRows,
     page,
@@ -57,10 +55,9 @@ export default function ItemMixExpPage() {
     handleAddRow,
     handleEditRow,
     handleDeleteRow,
-    handleBulkDelete,
-    handleDuplicateRow,
     handleAddFilter,
     handleRemoveFilter,
+    handleBulkDelete,
     handlePageChange,
     handlePageSizeChange,
     handleRowSelection,
@@ -123,8 +120,7 @@ export default function ItemMixExpPage() {
             setIsFormOpen(true);
           }}
           onDuplicate={(row) => {
-            const { id, ...rest } = row;
-            setSelectedRow({ ...rest, id: '' } as ItemMixExpRow);
+            setSelectedRow(row as ItemMixExpRow);
             setFormMode('duplicate');
             setIsFormOpen(true);
           }}

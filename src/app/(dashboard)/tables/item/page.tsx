@@ -1,9 +1,7 @@
 "use client";
 import { useState } from "react";
 import { z } from "zod";
-import { useRouter, useSearchParams } from "next/navigation";
-import { toast } from "sonner";
-import { createClient } from "@/lib/supabase/client";
+import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -13,14 +11,11 @@ import {
   SheetDescription,
   SheetFooter,
 } from "@/components/ui/sheet";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { DataTable } from "@/components/table/DataTable";
 import { useTableData } from "@/hooks/useTableData";
 import { TableHeader } from '@/components/table/TableHeader';
 import { TablePagination } from '@/components/table/TablePagination';
 import { DeleteDialog, ImportDialog, useExport } from '@/components/table/TableDialogs';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useStore } from "@/lib/store";
 import { itemTableSchema } from "./schema";
 import ItemForm from "./ItemForm";
@@ -61,7 +56,6 @@ const formTheme = {
 } as const;
 
 export default function ItemTablePage() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const tableId = searchParams.get('id') || '';
   const tableName = 'table_item_data';
@@ -77,8 +71,6 @@ export default function ItemTablePage() {
   const [selectedRow, setSelectedRow] = useState<ItemTableRow | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
-  const [importFile, setImportFile] = useState<File | null>(null);
-  const [isImporting, setIsImporting] = useState(false);
 
   // Define columns for the data table
   const columns = [
@@ -180,179 +172,9 @@ export default function ItemTablePage() {
     },
   ];
 
-  // Define filter definitions for the data table
-  const filterDefinitions = [
-    {
-      key: "tblidx",
-      label: "ID",
-      type: "number" as const,
-      validation: itemTableSchema.shape.tblidx,
-    },
-    {
-      key: "name",
-      label: "Name",
-      type: "text" as const,
-      validation: itemTableSchema.shape.name,
-    },
-    {
-      key: "byitem_type",
-      label: "Item Type",
-      type: "number" as const,
-      validation: itemTableSchema.shape.byitem_type,
-    },
-    {
-      key: "byrank",
-      label: "Rank",
-      type: "number" as const,
-      validation: itemTableSchema.shape.byrank,
-    },
-    {
-      key: "bvalidity_able",
-      label: "Valid",
-      type: "boolean" as const,
-      validation: itemTableSchema.shape.bvalidity_able,
-    },
-  ];
-
-  // Define tabs for the form
-  const tabs = [
-    {
-      id: "basic",
-      label: "Basic Info",
-      fields: [
-        "tblidx",
-        "name",
-        "wsznametext",
-        "szicon_name",
-        "bymodel_type",
-        "szmodel",
-        "szsub_weapon_act_model",
-        "byitem_type",
-        "byequip_type",
-        "dwequip_slot_type_bit_flag",
-        "wfunction_bit_flag",
-        "bymax_stack",
-        "byrank",
-        "dwweight",
-        "dwcost",
-        "dwsell_price",
-        "bvalidity_able",
-        "note",
-      ],
-    },
-    {
-      id: "attributes",
-      label: "Attributes",
-      fields: [
-        "bydurability",
-        "bydurability_count",
-        "bybattle_attribute",
-        "wphysical_offence",
-        "wenergy_offence",
-        "wphysical_defence",
-        "wenergy_defence",
-        "fattack_range_bonus",
-        "wattack_speed_rate",
-        "fattack_physical_revision",
-        "fattack_energy_revision",
-        "fdefence_physical_revision",
-        "fdefence_energy_revision",
-      ],
-    },
-    {
-      id: "requirements",
-      label: "Requirements",
-      fields: [
-        "byneed_min_level",
-        "byneed_max_level",
-        "dwneed_class_bit_flag",
-        "dwneed_gender_bit_flag",
-        "byclass_special",
-        "byrace_special",
-        "wneed_str",
-        "wneed_con",
-        "wneed_foc",
-        "wneed_dex",
-        "wneed_sol",
-        "wneed_eng",
-        "byrestricttype",
-        "byneedfunction",
-      ],
-    },
-    {
-      id: "options",
-      label: "Options",
-      fields: [
-        "biscanhaveoption",
-        "item_option_tblidx",
-        "byitemgroup",
-        "charm_tblidx",
-        "wcostumehidebitflag",
-        "needitemtblidx",
-        "set_item_tblidx",
-        "use_item_tblidx",
-      ],
-    },
-    {
-      id: "scouter",
-      label: "Scouter",
-      fields: [
-        "bybag_size",
-        "wscouter_watt",
-        "dwscouter_maxpower",
-        "byscouter_parts_type1",
-        "byscouter_parts_type2",
-        "byscouter_parts_type3",
-        "byscouter_parts_type4",
-      ],
-    },
-    {
-      id: "enhancement",
-      label: "Enhancement",
-      fields: [
-        "bcreatesuperiorable",
-        "bcreateexcellentable",
-        "bcreaterareable",
-        "bcreatelegendaryable",
-        "enchantratetblidx",
-        "excellenttblidx",
-        "raretblidx",
-        "legendarytblidx",
-        "biscanrenewal",
-      ],
-    },
-    {
-      id: "duration",
-      label: "Duration",
-      fields: [
-        "commonpoint",
-        "bycommonpointtype",
-        "dwusedurationmax",
-        "bydurationtype",
-        "contentstblidx",
-        "dwdurationgroup",
-      ],
-    },
-    {
-      id: "disassembly",
-      label: "Disassembly",
-      fields: [
-        "wdisassemble_bit_flag",
-        "bydisassemblenormalmin",
-        "bydisassemblenormalmax",
-        "bydisassembleuppermin",
-        "bydisassembleuppermax",
-        "bydropvisual",
-        "byusedisassemble",
-        "bydroplevel",
-      ],
-    },
-  ];
-
   // Use the custom hook to fetch and manage data
   const {
     data,
-    loading,
     error,
     totalRows,
     page,
@@ -362,8 +184,6 @@ export default function ItemTablePage() {
     handleAddRow,
     handleEditRow,
     handleDeleteRow,
-    handleBulkDelete,
-    handleDuplicateRow,
     handleAddFilter,
     handleRemoveFilter,
     handlePageChange,
@@ -379,58 +199,6 @@ export default function ItemTablePage() {
   });
 
   const handleExport = useExport({ tableId, tableName });
-
-  // Handle import dialog
-  const handleImport = () => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.csv,.xlsx,.xls';
-    input.onchange = async (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (file) {
-        setImportFile(file);
-        setIsImportDialogOpen(true);
-      }
-    };
-    input.click();
-  };
-
-  // Handle import confirmation
-  const handleImportConfirm = async (file: File) => {
-    if (!file) {
-      toast.error("Please select a file to import");
-      return;
-    }
-
-    setIsImporting(true);
-
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("tableName", "item");
-      formData.append("tableId", tableId);
-
-      const response = await fetch("/api/import", {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to import data");
-      }
-
-      toast.success("Data imported successfully");
-      refreshData();
-      setIsImportDialogOpen(false);
-      setImportFile(null);
-    } catch (error) {
-      console.error("Import error:", error);
-      toast.error(error instanceof Error ? error.message : "Failed to import data");
-    } finally {
-      setIsImporting(false);
-    }
-  };
 
   if (error) {
     return (
@@ -480,8 +248,7 @@ export default function ItemTablePage() {
             setIsFormOpen(true);
           }}
           onDuplicate={(row) => {
-            const { id, ...rest } = row;
-            setSelectedRow({ ...rest, id: '' } as ItemTableRow);
+            setSelectedRow(row as ItemTableRow);
             setFormMode('duplicate');
             setIsFormOpen(true);
           }}

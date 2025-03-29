@@ -43,10 +43,6 @@ interface TabDefinition {
 export function NpcForm({
   initialData,
   onSubmit,
-  onCancel,
-  mode,
-  open,
-  onOpenChange,
 }: NpcFormProps) {
   const [activeTab, setActiveTab] = useState('basic');
 

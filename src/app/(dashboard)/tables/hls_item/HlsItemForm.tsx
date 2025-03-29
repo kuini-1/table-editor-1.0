@@ -4,7 +4,6 @@ import { useState } from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
@@ -34,10 +33,6 @@ interface HlsItemFormProps {
 export function HlsItemForm({
   initialData,
   onSubmit,
-  onCancel,
-  mode,
-  open,
-  onOpenChange,
 }: HlsItemFormProps) {
   const [activeTab, setActiveTab] = useState("basic");
 

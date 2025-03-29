@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { persist, type StateStorage } from 'zustand/middleware'
+import { persist } from 'zustand/middleware'
 import { createClient } from '@/lib/supabase/client'
 
 interface UserProfile {
@@ -22,7 +22,7 @@ interface TablePermissions {
 
 interface TableData {
   [tableId: string]: {
-    data: any[];
+    data: Record<string, unknown>[];
     totalRows: number;
     lastFetched: number;
     filters: Record<string, unknown>;
@@ -95,8 +95,9 @@ export const useStore = create<State & Actions>()(
 
       clearTableData: (tableId: string) =>
         set((state) => {
-          const { [tableId]: _, ...rest } = state.tableData;
-          return { tableData: rest };
+          const newTableData = { ...state.tableData };
+          delete newTableData[tableId];
+          return { tableData: newTableData };
         }),
 
       clearStore: () => set({ userProfile: null, permissions: {}, tableData: {} }),
@@ -152,12 +153,12 @@ export const useStore = create<State & Actions>()(
 
           // Cache permissions for sub-owners
           if (data.role === 'sub_owner' && data.sub_owners?.[0]?.permissions) {
-            const permissions = data.sub_owners[0].permissions.reduce((acc: TablePermissions, perm: any) => {
-              acc[perm.table_id] = {
-                can_get: perm.can_get,
-                can_put: perm.can_put,
-                can_post: perm.can_post,
-                can_delete: perm.can_delete,
+            const permissions = data.sub_owners[0].permissions.reduce((acc: TablePermissions, perm: Record<string, unknown>) => {
+              acc[perm.table_id as string] = {
+                can_get: perm.can_get as boolean,
+                can_put: perm.can_put as boolean,
+                can_post: perm.can_post as boolean,
+                can_delete: perm.can_delete as boolean,
               };
               return acc;
             }, {});

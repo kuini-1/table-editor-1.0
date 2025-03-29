@@ -29,7 +29,6 @@ interface QuestProbabilityFormProps {
 export function QuestProbabilityForm({
   initialData,
   onSubmit,
-  mode,
 }: QuestProbabilityFormProps) {
   const [activeTab, setActiveTab] = useState('basic');
 
@@ -132,7 +131,7 @@ export function QuestProbabilityForm({
     );
   };
 
-  const renderSection = (section: { title: string; fields: any[] }) => {
+  const renderSection = (section: { title: string; fields: { key: string; label: string; type: string }[] }) => {
     return (
       <div key={section.title} className="w-full">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">

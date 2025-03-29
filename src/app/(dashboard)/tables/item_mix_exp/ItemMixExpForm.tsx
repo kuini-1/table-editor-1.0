@@ -27,7 +27,6 @@ interface ItemMixExpFormProps {
 export function ItemMixExpForm({
   initialData,
   onSubmit,
-  mode,
 }: ItemMixExpFormProps) {
   const form = useForm<ItemMixExpFormData>({
     resolver: zodResolver(itemMixExpSchema),

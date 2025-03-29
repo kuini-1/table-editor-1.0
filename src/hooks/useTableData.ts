@@ -13,15 +13,6 @@ interface TableConfig {
   }[];
 }
 
-interface TableData<T> {
-  data: T[];
-  totalRows: number;
-  lastFetched: number;
-  filters: ColumnFilters;
-  page: number;
-  pageSize: number;
-}
-
 interface UseTableDataProps {
   config: TableConfig;
   tableId: string;
@@ -54,8 +45,8 @@ export function useTableData<T extends { id: string }>({ config, tableId }: UseT
     }
   };
 
-  const handleError = (err: any, customMessage?: string) => {
-    const errorMessage = err.message || customMessage || 'An unexpected error occurred';
+  const handleError = (err: object | unknown) => {
+    const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred';
     setError(errorMessage);
     toast.error(errorMessage);
   };
@@ -116,7 +107,7 @@ export function useTableData<T extends { id: string }>({ config, tableId }: UseT
                 continue;
               }
               if (matchingRows && matchingRows.length > 0) {
-                const matchingIds = matchingRows.map((row: any) => row.id);
+                const matchingIds = matchingRows.map((row: Record<string, unknown>) => row.id);
                 if (matchingIds.length > 0) {
                   query = query.in('id', matchingIds);
                 }
@@ -148,8 +139,8 @@ export function useTableData<T extends { id: string }>({ config, tableId }: UseT
 
       setData(rows as T[]);
       setTotalRows(count || 0);
-    } catch (err: any) {
-      handleError(err, 'Failed to fetch data');
+    } catch (err) {
+      handleError(err);
     } finally {
       setLoading(false);
     }
@@ -174,8 +165,8 @@ export function useTableData<T extends { id: string }>({ config, tableId }: UseT
       setTotalRows(prev => prev + 1);
       toast.success('Row added successfully');
       return newRow as T;
-    } catch (err: any) {
-      handleError(err, 'Failed to add row');
+    } catch (err) {
+      handleError(err);
       throw err;
     }
   };
@@ -199,8 +190,8 @@ export function useTableData<T extends { id: string }>({ config, tableId }: UseT
       setData(prev => prev.map(row => row.id === id ? (updatedRow as T) : row));
       toast.success('Row updated successfully');
       return updatedRow as T;
-    } catch (err: any) {
-      handleError(err, 'Failed to update row');
+    } catch (err: object | unknown) {
+      handleError(err);
       throw err;
     }
   };
@@ -227,8 +218,8 @@ export function useTableData<T extends { id: string }>({ config, tableId }: UseT
         return next;
       });
       toast.success('Row deleted successfully');
-    } catch (err: any) {
-      handleError(err, 'Failed to delete row');
+    } catch (err: object | unknown) {
+      handleError(err);
       throw err;
     }
   };
@@ -258,8 +249,8 @@ export function useTableData<T extends { id: string }>({ config, tableId }: UseT
       setTotalRows(prev => prev - selectedRows.size);
       setSelectedRows(new Set());
       toast.success('Selected rows deleted successfully');
-    } catch (err: any) {
-      handleError(err, 'Failed to delete rows');
+    } catch (err: object | unknown) {
+      handleError(err);
       throw err;
     }
   };
@@ -283,8 +274,8 @@ export function useTableData<T extends { id: string }>({ config, tableId }: UseT
       setTotalRows(prev => prev + 1);
       toast.success('Row duplicated successfully');
       return newRow as T;
-    } catch (err: any) {
-      handleError(err, 'Failed to duplicate row');
+    } catch (err: object | unknown) {
+      handleError(err);
       throw err;
     }
   };
@@ -299,8 +290,9 @@ export function useTableData<T extends { id: string }>({ config, tableId }: UseT
   };
 
   const handleRemoveFilter = (column: string) => {
-    const { [column]: _, ...rest } = filters;
-    setFilters(rest);
+    const newFilters = { ...filters };
+    delete newFilters[column];
+    setFilters(newFilters);
     setPage(1);
   };
 

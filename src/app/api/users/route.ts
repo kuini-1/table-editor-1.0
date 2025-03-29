@@ -164,8 +164,8 @@ export async function POST(request: Request) {
 
     console.log('User creation completed successfully');
     return NextResponse.json({ success: true, user: authData.user });
-  } catch (error: any) {
+  } catch (error: object | unknown) {
     console.error('Unexpected error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: error instanceof Error ? error.message : 'Unknown error' }, { status: 500 });
   }
 } 

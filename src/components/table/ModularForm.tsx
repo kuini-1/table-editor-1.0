@@ -12,7 +12,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { cn } from "@/lib/utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 
@@ -23,7 +22,7 @@ export interface Column {
   key: string;
   label: string;
   type?: 'text' | 'number' | 'boolean';
-  validation?: any;
+  validation?: z.ZodTypeAny;
 }
 
 interface BaseFormData {
@@ -67,8 +66,6 @@ export function ModularForm<T extends BaseFormData>({
   onCancel,
   mode,
   tableId,
-  title,
-  description,
   showFooter = true,
 }: ModularFormProps<T>) {
   // Create a dynamic schema based on columns

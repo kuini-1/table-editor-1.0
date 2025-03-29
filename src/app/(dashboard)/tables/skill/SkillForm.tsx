@@ -4,7 +4,6 @@ import { useState } from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
@@ -32,9 +31,7 @@ interface SkillFormProps {
 }
 
 export default function SkillForm({
-  open,
   onOpenChange,
-  mode,
   initialData,
   onSubmit,
 }: SkillFormProps) {
@@ -51,6 +48,7 @@ export default function SkillForm({
       onOpenChange(false);
       form.reset();
     } catch (error) {
+      console.error("Error submitting form:", error);
       toast.error("Failed to submit form");
     }
   };

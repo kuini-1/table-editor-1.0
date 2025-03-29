@@ -131,7 +131,7 @@ export default function DashboardLayout({
       
       // Clear all cookies
       const cookies = document.cookie.split(';');
-      for (let cookie of cookies) {
+      for (const cookie of cookies) {
         const cookieName = cookie.split('=')[0].trim();
         // Set cookie expiry to past date and clear value
         document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`;

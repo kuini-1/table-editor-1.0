@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { toast } from 'sonner';
 import { useStore } from '@/lib/store';
 import { useTableData } from '@/hooks/useTableData';
 import { TableHeader } from '@/components/table/TableHeader';
@@ -82,7 +81,6 @@ export default function HlsItemPage() {
 
   const {
     data,
-    loading,
     error,
     totalRows,
     page,
@@ -92,7 +90,6 @@ export default function HlsItemPage() {
     handleAddRow,
     handleEditRow,
     handleDeleteRow,
-    handleDuplicateRow,
     handleAddFilter,
     handleRemoveFilter,
     handlePageChange,
@@ -152,8 +149,7 @@ export default function HlsItemPage() {
             setIsFormOpen(true);
           }}
           onDuplicate={(row) => {
-            const { id, ...rest } = row;
-            setSelectedRow({ ...rest, id: '' } as HlsItemRow);
+            setSelectedRow(row as HlsItemRow);
             setFormMode('duplicate');
             setIsFormOpen(true);
           }}

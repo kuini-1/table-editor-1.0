@@ -30,7 +30,6 @@ interface ItemBagListFormProps {
 export function ItemBagListForm({
   initialData,
   onSubmit,
-  mode,
 }: ItemBagListFormProps) {
   const [activeTab, setActiveTab] = useState("basic");
 

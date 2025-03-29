@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { z } from "zod";
 import { useSearchParams } from "next/navigation";
-import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -128,7 +127,6 @@ export default function UseItemPage() {
 
   const {
     data,
-    loading,
     error,
     totalRows,
     page,
@@ -138,8 +136,6 @@ export default function UseItemPage() {
     handleAddRow,
     handleEditRow,
     handleDeleteRow,
-    handleBulkDelete,
-    handleDuplicateRow,
     handleAddFilter,
     handleRemoveFilter,
     handlePageChange,
@@ -155,50 +151,6 @@ export default function UseItemPage() {
   });
 
   const handleExport = useExport({ tableId, tableName });
-
-  const handleImport = () => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.csv,.xlsx,.xls';
-    input.onchange = async (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (file) {
-        setIsImportDialogOpen(true);
-      }
-    };
-    input.click();
-  };
-
-  const handleImportConfirm = async (file: File) => {
-    if (!file) {
-      toast.error("Please select a file to import");
-      return;
-    }
-
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("tableName", "use_item");
-      formData.append("tableId", tableId);
-
-      const response = await fetch("/api/import", {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to import data");
-      }
-
-      toast.success("Data imported successfully");
-      refreshData();
-      setIsImportDialogOpen(false);
-    } catch (error) {
-      console.error("Import error:", error);
-      toast.error(error instanceof Error ? error.message : "Failed to import data");
-    }
-  };
 
   if (error) {
     return (
@@ -248,8 +200,7 @@ export default function UseItemPage() {
             setIsFormOpen(true);
           }}
           onDuplicate={(row) => {
-            const { id, ...rest } = row;
-            setSelectedRow({ ...rest, id: '' } as UseItemRow);
+            setSelectedRow(row as UseItemRow);
             setFormMode('duplicate');
             setIsFormOpen(true);
           }}

@@ -16,7 +16,6 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Label } from "@/components/ui/label";
 
 // Import the schema from the page file
 import { merchantSchema } from "./schema";
@@ -32,7 +31,6 @@ interface MerchantFormProps {
 }
 
 export default function MerchantForm({
-  open,
   onOpenChange,
   mode,
   initialData,
@@ -51,6 +49,7 @@ export default function MerchantForm({
       onOpenChange(false);
       form.reset();
     } catch (error) {
+      console.error("Error submitting form:", error);
       toast.error("Failed to submit form");
     }
   };

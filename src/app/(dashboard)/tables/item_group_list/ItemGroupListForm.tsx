@@ -29,7 +29,6 @@ interface ItemGroupListFormProps {
 export function ItemGroupListForm({
   initialData,
   onSubmit,
-  mode,
 }: ItemGroupListFormProps) {
   const [activeTab, setActiveTab] = useState("basic");
 

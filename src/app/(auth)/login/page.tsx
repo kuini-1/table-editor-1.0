@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useTheme } from 'next-themes';
 import { createClient } from "@/lib/supabase/client";
 import OneTapComponent from '@/components/OneTapComponent';
@@ -12,20 +12,12 @@ export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState('rokuaso@gmail.com');
   const [password, setPassword] = useState('xwqtyu12');
-  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [mounted, setMounted] = useState(false);
   const { theme, setTheme } = useTheme();
   const supabase = createClient();
-  const searchParams = useSearchParams();
-  const next = searchParams.get("next");
   const [isGoogleLoading, setIsGoogleLoading] = useState<boolean>(false);
   
   // Handle theme hydration
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
   useEffect(() => {
     const checkSession = async () => {
       const { data: { session }, error } = await supabase.auth.getSession();
@@ -47,11 +39,10 @@ export default function LoginPage() {
     return () => {
       subscription.unsubscribe();
     };
-  }, [router]);
+  }, [router, supabase.auth]);
 
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
     setLoading(true);
 
     try {
@@ -79,9 +70,8 @@ export default function LoginPage() {
       } else {
         throw new Error('No session data returned');
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Login error:', err);
-      setError(err.message || 'Failed to sign in. Please check your credentials.');
     } finally {
       setLoading(false);
     }
@@ -104,7 +94,7 @@ export default function LoginPage() {
             Sign in to your account
           </h2>
           <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-            Don't have an account?{' '}
+            Don&apos;t have an account?{' '}
             <Link
               href="/register"
               className="font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 dark:hover:text-indigo-300 transition-colors"

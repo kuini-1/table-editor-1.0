@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { toast } from 'sonner';
 import { useStore } from '@/lib/store';
 import { useTableData } from '@/hooks/useTableData';
 import { TableHeader } from '@/components/table/TableHeader';
@@ -20,7 +19,7 @@ import {
 import { Button } from "@/components/ui/button";
 import type { FormMode } from '@/components/table/ModularForm';
 import { ErrorDisplay } from '@/components/ErrorDisplay';
-import { npcSchema, columns } from './schema';
+import { columns } from './schema';
 import { NpcForm } from './NpcForm';
 import type { NpcFormData } from './schema';
 
@@ -47,7 +46,6 @@ export default function NpcPage() {
 
   const {
     data,
-    loading,
     error,
     totalRows,
     page,
@@ -58,7 +56,6 @@ export default function NpcPage() {
     handleEditRow,
     handleDeleteRow,
     handleBulkDelete,
-    handleDuplicateRow,
     handleAddFilter,
     handleRemoveFilter,
     handlePageChange,
@@ -123,8 +120,7 @@ export default function NpcPage() {
             setIsFormOpen(true);
           }}
           onDuplicate={(row) => {
-            const { id, ...rest } = row;
-            setSelectedRow({ ...rest, id: '' } as NpcRow);
+            setSelectedRow(row as NpcRow);
             setFormMode('duplicate');
             setIsFormOpen(true);
           }}

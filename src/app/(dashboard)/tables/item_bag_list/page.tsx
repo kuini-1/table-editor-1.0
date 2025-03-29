@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { toast } from 'sonner';
 import { useStore } from '@/lib/store';
 import { useTableData } from '@/hooks/useTableData';
 import { TableHeader } from '@/components/table/TableHeader';
@@ -20,7 +19,7 @@ import {
 import { Button } from "@/components/ui/button";
 import type { FormMode } from '@/components/table/ModularForm';
 import { ErrorDisplay } from '@/components/ErrorDisplay';
-import { itemBagListSchema, type ItemBagListFormData, type NewItemBagListFormData, columns } from './schema';
+import { type ItemBagListFormData, type NewItemBagListFormData, columns } from './schema';
 import { ItemBagListForm } from './ItemBagListForm';
 
 export default function ItemBagListPage() {
@@ -42,7 +41,6 @@ export default function ItemBagListPage() {
 
   const {
     data,
-    loading,
     error,
     totalRows,
     page,
@@ -53,7 +51,6 @@ export default function ItemBagListPage() {
     handleEditRow,
     handleDeleteRow,
     handleBulkDelete,
-    handleDuplicateRow,
     handleAddFilter,
     handleRemoveFilter,
     handlePageChange,
@@ -118,8 +115,7 @@ export default function ItemBagListPage() {
             setIsFormOpen(true);
           }}
           onDuplicate={(row) => {
-            const { id, ...rest } = row;
-            setSelectedRow({ ...rest, id: '' } as NewItemBagListFormData);
+            setSelectedRow(row as NewItemBagListFormData);
             setFormMode('duplicate');
             setIsFormOpen(true);
           }}

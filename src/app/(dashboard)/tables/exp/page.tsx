@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { toast } from 'sonner';
 import { useStore } from '@/lib/store';
 import { useTableData } from '@/hooks/useTableData';
 import { TableHeader } from '@/components/table/TableHeader';
@@ -42,7 +41,6 @@ export default function ExpTablePage() {
 
   const {
     data,
-    loading,
     error,
     totalRows,
     page,
@@ -53,7 +51,6 @@ export default function ExpTablePage() {
     handleEditRow,
     handleDeleteRow,
     handleBulkDelete,
-    handleDuplicateRow,
     handleAddFilter,
     handleRemoveFilter,
     handlePageChange,
@@ -118,8 +115,7 @@ export default function ExpTablePage() {
             setIsFormOpen(true);
           }}
           onDuplicate={(row) => {
-            const { id, ...rest } = row;
-            setSelectedRow({ ...rest, id: '' } as ExpTableRow);
+            setSelectedRow(row as ExpTableRow);
             setFormMode('duplicate');
             setIsFormOpen(true);
           }}

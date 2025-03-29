@@ -4,7 +4,7 @@ import { CookieOptions } from "@supabase/ssr";
 
 export async function updateSession(request: NextRequest) {
   // Create a response with the request headers
-  let supabaseResponse = NextResponse.next({
+  const supabaseResponse = NextResponse.next({
     request: {
       headers: request.headers,
     },

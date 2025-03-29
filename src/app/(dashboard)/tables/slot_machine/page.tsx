@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { toast } from 'sonner';
 import { useStore } from '@/lib/store';
 import { useTableData } from '@/hooks/useTableData';
 import { TableHeader } from '@/components/table/TableHeader';
@@ -74,11 +73,9 @@ export default function SlotMachinePage() {
   const [selectedRow, setSelectedRow] = useState<SlotMachineRow | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
-  const [fileToImport, setFileToImport] = useState<File | null>(null);
 
   const {
     data,
-    loading,
     error,
     totalRows,
     page,
@@ -88,8 +85,6 @@ export default function SlotMachinePage() {
     handleAddRow,
     handleEditRow,
     handleDeleteRow,
-    handleBulkDelete,
-    handleDuplicateRow,
     handleAddFilter,
     handleRemoveFilter,
     handlePageChange,
@@ -105,47 +100,6 @@ export default function SlotMachinePage() {
   });
 
   const handleExport = useExport({ tableId, tableName });
-
-  const handleImport = () => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.csv,.xlsx,.xls';
-    input.onchange = async (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (file) {
-        setFileToImport(file);
-        setIsImportDialogOpen(true);
-      }
-    };
-    input.click();
-  };
-
-  const handleImportConfirm = async () => {
-    if (!fileToImport) return;
-
-    const formData = new FormData();
-    formData.append('file', fileToImport);
-    formData.append('table_id', tableId);
-
-    try {
-      const response = await fetch('/api/import', {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!response.ok) {
-        throw new Error('Import failed');
-      }
-
-      toast.success('Data imported successfully');
-      refreshData();
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to import data');
-    } finally {
-      setFileToImport(null);
-      setIsImportDialogOpen(false);
-    }
-  };
 
   if (error) {
     return (
@@ -195,8 +149,7 @@ export default function SlotMachinePage() {
             setIsFormOpen(true);
           }}
           onDuplicate={(row) => {
-            const { id, ...rest } = row;
-            setSelectedRow({ ...rest, id: '' } as SlotMachineRow);
+            setSelectedRow(row as SlotMachineRow);
             setFormMode('duplicate');
             setIsFormOpen(true);
           }}
