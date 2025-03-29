@@ -39,7 +39,7 @@ const OneTapComponent: React.FC<OneTapComponentProps> = ({ children, onStateChan
     return () => {
       subscription.unsubscribe()
     }
-  }, [router])
+  }, [router, supabase.auth])
 
   const handleClick = async () => {
     if (onStateChange) onStateChange(true)

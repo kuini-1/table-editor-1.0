@@ -20,6 +20,7 @@ import { useStore } from "@/lib/store";
 import { itemTableSchema } from "./schema";
 import ItemForm from "./ItemForm";
 import { ErrorDisplay } from '@/components/ErrorDisplay';
+import React from "react";
 
 type ItemTableFormData = z.infer<typeof itemTableSchema>;
 
@@ -29,42 +30,19 @@ interface ItemTableRow extends ItemTableFormData {
 
 type FormMode = 'add' | 'edit' | 'duplicate';
 
-// Form theme configuration
-const formTheme = {
-  title: {
-    text: {
-      add: "Add New Item",
-      edit: "Edit Item",
-      duplicate: "Duplicate Item"
-    }
-  },
-  description: {
-    text: {
-      add: "Add a new item to the database.",
-      edit: "Edit the selected item's details.",
-      duplicate: "Create a new item based on the selected one."
-    }
-  },
-  button: {
-    text: {
-      add: "Add Item",
-      edit: "Save Changes",
-      duplicate: "Duplicate Entry"
-    },
-    className: "flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700",
-  },
-} as const;
-
 export default function ItemTablePage() {
   const searchParams = useSearchParams();
   const tableId = searchParams.get('id') || '';
   const tableName = 'table_item_data';
   const { userProfile } = useStore();
-  const selectedTable = userProfile?.data?.id === tableId ? {
-    id: tableId,
-    name: 'Item Table',
-    type: 'item',
-  } : undefined;
+  const selectedTable = React.useMemo(() => 
+    userProfile?.data?.id === tableId ? {
+      id: tableId,
+      name: 'Item Table',
+      type: 'item',
+    } : undefined,
+    [userProfile?.data?.id, tableId]
+  );
   
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [formMode, setFormMode] = useState<FormMode>('add');
@@ -184,6 +162,7 @@ export default function ItemTablePage() {
     handleAddRow,
     handleEditRow,
     handleDeleteRow,
+    handleBulkDelete,
     handleAddFilter,
     handleRemoveFilter,
     handlePageChange,
@@ -220,8 +199,8 @@ export default function ItemTablePage() {
         filters={filters}
         selectedCount={selectedRows.size}
         onAddRow={() => {
-          setSelectedRow(null);
           setFormMode('add');
+          setSelectedRow(null);
           setIsFormOpen(true);
         }}
         onImport={() => setIsImportDialogOpen(true)}
@@ -229,7 +208,7 @@ export default function ItemTablePage() {
         onRefresh={refreshData}
         onBulkDelete={() => {
           if (selectedRows.size > 0) {
-            handleDeleteRow(Array.from(selectedRows).join(','));
+            handleBulkDelete();
           }
         }}
         onAddFilter={handleAddFilter}
@@ -275,10 +254,14 @@ export default function ItemTablePage() {
         >
           <SheetHeader className="px-6 py-4 border-b border-gray-200 dark:border-gray-800">
             <SheetTitle className="bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent text-2xl font-bold">
-              {formTheme.title.text[formMode]}
+              {formMode === 'add' ? 'Add Item' : 
+               formMode === 'edit' ? 'Edit Item' : 
+               'Duplicate Item'}
             </SheetTitle>
             <SheetDescription className="text-gray-500 dark:text-gray-400">
-              {formTheme.description.text[formMode]}
+              {formMode === 'add' ? 'Create a new item with the details below.' :
+               formMode === 'edit' ? 'Modify the item values for this entry.' :
+               'Create a new entry based on the selected item data.'}
             </SheetDescription>
           </SheetHeader>
           
@@ -286,7 +269,7 @@ export default function ItemTablePage() {
             <ItemForm
               open={isFormOpen}
               onOpenChange={setIsFormOpen}
-              mode={formMode === 'duplicate' ? 'add' : formMode}
+              mode={formMode}
               initialData={selectedRow || undefined}
               onSubmit={(data) => {
                 switch (formMode) {
@@ -320,7 +303,7 @@ export default function ItemTablePage() {
             </Button>
             <Button
               type="submit"
-              className={formTheme.button.className}
+              className="flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700"
               onClick={() => {
                 const form = document.querySelector('form');
                 if (form) {
@@ -328,7 +311,9 @@ export default function ItemTablePage() {
                 }
               }}
             >
-              {formTheme.button.text[formMode]}
+              {formMode === 'add' ? 'Add Item' :
+               formMode === 'edit' ? 'Save Changes' :
+               'Duplicate Item'}
             </Button>
           </SheetFooter>
         </SheetContent>

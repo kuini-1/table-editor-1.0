@@ -111,7 +111,7 @@ export default function UsersPage() {
 
   useEffect(() => {
     fetchUsers();
-  }, []);
+  });
 
   const fetchUsers = async () => {
     try {

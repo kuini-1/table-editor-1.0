@@ -25,7 +25,7 @@ type ItemTableFormData = z.infer<typeof itemTableSchema>;
 interface ItemFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  mode: "add" | "edit";
+  mode: 'add' | 'edit' | 'duplicate';
   initialData?: ItemTableFormData;
   onSubmit: (data: ItemTableFormData) => void;
 }
@@ -420,7 +420,12 @@ export default function ItemForm({
                 type={config.type === 'number' ? 'number' : 'text'}
                 name={formField.name}
                 value={String(formField.value ?? '')}
-                onChange={formField.onChange}
+                onChange={(e) => {
+                  const value = config.type === 'number' 
+                    ? e.target.value === '' ? undefined : Number(e.target.value)
+                    : e.target.value;
+                  formField.onChange(value);
+                }}
                 className="h-12 px-3 bg-gray-50 dark:bg-gray-800/50 border-2 border-gray-200 dark:border-gray-700 rounded-lg transition-all duration-200"
               />
             </FormControl>

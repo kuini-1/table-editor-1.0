@@ -166,7 +166,7 @@ export default function TablesPage() {
       }
     };
     initProfile();
-  }, []);
+  });
 
   useEffect(() => {
     if (selectedTable) {

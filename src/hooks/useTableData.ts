@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
 import type { ColumnFilter, ColumnFilters } from '@/components/table/TableFilter';
@@ -27,23 +27,58 @@ export function useTableData<T extends { id: string }>({ config, tableId }: UseT
   const [pageSize, setPageSize] = useState(50);
   const [filters, setFilters] = useState<ColumnFilters>({});
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
+  const [permissionCache, setPermissionCache] = useState<Record<string, { result: boolean; timestamp: number }>>({});
 
   const supabase = createClient();
 
-  const checkPermission = async (action: 'get' | 'put' | 'post' | 'delete'): Promise<boolean> => {
-    try {
-      const { data, error } = await supabase.rpc('check_table_permission', {
-        p_table_id: tableId,
-        p_action: action.toUpperCase()
-      });
+  const PERMISSION_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
-      if (error) throw error;
-      return !!data;
-    } catch (error) {
-      console.error(`Permission check failed for ${action}:`, error);
+  const checkPermission = useCallback(async (action: 'get' | 'put' | 'post' | 'delete'): Promise<boolean> => {
+    if (!tableId) {
+      console.error('No table ID provided for permission check');
       return false;
     }
-  };
+
+    const cacheKey = `${tableId}-${action}`;
+    const cached = permissionCache[cacheKey];
+    if (cached && Date.now() - cached.timestamp < PERMISSION_CACHE_DURATION) {
+      return cached.result;
+    }
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        return false;
+      }
+
+      const actionMap = {
+        'get': 'select',
+        'put': 'update',
+        'post': 'insert',
+        'delete': 'delete'
+      };
+
+      const dbAction = actionMap[action];
+      const { data, error } = await supabase.rpc('check_table_permission', {
+        p_table_id: tableId,
+        p_action: dbAction
+      });
+
+      if (error) {
+        return false;
+      }
+
+      const result = !!data;
+      setPermissionCache(prev => ({
+        ...prev,
+        [cacheKey]: { result, timestamp: Date.now() }
+      }));
+
+      return result;
+    } catch (error) {
+      return false;
+    }
+  }, [tableId, supabase, permissionCache]);
 
   const handleError = (err: object | unknown) => {
     const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred';
@@ -51,13 +86,19 @@ export function useTableData<T extends { id: string }>({ config, tableId }: UseT
     toast.error(errorMessage);
   };
 
-  const fetchData = async (currentFilters = filters) => {
-    if (!tableId) return;
+  const fetchData = useCallback(async (currentFilters = filters) => {
+    if (!tableId) {
+      setError('No table ID provided');
+      setLoading(false);
+      return;
+    }
 
     try {
       const hasPermission = await checkPermission('get');
       if (!hasPermission) {
-        throw new Error('You do not have permission to view this table');
+        setError('You do not have permission to view this table');
+        setLoading(false);
+        return;
       }
 
       setLoading(true);
@@ -144,7 +185,7 @@ export function useTableData<T extends { id: string }>({ config, tableId }: UseT
     } finally {
       setLoading(false);
     }
-  };
+  }, [filters, tableId, checkPermission, supabase, config.tableName, config.columns, page, pageSize]);
 
   const handleAddRow = async (formData: Omit<T, 'id'>) => {
     try {
@@ -332,7 +373,7 @@ export function useTableData<T extends { id: string }>({ config, tableId }: UseT
     if (tableId) {
       fetchData();
     }
-  }, [tableId, page, pageSize, filters]);
+  }, [tableId, page, pageSize, filters, fetchData]);
 
   return {
     data,
