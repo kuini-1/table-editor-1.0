@@ -9,14 +9,44 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
-import { Loader2, User, Building2, Mail, Lock, CreditCard, Shield, Bell } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Loader2, User, Mail, Lock, CreditCard, Shield, Bell } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
 
 interface UserProfile {
   id: string;
   email: string;
   full_name?: string;
-  company_name?: string;
   role: 'owner' | 'sub_owner';
+  stripe_customer_id?: string;
+  stripe_subscription_id?: string;
+  subscription_status?: string;
+}
+
+interface SubscriptionPlan {
+  id: string;
+  name: string;
+  priceId: string;
+  amount: number;
+  interval: string;
+  description: string;
+  productId: string;
+  features: string[];
+  marketingFeatures: string[];
+}
+
+interface Subscription {
+  id: string;
+  status: string;
+  current_period_end: number;
+  cancel_at_period_end: boolean;
+  plan: {
+    id: string;
+    name: string;
+    amount: number;
+    interval: 'month' | 'year' | 'one-time';
+  };
 }
 
 const sidebarNavItems = [
@@ -47,18 +77,201 @@ const sidebarNavItems = [
   },
 ];
 
-export default function SettingsPage() {
+function PlanSelectorDialog({ 
+  open, 
+  onOpenChange, 
+  onSelectPlan, 
+  currentPlanId,
+  plans
+}: { 
+  open: boolean; 
+  onOpenChange: (open: boolean) => void;
+  onSelectPlan: (priceId: string) => void;
+  currentPlanId?: string;
+  plans: SubscriptionPlan[];
+}) {
+  const [selectedInterval, setSelectedInterval] = useState<'month' | 'year' | 'lifetime'>('month');
+
+  // Group plans by product
+  const basicPlans = plans.filter(plan => plan.name.toLowerCase().includes('basic'));
+  const proPlans = plans.filter(plan => plan.name.toLowerCase().includes('pro'));
+
+  // Get the selected plan based on interval
+  const getSelectedPlan = (plans: SubscriptionPlan[]) => {
+    return plans.find(plan => {
+      if (selectedInterval === 'lifetime') {
+        return plan.interval === 'one-time';
+      }
+      return plan.interval === selectedInterval;
+    });
+  };
+
+  const selectedBasicPlan = getSelectedPlan(basicPlans);
+  const selectedProPlan = getSelectedPlan(proPlans);
+
+  // Hardcoded feature lists
+  const basicFeatures = [
+    "Create up to 3 sub accounts",
+    "Bandwidth 5GB",
+    "Access to 60+ tables",
+    "Set individual user permissions for each table"
+  ];
+
+  const proFeatures = [
+    "Create up to 6 sub accounts",
+    "Bandwidth 50GB",
+    "Access to 60+ tables",
+    "Set individual user permissions for each table"
+  ];
+
+  // Check mark SVG component
+  const CheckMark = () => (
+    <svg 
+      className="h-5 w-5 text-green-500 flex-shrink-0" 
+      fill="none" 
+      viewBox="0 0 24 24" 
+      stroke="currentColor"
+    >
+      <path 
+        strokeLinecap="round" 
+        strokeLinejoin="round" 
+        strokeWidth={2} 
+        d="M5 13l4 4L19 7" 
+      />
+    </svg>
+  );
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[800px]">
+        <DialogHeader>
+          <DialogTitle>Choose Your Plan</DialogTitle>
+          <DialogDescription>
+            Select the plan that best fits your needs
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="flex justify-center space-x-2 mb-6">
+          <Button
+            variant={selectedInterval === 'month' ? 'default' : 'outline'}
+            onClick={() => setSelectedInterval('month')}
+            className="min-w-[100px]"
+          >
+            Monthly
+          </Button>
+          <Button
+            variant={selectedInterval === 'year' ? 'default' : 'outline'}
+            onClick={() => setSelectedInterval('year')}
+            className="min-w-[100px]"
+          >
+            Yearly
+          </Button>
+          <Button
+            variant={selectedInterval === 'lifetime' ? 'default' : 'outline'}
+            onClick={() => setSelectedInterval('lifetime')}
+            className="min-w-[100px]"
+          >
+            Lifetime
+          </Button>
+        </div>
+
+        <div className="grid grid-cols-2 gap-6">
+          {/* Basic Plan */}
+          <Card className={`relative transition-colors ${
+            currentPlanId === selectedBasicPlan?.id ? 'border-primary' : ''
+          }`}>
+            <CardHeader>
+              <CardTitle className="text-xl">Basic</CardTitle>
+              <CardDescription>Perfect for getting started</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="text-3xl font-bold">
+                ${selectedBasicPlan?.amount ? selectedBasicPlan.amount / 100 : 0}
+                {selectedInterval !== 'lifetime' && (
+                  <span className="text-sm font-normal text-muted-foreground">
+                    /{selectedInterval}
+                  </span>
+                )}
+              </div>
+              <ul className="space-y-3">
+                {basicFeatures.map((feature, index) => (
+                  <li key={index} className="flex items-center space-x-2">
+                    <CheckMark />
+                    <span>{feature}</span>
+                  </li>
+                ))}
+              </ul>
+              <Button 
+                className="w-full"
+                onClick={() => selectedBasicPlan && onSelectPlan(selectedBasicPlan.priceId)}
+                disabled={!selectedBasicPlan}
+              >
+                Select Basic Plan
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Pro Plan */}
+          <Card className={`relative transition-colors ${
+            currentPlanId === selectedProPlan?.id ? 'border-primary' : ''
+          }`}>
+            <CardHeader>
+              <CardTitle className="text-xl">Pro</CardTitle>
+              <CardDescription>For growing businesses</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="text-3xl font-bold">
+                ${selectedProPlan?.amount ? selectedProPlan.amount / 100 : 0}
+                {selectedInterval !== 'lifetime' && (
+                  <span className="text-sm font-normal text-muted-foreground">
+                    /{selectedInterval}
+                  </span>
+                )}
+              </div>
+              <ul className="space-y-3">
+                {proFeatures.map((feature, index) => (
+                  <li key={index} className="flex items-center space-x-2">
+                    <CheckMark />
+                    <span>{feature}</span>
+                  </li>
+                ))}
+              </ul>
+              <Button 
+                className="w-full"
+                onClick={() => selectedProPlan && onSelectPlan(selectedProPlan.priceId)}
+                disabled={!selectedProPlan}
+              >
+                Select Pro Plan
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+const SettingsPage = () => {
   const router = useRouter();
+  const [activeSection, setActiveSection] = useState('profile');
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [subscription, setSubscription] = useState<Subscription | null>(null);
+  const [subscriptionPlans, setSubscriptionPlans] = useState<SubscriptionPlan[]>([]);
+  const [loadingPrices, setLoadingPrices] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showPlanSelector, setShowPlanSelector] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
-  const [activeSection, setActiveSection] = useState("profile");
+  const [emailNotifications, setEmailNotifications] = useState(true);
+  const [browserNotifications, setBrowserNotifications] = useState(false);
+  const [currentSession, setCurrentSession] = useState<{
+    created_at: string;
+    last_active_at: string;
+  } | null>(null);
+  const [loadingSession, setLoadingSession] = useState(false);
 
   const [formData, setFormData] = useState({
     full_name: '',
-    company_name: '',
     email: '',
     currentPassword: '',
     newPassword: '',
@@ -87,20 +300,140 @@ export default function SettingsPage() {
       setFormData(prev => ({
         ...prev,
         full_name: profile.full_name || '',
-        company_name: profile.company_name || '',
         email: user.email || '',
       }));
     } catch (err) {
       setError('Failed to fetch profile');
       console.error(err);
-    } finally {
-      setLoading(false);
     }
   }, [router]);
+
+  const fetchCurrentSession = useCallback(async () => {
+    try {
+      setLoadingSession(true);
+      const supabase = createClient();
+      
+      const { data: { session }, error } = await supabase.auth.getSession();
+      
+      if (error) throw error;
+      
+      if (session) {
+        setCurrentSession({
+          created_at: new Date().toISOString(),
+          last_active_at: new Date().toISOString(),
+        });
+      } else {
+        setCurrentSession(null);
+      }
+    } catch (err) {
+      console.error('Error fetching session:', err);
+      setError('Failed to fetch session information');
+    } finally {
+      setLoadingSession(false);
+    }
+  }, []);
+
+  const fetchSubscription = useCallback(async () => {
+    try {
+      const supabase = createClient();
+      
+      // If user is a sub-owner, get the owner's subscription
+      if (profile?.role === 'sub_owner') {
+        // First get the owner's profile
+        const { data: ownerProfile, error: ownerError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('role', 'owner')
+          .single();
+
+        if (ownerError) {
+          console.error('Error fetching owner profile:', ownerError);
+          throw new Error('Failed to fetch owner profile');
+        }
+
+        if (!ownerProfile) {
+          console.error('No owner profile found');
+          setError('No owner profile found');
+          return;
+        }
+
+        // Then get the owner's subscription
+        const response = await fetch('/api/stripe', {
+          headers: {
+            'X-User-Id': ownerProfile.id // Pass owner's ID to get their subscription
+          }
+        });
+
+        const data = await response.json();
+        
+        if (!response.ok) {
+          console.error('Error fetching subscription:', data);
+          throw new Error(data.error || 'Failed to fetch subscription');
+        }
+
+        setSubscription(data.subscription);
+      } else {
+        // For owners, get their own subscription
+        const response = await fetch('/api/stripe');
+        const data = await response.json();
+        
+        if (!response.ok) {
+          console.error('Error fetching subscription:', data);
+          throw new Error(data.error || 'Failed to fetch subscription');
+        }
+
+        setSubscription(data.subscription);
+      }
+    } catch (err) {
+      console.error('Error in fetchSubscription:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch subscription information');
+    }
+  }, [profile?.role]);
 
   useEffect(() => {
     fetchProfile();
   }, [fetchProfile]);
+
+  useEffect(() => {
+    if (activeSection === 'security') {
+      fetchCurrentSession();
+    }
+  }, [activeSection, fetchCurrentSession]);
+
+  useEffect(() => {
+    if (activeSection === 'subscription') {
+      fetchSubscription();
+    }
+  }, [activeSection, fetchSubscription]);
+
+  useEffect(() => {
+    if (activeSection === 'subscription') {
+      fetchStripePrices();
+    }
+  }, [activeSection]);
+
+  const fetchStripePrices = async () => {
+    try {
+      setLoadingPrices(true);
+      setError(null);
+      const response = await fetch('/api/stripe/prices');
+      if (!response.ok) {
+        throw new Error('Failed to fetch prices');
+      }
+      const data = await response.json();
+      console.log('All plans:', data.prices.map((plan: SubscriptionPlan) => ({
+        name: plan.name,
+        interval: plan.interval,
+        amount: plan.amount,
+        priceId: plan.priceId
+      })));
+      setSubscriptionPlans(data.prices);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch prices');
+    } finally {
+      setLoadingPrices(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -121,7 +454,6 @@ export default function SettingsPage() {
         .from('profiles')
         .update({
           full_name: formData.full_name,
-          company_name: formData.company_name,
           updated_at: new Date().toISOString(),
         })
         .eq('id', profile?.id);
@@ -200,7 +532,80 @@ export default function SettingsPage() {
     }
   };
 
-  if (loading) {
+  const handleSubscribe = async (priceId: string) => {
+    try {
+      setSaving(true);
+      console.log('Creating subscription with price ID:', priceId);
+
+      const response = await fetch('/api/stripe', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          priceId,
+          action: 'create',
+        }),
+      });
+
+      const data = await response.json();
+      console.log('Server response:', data);
+      
+      if (!response.ok) {
+        console.error('Error creating subscription:', data);
+        throw new Error(data.error || 'Failed to create subscription');
+      }
+
+      if (!data.url) {
+        console.error('No checkout URL received from server');
+        throw new Error('No checkout URL received');
+      }
+
+      window.open(data.url, "_self");
+    } catch (err) {
+      console.error('Error in handleSubscribe:', err);
+      setError(err instanceof Error ? err.message : 'Failed to create subscription. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleCancelSubscription = async () => {
+    try {
+      setSaving(true);
+      const response = await fetch('/api/stripe', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          priceId: subscription?.plan.id,
+          action: 'cancel',
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
+      setSuccess('Subscription cancelled successfully');
+      await fetchSubscription();
+    } catch (err) {
+      console.error('Error cancelling subscription:', err);
+      setError('Failed to cancel subscription. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSelectPlan = async (priceId: string) => {
+    setShowPlanSelector(false);
+    await handleSubscribe(priceId);
+  };
+
+  if (loadingPrices) {
     return (
       <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -309,22 +714,6 @@ export default function SettingsPage() {
                           setFormData({ ...formData, full_name: e.target.value })
                         }
                         placeholder="Enter your full name"
-                        className="pl-10"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="company_name" className="text-sm font-medium">Company Name</Label>
-                    <div className="relative">
-                      <Building2 className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
-                      <Input
-                        id="company_name"
-                        value={formData.company_name}
-                        onChange={(e) =>
-                          setFormData({ ...formData, company_name: e.target.value })
-                        }
-                        placeholder="Enter your company name"
                         className="pl-10"
                       />
                     </div>
@@ -439,59 +828,109 @@ export default function SettingsPage() {
               <CardHeader>
                 <CardTitle>Subscription Plan</CardTitle>
                 <CardDescription>
-                  Manage your subscription and billing information.
+                  {profile?.role === 'owner' 
+                    ? 'Manage your subscription and billing information.'
+                    : 'View your subscription plan details.'}
                 </CardDescription>
               </CardHeader>
 
               <CardContent className="space-y-6">
-                <div className="rounded-lg border p-4">
+                {error && (
+                  <Alert variant="destructive" className="bg-red-50 text-white dark:bg-red-900/50 border-red-200 dark:border-red-800">
+                    <AlertDescription>{error}</AlertDescription>
+                  </Alert>
+                )}
+
+                {success && (
+                  <Alert className="border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-800/30 dark:bg-emerald-900/30 dark:text-emerald-200">
+                    <AlertDescription>{success}</AlertDescription>
+                  </Alert>
+                )}
+
+                <div className="space-y-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h4 className="font-semibold">Current Plan: Pro</h4>
-                      <p className="text-sm text-muted-foreground">$29/month</p>
+                      <h3 className="text-lg font-medium">Subscription</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Manage your subscription and billing information
+                      </p>
                     </div>
-                    <Button variant="outline">Change Plan</Button>
+                    {profile?.role === 'owner' && (
+                      <Button onClick={() => setShowPlanSelector(true)}>
+                        Change Plan
+                      </Button>
+                    )}
                   </div>
-                  <Separator className="my-4" />
-                  <div className="space-y-4">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Next billing date</span>
-                      <span>April 1, 2024</span>
+
+                  {loadingPrices ? (
+                    <div className="flex items-center justify-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                     </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Tables included</span>
-                      <span>20</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Team members</span>
-                      <span>10</span>
-                    </div>
-                  </div>
+                  ) : error ? (
+                    <div className="text-red-500 text-center py-4">{error}</div>
+                  ) : (
+                    <>
+                      <div className="rounded-lg border p-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h4 className="font-medium">Current Plan</h4>
+                            <p className="text-sm text-muted-foreground">
+                              {subscription?.plan?.name || 'No active subscription'}
+                            </p>
+                          </div>
+                          {subscription && (
+                            <Badge variant={subscription.status === 'active' ? 'default' : 'secondary'}>
+                              {subscription.status}
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+
+                      <PlanSelectorDialog
+                        open={showPlanSelector}
+                        onOpenChange={setShowPlanSelector}
+                        onSelectPlan={handleSelectPlan}
+                        plans={subscriptionPlans}
+                      />
+                    </>
+                  )}
                 </div>
 
-                <div className="rounded-lg border p-4">
-                  <h4 className="font-semibold mb-4">Payment Method</h4>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4">
-                      <CreditCard className="h-6 w-6 text-muted-foreground" />
-                      <div>
-                        <p className="font-medium">•••• •••• •••• 4242</p>
-                        <p className="text-sm text-muted-foreground">Expires 12/24</p>
+                {subscription && profile?.role === 'owner' && (
+                  <div className="rounded-lg border p-4">
+                    <h4 className="font-semibold mb-4">Payment Method</h4>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-4">
+                        <CreditCard className="h-6 w-6 text-muted-foreground" />
+                        <div>
+                          <p className="font-medium">•••• •••• •••• 4242</p>
+                          <p className="text-sm text-muted-foreground">Expires 12/24</p>
+                        </div>
                       </div>
+                      <Button variant="ghost" size="sm">Edit</Button>
                     </div>
-                    <Button variant="ghost" size="sm">Edit</Button>
                   </div>
-                </div>
+                )}
               </CardContent>
 
-              <CardFooter className="flex justify-between">
-                <Button variant="outline" className="text-red-400 hover:bg-destructive/90 hover:text-white">
-                  Cancel Subscription
-                </Button>
-                <Button>
-                  Update Billing Info
-                </Button>
-              </CardFooter>
+              {subscription && profile?.role === 'owner' && (
+                <CardFooter className="flex justify-between">
+                  <Button 
+                    variant="outline" 
+                    className="text-red-400 hover:bg-destructive/90 hover:text-white"
+                    onClick={handleCancelSubscription}
+                    disabled={saving || subscription.cancel_at_period_end}
+                  >
+                    {saving ? (
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    ) : null}
+                    {subscription.cancel_at_period_end ? 'Subscription Cancelled' : 'Cancel Subscription'}
+                  </Button>
+                  <Button>
+                    Update Billing Info
+                  </Button>
+                </CardFooter>
+              )}
             </Card>
           )}
 
@@ -500,25 +939,64 @@ export default function SettingsPage() {
               <CardHeader>
                 <CardTitle>Security Settings</CardTitle>
                 <CardDescription>
-                  Manage your security preferences and two-factor authentication.
+                  Manage your security preferences and active sessions.
                 </CardDescription>
               </CardHeader>
 
               <CardContent className="space-y-6">
-                <div className="flex items-center justify-between rounded-lg border p-4">
-                  <div className="space-y-0.5">
-                    <h4 className="font-semibold">Two-factor Authentication</h4>
-                    <p className="text-sm text-muted-foreground">Add an extra layer of security to your account</p>
-                  </div>
-                  <Button variant="outline">Enable</Button>
-                </div>
+                {error && (
+                  <Alert variant="destructive" className="bg-red-50 text-white dark:bg-red-900/50 border-red-200 dark:border-red-800">
+                    <AlertDescription>{error}</AlertDescription>
+                  </Alert>
+                )}
 
-                <div className="flex items-center justify-between rounded-lg border p-4">
-                  <div className="space-y-0.5">
-                    <h4 className="font-semibold">Active Sessions</h4>
-                    <p className="text-sm text-muted-foreground">Manage your active sessions across devices</p>
+                {success && (
+                  <Alert className="border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-800/30 dark:bg-emerald-900/30 dark:text-emerald-200">
+                    <AlertDescription>{success}</AlertDescription>
+                  </Alert>
+                )}
+
+                <div className="rounded-lg border">
+                  <div className="p-4 border-b">
+                    <h4 className="font-semibold">Current Session</h4>
+                    <p className="text-sm text-muted-foreground">Information about your current session</p>
                   </div>
-                  <Button variant="outline">Manage</Button>
+                  
+                  <div className="p-4">
+                    {loadingSession ? (
+                      <div className="text-center">
+                        <Loader2 className="h-5 w-5 animate-spin mx-auto" />
+                        <p className="text-sm text-muted-foreground mt-2">Loading session information...</p>
+                      </div>
+                    ) : currentSession ? (
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <div className="space-y-1">
+                            <p className="font-medium">Current Device</p>
+                            <p className="text-sm text-muted-foreground">
+                              Last active: {new Date(currentSession.last_active_at).toLocaleString()}
+                            </p>
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleSignOut}
+                            disabled={saving}
+                          >
+                            {saving ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              'Sign Out'
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-center text-muted-foreground">
+                        No active session found
+                      </div>
+                    )}
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -540,7 +1018,11 @@ export default function SettingsPage() {
                       <h4 className="font-semibold">Email Notifications</h4>
                       <p className="text-sm text-muted-foreground">Receive notifications about your account activity</p>
                     </div>
-                    <Button variant="outline">Configure</Button>
+                    <Switch
+                      checked={emailNotifications}
+                      onCheckedChange={setEmailNotifications}
+                      aria-label="Toggle email notifications"
+                    />
                   </div>
                   <Separator />
                   <div className="flex items-center justify-between">
@@ -548,7 +1030,11 @@ export default function SettingsPage() {
                       <h4 className="font-semibold">Browser Notifications</h4>
                       <p className="text-sm text-muted-foreground">Get real-time notifications in your browser</p>
                     </div>
-                    <Button variant="outline">Configure</Button>
+                    <Switch
+                      checked={browserNotifications}
+                      onCheckedChange={setBrowserNotifications}
+                      aria-label="Toggle browser notifications"
+                    />
                   </div>
                 </div>
               </CardContent>
@@ -556,6 +1042,16 @@ export default function SettingsPage() {
           )}
         </div>
       </div>
+
+      <PlanSelectorDialog
+        open={showPlanSelector}
+        onOpenChange={setShowPlanSelector}
+        onSelectPlan={handleSelectPlan}
+        currentPlanId={subscription?.plan.id}
+        plans={subscriptionPlans}
+      />
     </div>
   );
 }
+
+export default SettingsPage;
