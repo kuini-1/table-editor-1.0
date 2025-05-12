@@ -1,8 +1,7 @@
 "use client";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { z } from "zod";
 import { useSearchParams } from "next/navigation";
-import { Button } from "@/components/ui/button";
 import {
   Sheet,
   SheetContent,
@@ -17,10 +16,11 @@ import { TableHeader } from '@/components/table/TableHeader';
 import { TablePagination } from '@/components/table/TablePagination';
 import { DeleteDialog, ImportDialog, useExport } from '@/components/table/TableDialogs';
 import { useStore } from "@/lib/store";
-import { itemTableSchema } from "./schema";
+import { itemTableSchema, columns } from "./schema";
 import ItemForm from "./ItemForm";
 import { ErrorDisplay } from '@/components/ErrorDisplay';
 import React from "react";
+import { Button } from "@/components/ui/button";
 
 type ItemTableFormData = z.infer<typeof itemTableSchema>;
 
@@ -35,7 +35,9 @@ export default function ItemTablePage() {
   const tableId = searchParams.get('id') || '';
   const tableName = 'table_item_data';
   const { userProfile } = useStore();
-  const selectedTable = React.useMemo(() => 
+  
+  // Memoize selected table to prevent unnecessary re-renders
+  const selectedTable = useMemo(() => 
     userProfile?.data?.id === tableId ? {
       id: tableId,
       name: 'Item Table',
@@ -44,113 +46,7 @@ export default function ItemTablePage() {
     [userProfile?.data?.id, tableId]
   );
   
-  const [isFormOpen, setIsFormOpen] = useState(false);
-  const [formMode, setFormMode] = useState<FormMode>('add');
-  const [selectedRow, setSelectedRow] = useState<ItemTableRow | null>(null);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
-
-  // Define columns for the data table
-  const columns = [
-    {
-      key: "tblidx",
-      label: "ID",
-      type: "number" as const,
-      validation: itemTableSchema.shape.tblidx,
-    },
-    {
-      key: "name",
-      label: "Name",
-      type: "text" as const,
-      validation: itemTableSchema.shape.name,
-    },
-    {
-      key: "wsznametext",
-      label: "Display Name",
-      type: "text" as const,
-      validation: itemTableSchema.shape.wsznametext,
-    },
-    {
-      key: "szicon_name",
-      label: "Icon Name",
-      type: "text" as const,
-      validation: itemTableSchema.shape.szicon_name,
-    },
-    {
-      key: "byitem_type",
-      label: "Item Type",
-      type: "number" as const,
-      validation: itemTableSchema.shape.byitem_type,
-    },
-    {
-      key: "byequip_type",
-      label: "Equip Type",
-      type: "number" as const,
-      validation: itemTableSchema.shape.byequip_type,
-    },
-    {
-      key: "byrank",
-      label: "Rank",
-      type: "number" as const,
-      validation: itemTableSchema.shape.byrank,
-    },
-    {
-      key: "dwcost",
-      label: "Cost",
-      type: "number" as const,
-      validation: itemTableSchema.shape.dwcost,
-    },
-    {
-      key: "dwsell_price",
-      label: "Sell Price",
-      type: "number" as const,
-      validation: itemTableSchema.shape.dwsell_price,
-    },
-    {
-      key: "bvalidity_able",
-      label: "Valid",
-      type: "boolean" as const,
-      validation: itemTableSchema.shape.bvalidity_able,
-    },
-    {
-      key: "biscanhaveoption",
-      label: "Can Have Option",
-      type: "boolean" as const,
-      validation: itemTableSchema.shape.biscanhaveoption,
-    },
-    {
-      key: "bcreatesuperiorable",
-      label: "Can Create Superior",
-      type: "boolean" as const,
-      validation: itemTableSchema.shape.bcreatesuperiorable,
-    },
-    {
-      key: "bcreateexcellentable",
-      label: "Can Create Excellent",
-      type: "boolean" as const,
-      validation: itemTableSchema.shape.bcreateexcellentable,
-    },
-    {
-      key: "bcreaterareable",
-      label: "Can Create Rare",
-      type: "boolean" as const,
-      validation: itemTableSchema.shape.bcreaterareable,
-    },
-    {
-      key: "bcreatelegendaryable",
-      label: "Can Create Legendary",
-      type: "boolean" as const,
-      validation: itemTableSchema.shape.bcreatelegendaryable,
-    },
-    {
-      key: "biscanrenewal",
-      label: "Can Renewal",
-      type: "boolean" as const,
-      validation: itemTableSchema.shape.biscanrenewal,
-    },
-  ];
-
-  // Use the custom hook to fetch and manage data
+  // Use table data hook
   const {
     data,
     error,
@@ -176,8 +72,52 @@ export default function ItemTablePage() {
     },
     tableId,
   });
+  
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [formMode, setFormMode] = useState<FormMode>('add');
+  const [selectedRow, setSelectedRow] = useState<ItemTableRow | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+
+  // Memoize handlers to prevent unnecessary re-renders
+  const handleAdd = useMemo(() => () => {
+    setFormMode('add');
+    setSelectedRow(null);
+    setIsFormOpen(true);
+  }, []);
+
+  const handleEdit = useMemo(() => (row: ItemTableRow) => {
+    setFormMode('edit');
+    setSelectedRow(row);
+    setIsFormOpen(true);
+  }, []);
+
+  const handleDuplicate = useMemo(() => (row: ItemTableRow) => {
+    setFormMode('duplicate');
+    setSelectedRow(row);
+    setIsFormOpen(true);
+  }, []);
+
+  const handleDelete = useMemo(() => (row: ItemTableRow) => {
+    setSelectedRow(row);
+    setIsDeleteDialogOpen(true);
+  }, []);
+
+  const handleImport = useMemo(() => () => {
+    setIsImportDialogOpen(true);
+  }, []);
 
   const handleExport = useExport({ tableId, tableName });
+
+  const handleFormSubmit = useMemo(() => (data: ItemTableFormData) => {
+    if (formMode === 'add') {
+      handleAddRow(data);
+    } else if (formMode === 'edit' && selectedRow) {
+      handleEditRow(selectedRow.id, data);
+    } else if (formMode === 'duplicate' && selectedRow) {
+      handleDuplicate(selectedRow);
+    }
+  }, [formMode, selectedRow, handleAddRow, handleEditRow, handleDuplicate]);
 
   if (error) {
     return (
@@ -198,46 +138,27 @@ export default function ItemTablePage() {
         columns={columns}
         filters={filters}
         selectedCount={selectedRows.size}
-        onAddRow={() => {
-          setFormMode('add');
-          setSelectedRow(null);
-          setIsFormOpen(true);
-        }}
-        onImport={() => setIsImportDialogOpen(true)}
+        onAddRow={handleAdd}
+        onImport={handleImport}
         onExport={handleExport}
         onRefresh={refreshData}
-        onBulkDelete={() => {
-          if (selectedRows.size > 0) {
-            handleBulkDelete();
-          }
-        }}
+        onBulkDelete={handleBulkDelete}
         onAddFilter={handleAddFilter}
         onRemoveFilter={handleRemoveFilter}
       />
-
+      
       <div className="flex-1 overflow-hidden">
         <DataTable
           columns={columns}
           data={data}
           selectedRows={selectedRows}
           onRowSelect={handleRowSelection}
-          onEdit={(row) => {
-            setSelectedRow(row);
-            setFormMode('edit');
-            setIsFormOpen(true);
-          }}
-          onDuplicate={(row) => {
-            setSelectedRow(row as ItemTableRow);
-            setFormMode('duplicate');
-            setIsFormOpen(true);
-          }}
-          onDelete={(row) => {
-            setSelectedRow(row);
-            setIsDeleteDialogOpen(true);
-          }}
+          onEdit={handleEdit}
+          onDuplicate={handleDuplicate}
+          onDelete={handleDelete}
         />
       </div>
-
+      
       <TablePagination
         currentPage={page}
         currentPageSize={pageSize}
@@ -245,8 +166,7 @@ export default function ItemTablePage() {
         onPageChange={handlePageChange}
         onPageSizeChange={handlePageSizeChange}
       />
-
-      {/* Item Form */}
+      
       <Sheet open={isFormOpen} onOpenChange={setIsFormOpen}>
         <SheetContent 
           side="right" 
@@ -255,13 +175,12 @@ export default function ItemTablePage() {
           <SheetHeader className="px-6 py-4 border-b border-gray-200 dark:border-gray-800">
             <SheetTitle className="bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent text-2xl font-bold">
               {formMode === 'add' ? 'Add Item' : 
-               formMode === 'edit' ? 'Edit Item' : 
-               'Duplicate Item'}
+               formMode === 'edit' ? 'Edit Item' : 'Duplicate Item'}
             </SheetTitle>
             <SheetDescription className="text-gray-500 dark:text-gray-400">
               {formMode === 'add' ? 'Create a new item with the details below.' :
-               formMode === 'edit' ? 'Modify the item values for this entry.' :
-               'Create a new entry based on the selected item data.'}
+               formMode === 'edit' ? 'Modify the item properties.' :
+               'Create a new item based on the selected item data.'}
             </SheetDescription>
           </SheetHeader>
           
@@ -271,22 +190,7 @@ export default function ItemTablePage() {
               onOpenChange={setIsFormOpen}
               mode={formMode}
               initialData={selectedRow || undefined}
-              onSubmit={(data) => {
-                switch (formMode) {
-                  case 'add':
-                    handleAddRow(data as ItemTableRow);
-                    break;
-                  case 'edit':
-                    if (selectedRow?.id) {
-                      handleEditRow(selectedRow.id, data as ItemTableRow);
-                    }
-                    break;
-                  case 'duplicate':
-                    handleAddRow(data as ItemTableRow);
-                    break;
-                }
-                setIsFormOpen(false);
-              }}
+              onSubmit={handleFormSubmit}
             />
           </div>
 
@@ -319,16 +223,6 @@ export default function ItemTablePage() {
         </SheetContent>
       </Sheet>
 
-      {/* Import Dialog */}
-      <ImportDialog
-        isOpen={isImportDialogOpen}
-        onClose={() => setIsImportDialogOpen(false)}
-        onSuccess={refreshData}
-        tableId={tableId}
-        tableName={tableName}
-      />
-
-      {/* Delete Confirmation Dialog */}
       <DeleteDialog
         isOpen={isDeleteDialogOpen}
         onClose={() => setIsDeleteDialogOpen(false)}
@@ -339,6 +233,17 @@ export default function ItemTablePage() {
           }
         }}
         itemName={selectedRow?.name || "this item"}
+      />
+
+      <ImportDialog
+        isOpen={isImportDialogOpen}
+        onClose={() => setIsImportDialogOpen(false)}
+        onSuccess={() => {
+          setIsImportDialogOpen(false);
+          refreshData();
+        }}
+        tableName={tableName}
+        tableId={tableId}
       />
     </div>
   );

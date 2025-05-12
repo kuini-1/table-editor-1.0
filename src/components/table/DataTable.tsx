@@ -40,11 +40,11 @@ export function DataTable<T extends { id: string }>({
 
   return (
     <div className="rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-xl">
-      <div className="overflow-x-auto">
+      <div className="relative max-h-[calc(100vh-16rem)] overflow-auto">
         <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-800">
-          <thead>
+          <thead className="sticky top-0 z-30">
             <tr className="bg-gray-50/50 dark:bg-gray-800/50 backdrop-blur-sm">
-              <th className="sticky left-0 z-20 bg-gray-50 dark:bg-gray-800 w-[50px] px-4 py-3">
+              <th className="sticky left-0 z-40 bg-gray-50 dark:bg-gray-800 w-[50px] px-4 py-3">
                 <div className="flex items-center justify-center">
                   <Checkbox
                     checked={isAllSelected}
@@ -63,7 +63,7 @@ export function DataTable<T extends { id: string }>({
                   {column.label}
                 </th>
               ))}
-              <th className="sticky right-0 z-20 bg-gray-50 dark:bg-gray-800 w-[120px] px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">
+              <th className="sticky right-0 z-40 bg-gray-50 dark:bg-gray-800 w-[120px] px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">
                 Actions
               </th>
             </tr>

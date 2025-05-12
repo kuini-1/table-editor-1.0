@@ -22,6 +22,8 @@ interface UserProfile {
   stripe_customer_id?: string;
   stripe_subscription_id?: string;
   subscription_status?: string;
+  monthly_bandwidth_limit?: number;
+  current_month_bandwidth_used?: number;
 }
 
 interface SubscriptionPlan {
@@ -41,11 +43,95 @@ interface Subscription {
   status: string;
   current_period_end: number;
   cancel_at_period_end: boolean;
-  plan: {
+  plan?: {
     id: string;
     name: string;
     amount: number;
-    interval: 'month' | 'year' | 'one-time';
+    interval: string;
+  };
+  items: {
+    id: string;
+    object: string;
+    billing_thresholds: null;
+    created: number;
+    current_period_end: number;
+    current_period_start: number;
+    discounts: Array<{
+      id: string;
+      object: string;
+      amount_off: number | null;
+      percent_off: number | null;
+      duration: string | null;
+      duration_in_months: number | null;
+    }>;
+    metadata: Record<string, string>;
+    plan: {
+      id: string;
+      object: string;
+      active: boolean;
+      aggregate_usage: null;
+      amount: number;
+      amount_decimal: string;
+      billing_scheme: string;
+      created: number;
+      currency: string;
+      interval: 'month' | 'year' | 'one-time';
+      interval_count: number;
+      livemode: boolean;
+      metadata: Record<string, string>;
+      meter: null;
+      nickname: string | null;
+      product: string;
+      tiers_mode: null;
+      transform_usage: null;
+      trial_period_days: null;
+      usage_type: string;
+    };
+    price: {
+      id: string;
+      object: string;
+      active: boolean;
+      billing_scheme: string;
+      created: number;
+      currency: string;
+      custom_unit_amount: null;
+      livemode: boolean;
+      lookup_key: null;
+      metadata: Record<string, string>;
+      nickname: string | null;
+      product: string;
+      recurring: {
+        interval: string;
+        interval_count: number;
+        usage_type: string;
+        aggregate_usage: null;
+        trial_period_days: null;
+      };
+      tax_behavior: string;
+      tiers_mode: null;
+      transform_quantity: null;
+      type: string;
+      unit_amount: number;
+      unit_amount_decimal: string;
+    };
+    quantity: number;
+    subscription: string;
+    tax_rates: Array<{
+      id: string;
+      object: string;
+      active: boolean;
+      country: string;
+      created: number;
+      description: string;
+      display_name: string;
+      inclusive: boolean;
+      jurisdiction: string;
+      livemode: boolean;
+      metadata: Record<string, string>;
+      percentage: number;
+      state: string;
+      tax_type: string;
+    }>;
   };
 }
 
@@ -76,6 +162,38 @@ const sidebarNavItems = [
     href: "#notifications",
   },
 ];
+
+// Feature lists for subscription plans
+const basicFeatures: string[] = [
+  "Create up to 3 sub accounts",
+  "5GB monthly bandwidth",
+  "Access to 60+ tables",
+  "Set individual user permissions for each table"
+];
+
+const proFeatures: string[] = [
+  "Create up to 6 sub accounts",
+  "50GB monthly bandwidth",
+  "Access to 60+ tables",
+  "Set individual user permissions for each table"
+];
+
+// Check mark SVG component
+const CheckMark = () => (
+  <svg 
+    className="h-5 w-5 text-green-500 flex-shrink-0" 
+    fill="none" 
+    viewBox="0 0 24 24" 
+    stroke="currentColor"
+  >
+    <path 
+      strokeLinecap="round" 
+      strokeLinejoin="round" 
+      strokeWidth={2} 
+      d="M5 13l4 4L19 7" 
+    />
+  </svg>
+);
 
 function PlanSelectorDialog({ 
   open, 
@@ -108,38 +226,6 @@ function PlanSelectorDialog({
 
   const selectedBasicPlan = getSelectedPlan(basicPlans);
   const selectedProPlan = getSelectedPlan(proPlans);
-
-  // Hardcoded feature lists
-  const basicFeatures = [
-    "Create up to 3 sub accounts",
-    "Bandwidth 5GB",
-    "Access to 60+ tables",
-    "Set individual user permissions for each table"
-  ];
-
-  const proFeatures = [
-    "Create up to 6 sub accounts",
-    "Bandwidth 50GB",
-    "Access to 60+ tables",
-    "Set individual user permissions for each table"
-  ];
-
-  // Check mark SVG component
-  const CheckMark = () => (
-    <svg 
-      className="h-5 w-5 text-green-500 flex-shrink-0" 
-      fill="none" 
-      viewBox="0 0 24 24" 
-      stroke="currentColor"
-    >
-      <path 
-        strokeLinecap="round" 
-        strokeLinejoin="round" 
-        strokeWidth={2} 
-        d="M5 13l4 4L19 7" 
-      />
-    </svg>
-  );
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -335,60 +421,22 @@ const SettingsPage = () => {
 
   const fetchSubscription = useCallback(async () => {
     try {
-      const supabase = createClient();
+      console.log('Fetching subscription data...');
+      const response = await fetch('/api/stripe');
+      const data = await response.json();
       
-      // If user is a sub-owner, get the owner's subscription
-      if (profile?.role === 'sub_owner') {
-        // First get the owner's profile
-        const { data: ownerProfile, error: ownerError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('role', 'owner')
-          .single();
-
-        if (ownerError) {
-          console.error('Error fetching owner profile:', ownerError);
-          throw new Error('Failed to fetch owner profile');
-        }
-
-        if (!ownerProfile) {
-          console.error('No owner profile found');
-          setError('No owner profile found');
-          return;
-        }
-
-        // Then get the owner's subscription
-        const response = await fetch('/api/stripe', {
-          headers: {
-            'X-User-Id': ownerProfile.id // Pass owner's ID to get their subscription
-          }
-        });
-
-        const data = await response.json();
-        
-        if (!response.ok) {
-          console.error('Error fetching subscription:', data);
-          throw new Error(data.error || 'Failed to fetch subscription');
-        }
-
-        setSubscription(data.subscription);
-      } else {
-        // For owners, get their own subscription
-        const response = await fetch('/api/stripe');
-        const data = await response.json();
-        
-        if (!response.ok) {
-          console.error('Error fetching subscription:', data);
-          throw new Error(data.error || 'Failed to fetch subscription');
-        }
-
-        setSubscription(data.subscription);
+      if (!response.ok) {
+        console.error('Error response from /api/stripe:', data);
+        throw new Error(data.error || 'Failed to fetch subscription');
       }
+
+      console.log('Subscription data received:', data);
+      setSubscription(data.subscription);
     } catch (err) {
       console.error('Error in fetchSubscription:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch subscription information');
     }
-  }, [profile?.role]);
+  }, []);
 
   useEffect(() => {
     fetchProfile();
@@ -402,6 +450,7 @@ const SettingsPage = () => {
 
   useEffect(() => {
     if (activeSection === 'subscription') {
+      console.log('Subscription section active, fetching data...');
       fetchSubscription();
     }
   }, [activeSection, fetchSubscription]);
@@ -532,9 +581,71 @@ const SettingsPage = () => {
     }
   };
 
+  useEffect(() => {
+    const updateSubscriptionStatus = async () => {
+      const searchParams = new URLSearchParams(window.location.search);
+      const success = searchParams.get('success');
+      const canceled = searchParams.get('canceled');
+
+      if (success === 'true') {
+        try {
+          console.log('Payment successful, fetching updated subscription');
+          await fetchSubscription();
+          setSuccess('Subscription updated successfully');
+          // Update URL to remove query parameters
+          window.history.replaceState({}, '', '/settings');
+        } catch (err) {
+          console.error('Error updating subscription after payment:', err);
+          setError('Failed to update subscription. Please refresh the page or contact support.');
+        }
+      } else if (canceled === 'true') {
+        setError('Subscription process was canceled');
+        window.history.replaceState({}, '', '/settings');
+      }
+    };
+
+    updateSubscriptionStatus();
+  }, [fetchSubscription]);
+
+  const handleCancelSubscription = async () => {
+    try {
+      setSaving(true);
+      const response = await fetch('/api/stripe', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          priceId: subscription?.items?.plan?.id,
+          action: 'cancel',
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
+      setSuccess('Subscription cancelled successfully');
+      await fetchSubscription();
+    } catch (err) {
+      console.error('Error cancelling subscription:', err);
+      setError('Failed to cancel subscription. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSelectPlan = async (priceId: string) => {
+    setShowPlanSelector(false);
+    await handleSubscribe(priceId);
+  };
+
   const handleSubscribe = async (priceId: string) => {
     try {
       setSaving(true);
+      setError(null);
       console.log('Creating subscription with price ID:', priceId);
 
       const response = await fetch('/api/stripe', {
@@ -568,41 +679,6 @@ const SettingsPage = () => {
     } finally {
       setSaving(false);
     }
-  };
-
-  const handleCancelSubscription = async () => {
-    try {
-      setSaving(true);
-      const response = await fetch('/api/stripe', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          priceId: subscription?.plan.id,
-          action: 'cancel',
-        }),
-      });
-
-      const data = await response.json();
-
-      if (data.error) {
-        throw new Error(data.error);
-      }
-
-      setSuccess('Subscription cancelled successfully');
-      await fetchSubscription();
-    } catch (err) {
-      console.error('Error cancelling subscription:', err);
-      setError('Failed to cancel subscription. Please try again.');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleSelectPlan = async (priceId: string) => {
-    setShowPlanSelector(false);
-    await handleSubscribe(priceId);
   };
 
   if (loadingPrices) {
@@ -653,10 +729,11 @@ const SettingsPage = () => {
               <button
                 key={item.href}
                 onClick={() => setActiveSection(item.href.replace('#', ''))}
-                className={`flex items-center justify-start space-x-2 rounded-lg px-3 py-2 w-full hover:bg-accent hover:text-accent-foreground transition-colors ${activeSection === item.href.replace('#', '')
+                className={`flex items-center justify-start space-x-2 rounded-lg px-3 py-2 w-full hover:bg-accent hover:text-accent-foreground transition-colors ${
+                  activeSection === item.href.replace('#', '')
                     ? 'bg-accent/50 text-accent-foreground'
                     : 'text-muted-foreground'
-                  }`}
+                }`}
               >
                 <item.icon className="h-4 w-4" />
                 <span>{item.title}</span>
@@ -827,11 +904,6 @@ const SettingsPage = () => {
             <Card className="border-none shadow-lg bg-gradient-to-br from-white to-gray-50/50 dark:from-gray-900 dark:to-gray-800/50">
               <CardHeader>
                 <CardTitle>Subscription Plan</CardTitle>
-                <CardDescription>
-                  {profile?.role === 'owner' 
-                    ? 'Manage your subscription and billing information.'
-                    : 'View your subscription plan details.'}
-                </CardDescription>
               </CardHeader>
 
               <CardContent className="space-y-6">
@@ -850,16 +922,20 @@ const SettingsPage = () => {
                 <div className="space-y-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h3 className="text-lg font-medium">Subscription</h3>
-                      <p className="text-sm text-muted-foreground">
-                        Manage your subscription and billing information
+                      <h3 className="text-lg font-semibold">
+                        {subscription?.plan?.name || subscription?.items?.plan?.nickname || subscription?.items?.plan?.id || 'No active subscription'}
+                      </h3>
+                      <p className="text-sm text-gray-500">
+                        {subscription?.plan?.amount ? `$${(subscription.plan.amount / 100).toFixed(2)}` : 
+                         subscription?.items?.plan?.amount ? `$${(subscription.items.plan.amount / 100).toFixed(2)}` : ''} 
+                        / {subscription?.plan?.interval || subscription?.items?.plan?.interval || 'month'}
                       </p>
                     </div>
-                    {profile?.role === 'owner' && (
-                      <Button onClick={() => setShowPlanSelector(true)}>
-                        Change Plan
-                      </Button>
-                    )}
+                    <div className="flex items-center gap-4">
+                      <Badge variant={subscription?.status === 'active' ? 'default' : 'destructive'}>
+                        {subscription?.status || 'No subscription'}
+                      </Badge>
+                    </div>
                   </div>
 
                   {loadingPrices ? (
@@ -869,22 +945,38 @@ const SettingsPage = () => {
                   ) : error ? (
                     <div className="text-red-500 text-center py-4">{error}</div>
                   ) : (
-                    <>
-                      <div className="rounded-lg border p-4">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <h4 className="font-medium">Current Plan</h4>
-                            <p className="text-sm text-muted-foreground">
-                              {subscription?.plan?.name || 'No active subscription'}
-                            </p>
+                    <div>
+                      {subscription && (
+                        <div className="rounded-lg border p-4">
+                          <h4 className="font-semibold mb-4">Bandwidth Usage</h4>
+                          <div className="space-y-4">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="text-sm text-muted-foreground">Used This Month</p>
+                                <p className="font-medium">
+                                  {profile?.current_month_bandwidth_used ? `${(profile.current_month_bandwidth_used / (1024 * 1024 * 1024)).toFixed(1)} GB` : '0 GB'}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-sm text-muted-foreground">Monthly Limit</p>
+                                <p className="font-medium">
+                                  {profile?.monthly_bandwidth_limit ? `${(profile.monthly_bandwidth_limit / (1024 * 1024 * 1024)).toFixed(1)} GB` : '5 GB'}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
+                              <div 
+                                className="bg-primary h-2.5 rounded-full" 
+                                style={{ 
+                                  width: `${profile?.monthly_bandwidth_limit && profile?.current_month_bandwidth_used 
+                                    ? Math.min((profile.current_month_bandwidth_used / profile.monthly_bandwidth_limit) * 100, 100) 
+                                    : 0}%` 
+                                }}
+                              ></div>
+                            </div>
                           </div>
-                          {subscription && (
-                            <Badge variant={subscription.status === 'active' ? 'default' : 'secondary'}>
-                              {subscription.status}
-                            </Badge>
-                          )}
                         </div>
-                      </div>
+                      )}
 
                       <PlanSelectorDialog
                         open={showPlanSelector}
@@ -892,43 +984,41 @@ const SettingsPage = () => {
                         onSelectPlan={handleSelectPlan}
                         plans={subscriptionPlans}
                       />
-                    </>
+                    </div>
                   )}
                 </div>
-
-                {subscription && profile?.role === 'owner' && (
-                  <div className="rounded-lg border p-4">
-                    <h4 className="font-semibold mb-4">Payment Method</h4>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-4">
-                        <CreditCard className="h-6 w-6 text-muted-foreground" />
-                        <div>
-                          <p className="font-medium">•••• •••• •••• 4242</p>
-                          <p className="text-sm text-muted-foreground">Expires 12/24</p>
-                        </div>
-                      </div>
-                      <Button variant="ghost" size="sm">Edit</Button>
-                    </div>
-                  </div>
-                )}
               </CardContent>
 
-              {subscription && profile?.role === 'owner' && (
+              {profile?.role === 'owner' && (
                 <CardFooter className="flex justify-between">
-                  <Button 
-                    variant="outline" 
-                    className="text-red-400 hover:bg-destructive/90 hover:text-white"
-                    onClick={handleCancelSubscription}
-                    disabled={saving || subscription.cancel_at_period_end}
-                  >
-                    {saving ? (
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    ) : null}
-                    {subscription.cancel_at_period_end ? 'Subscription Cancelled' : 'Cancel Subscription'}
-                  </Button>
-                  <Button>
-                    Update Billing Info
-                  </Button>
+                  {subscription ? (
+                    <>
+                      <Button 
+                        variant="outline" 
+                        className="text-red-400 hover:bg-destructive/90 hover:text-white"
+                        onClick={handleCancelSubscription}
+                        disabled={saving || subscription.cancel_at_period_end}
+                      >
+                        {saving ? (
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        ) : null}
+                        {subscription.cancel_at_period_end ? 'Subscription Cancelled' : 'Cancel Subscription'}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => setShowPlanSelector(true)}
+                      >
+                        Change Plan
+                      </Button>
+                    </>
+                  ) : (
+                    <Button
+                      onClick={() => setShowPlanSelector(true)}
+                      className="w-full"
+                    >
+                      Add Subscription
+                    </Button>
+                  )}
                 </CardFooter>
               )}
             </Card>
@@ -1047,7 +1137,7 @@ const SettingsPage = () => {
         open={showPlanSelector}
         onOpenChange={setShowPlanSelector}
         onSelectPlan={handleSelectPlan}
-        currentPlanId={subscription?.plan.id}
+        currentPlanId={subscription?.items?.plan?.id}
         plans={subscriptionPlans}
       />
     </div>
