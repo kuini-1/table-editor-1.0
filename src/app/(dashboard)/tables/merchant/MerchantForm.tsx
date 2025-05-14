@@ -1,9 +1,9 @@
 "use client";
+
 import { useState } from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
@@ -15,26 +15,23 @@ import {
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { toast } from "sonner";
 
-// Import the schema from the page file
 import { merchantSchema } from "./schema";
 
 type MerchantFormData = z.infer<typeof merchantSchema>;
 
 interface MerchantFormProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  mode: "add" | "edit";
   initialData?: MerchantFormData;
   onSubmit: (data: MerchantFormData) => void;
+  onCancel: () => void;
+  mode: "add" | "edit" | "duplicate";
+  tableId: string;
 }
 
 export default function MerchantForm({
-  onOpenChange,
-  mode,
   initialData,
   onSubmit,
+  tableId,
 }: MerchantFormProps) {
   const [activeTab, setActiveTab] = useState("basic");
 
@@ -44,14 +41,7 @@ export default function MerchantForm({
   });
 
   const handleSubmit = (data: MerchantFormData) => {
-    try {
-      onSubmit(data);
-      onOpenChange(false);
-      form.reset();
-    } catch (error) {
-      console.error("Error submitting form:", error);
-      toast.error("Failed to submit form");
-    }
+    onSubmit(data);
   };
 
   // Define field labels and types
@@ -62,21 +52,21 @@ export default function MerchantForm({
     tab_name: { label: "Tab Name", type: "text" },
     dwneedmileage: { label: "Need Mileage", type: "number" },
     aitem_tblidx_0: { label: "Item ID", type: "number" },
-    aneeditemtblidx_0: { label: "Required Item ID", type: "number" },
-    abyneeditemstack_0: { label: "Required Item Stack", type: "number" },
-    adwneedzenny_0: { label: "Required Zenny", type: "number" },
+    aneeditemtblidx_0: { label: "Need Item ID", type: "number" },
+    abyneeditemstack_0: { label: "Need Item Stack", type: "number" },
+    adwneedzenny_0: { label: "Need Zenny", type: "number" },
     aitem_tblidx_1: { label: "Item ID", type: "number" },
-    aneeditemtblidx_1: { label: "Required Item ID", type: "number" },
-    abyneeditemstack_1: { label: "Required Item Stack", type: "number" },
-    adwneedzenny_1: { label: "Required Zenny", type: "number" },
+    aneeditemtblidx_1: { label: "Need Item ID", type: "number" },
+    abyneeditemstack_1: { label: "Need Item Stack", type: "number" },
+    adwneedzenny_1: { label: "Need Zenny", type: "number" },
     aitem_tblidx_2: { label: "Item ID", type: "number" },
-    aneeditemtblidx_2: { label: "Required Item ID", type: "number" },
-    abyneeditemstack_2: { label: "Required Item Stack", type: "number" },
-    adwneedzenny_2: { label: "Required Zenny", type: "number" },
+    aneeditemtblidx_2: { label: "Need Item ID", type: "number" },
+    abyneeditemstack_2: { label: "Need Item Stack", type: "number" },
+    adwneedzenny_2: { label: "Need Zenny", type: "number" },
     aitem_tblidx_3: { label: "Item ID", type: "number" },
-    aneeditemtblidx_3: { label: "Required Item ID", type: "number" },
-    abyneeditemstack_3: { label: "Required Item Stack", type: "number" },
-    adwneedzenny_3: { label: "Required Zenny", type: "number" },
+    aneeditemtblidx_3: { label: "Need Item ID", type: "number" },
+    abyneeditemstack_3: { label: "Need Item Stack", type: "number" },
+    adwneedzenny_3: { label: "Need Zenny", type: "number" },
   };
 
   // Define tabs with their sections
@@ -99,10 +89,10 @@ export default function MerchantForm({
     },
     {
       id: "items",
-      label: "Items",
-      sections: [
+      label: "Item Bundles",
+      itemSets: [
         {
-          label: "Item Set 1",
+          label: "Item Bundle 1",
           fields: [
             "aitem_tblidx_0",
             "aneeditemtblidx_0",
@@ -111,7 +101,7 @@ export default function MerchantForm({
           ]
         },
         {
-          label: "Item Set 2",
+          label: "Item Bundle 2",
           fields: [
             "aitem_tblidx_1",
             "aneeditemtblidx_1",
@@ -120,7 +110,7 @@ export default function MerchantForm({
           ]
         },
         {
-          label: "Item Set 3",
+          label: "Item Bundle 3",
           fields: [
             "aitem_tblidx_2",
             "aneeditemtblidx_2",
@@ -129,7 +119,7 @@ export default function MerchantForm({
           ]
         },
         {
-          label: "Item Set 4",
+          label: "Item Bundle 4",
           fields: [
             "aitem_tblidx_3",
             "aneeditemtblidx_3",
@@ -158,10 +148,10 @@ export default function MerchantForm({
             </FormLabel>
             <FormControl>
               <Input
-                {...formField}
-                name={String(formField.name)}
-                value={formField.value || ''}
-                type={config.type}
+                type={config.type === 'number' ? 'number' : 'text'}
+                name={formField.name}
+                value={String(formField.value ?? '')}
+                onChange={formField.onChange}
                 className="h-12 px-3 bg-gray-50 dark:bg-gray-800/50 border-2 border-gray-200 dark:border-gray-700 rounded-lg transition-all duration-200"
               />
             </FormControl>
@@ -175,67 +165,58 @@ export default function MerchantForm({
   // Function to render a section
   const renderSection = (section: { label: string; fields: string[] }) => {
     return (
-      <div key={section.label} className="mb-6 rounded-lg border-2 border-gray-200 dark:border-gray-700 p-4 w-full">
+      <div key={section.label} className="mb-6 rounded-lg border-2 border-gray-200 dark:border-gray-700 p-4">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
           {section.label}
         </h3>
-        <div className="grid grid-cols-2 gap-x-4 gap-y-6">
+        <div className="grid grid-cols-2 gap-4">
           {section.fields.map((field) => renderField(field))}
         </div>
       </div>
     );
   };
 
+  // Function to render an item set
+  const renderItemSet = (itemSet: { label: string; fields: string[] }) => {
+    return (
+      <div key={itemSet.label} className="mb-6 rounded-lg border-2 border-gray-200 dark:border-gray-700 p-4">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+          {itemSet.label}
+        </h3>
+        <div className="grid grid-cols-2 gap-4">
+          {itemSet.fields.map((field) => renderField(field))}
+        </div>
+      </div>
+    );
+  };
+
+  const basicTab = tabs.find(tab => tab.id === "basic");
+  const itemsTab = tabs.find(tab => tab.id === "items");
+
   return (
     <div className="flex flex-col h-full">
       <ScrollArea className="flex-1 px-6 py-4">
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6 pb-20">
+          <form 
+            onSubmit={form.handleSubmit(handleSubmit)} 
+            className="space-y-6"
+            data-testid={`merchant-form-${tableId}`}
+          >
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="grid grid-cols-2 mb-4">
-                {tabs.map((tab) => (
-                  <TabsTrigger 
-                    key={tab.id} 
-                    value={tab.id}
-                    className="flex-1 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900 data-[state=active]:text-indigo-600 dark:data-[state=active]:text-indigo-400"
-                  >
-                    {tab.label}
-                  </TabsTrigger>
-                ))}
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="basic">Basic Info</TabsTrigger>
+                <TabsTrigger value="items">Item Bundles</TabsTrigger>
               </TabsList>
-              {tabs.map((tab) => (
-                <TabsContent key={tab.id} value={tab.id} className="space-y-6">
-                  {tab.sections && (
-                    <div className="space-y-6">
-                      {tab.sections.map((section) => renderSection(section))}
-                    </div>
-                  )}
-                </TabsContent>
-              ))}
+              <TabsContent value="basic" className="space-y-4">
+                {basicTab?.sections?.map((section) => renderSection(section))}
+              </TabsContent>
+              <TabsContent value="items" className="space-y-4">
+                {itemsTab?.itemSets?.map((itemSet) => renderItemSet(itemSet))}
+              </TabsContent>
             </Tabs>
           </form>
         </Form>
       </ScrollArea>
-      
-      <div className="sticky bottom-0 px-6 py-4 border-t border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-900/80 backdrop-blur supports-[backdrop-filter]:bg-background/80">
-        <div className="flex gap-4 w-full">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            className="flex-1 border hover:bg-gray-50 dark:hover:bg-gray-800"
-          >
-            Cancel
-          </Button>
-          <Button
-            type="submit"
-            onClick={form.handleSubmit(handleSubmit)}
-            className="flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 text-white dark:text-white hover:from-purple-700 hover:to-indigo-700"
-          >
-            {mode === "add" ? "Add Merchant" : "Save Changes"}
-          </Button>
-        </div>
-      </div>
     </div>
   );
 } 

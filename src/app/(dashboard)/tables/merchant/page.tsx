@@ -1,58 +1,26 @@
 'use client';
 
 import { useState } from "react";
-import { z } from "zod";
 import { useSearchParams } from "next/navigation";
+import { useStore } from "@/lib/store";
+import { useTableData } from "@/hooks/useTableData";
+import { TableHeader } from '@/components/table/TableHeader';
+import { DataTable } from "@/components/table/DataTable";
+import { TablePagination } from '@/components/table/TablePagination';
+import { DeleteDialog, ImportDialog, useExport } from '@/components/table/TableDialogs';
 import {
   Sheet,
   SheetContent,
   SheetHeader,
   SheetTitle,
   SheetDescription,
+  SheetFooter,
 } from "@/components/ui/sheet";
-import { useTableData } from "@/hooks/useTableData";
-import { TableHeader } from '@/components/table/TableHeader';
-import { TablePagination } from '@/components/table/TablePagination';
-import { DataTable } from "@/components/table/DataTable";
-import { DeleteDialog, ImportDialog, useExport } from '@/components/table/TableDialogs';
-import { useStore } from "@/lib/store";
-import { merchantSchema } from "./schema";
-import MerchantForm from "./MerchantForm";
+import { Button } from "@/components/ui/button";
+import type { FormMode } from '@/components/table/ModularForm';
 import { ErrorDisplay } from '@/components/ErrorDisplay';
-
-type MerchantFormData = z.infer<typeof merchantSchema>;
-
-interface MerchantRow extends MerchantFormData {
-  id: string;
-}
-
-type FormMode = 'add' | 'edit' | 'duplicate';
-
-// Form theme configuration
-const formTheme = {
-  title: {
-    text: {
-      add: "Add New Merchant",
-      edit: "Edit Merchant",
-      duplicate: "Duplicate Merchant"
-    }
-  },
-  description: {
-    text: {
-      add: "Add a new merchant to the database.",
-      edit: "Edit the selected merchant's details.",
-      duplicate: "Create a new merchant based on the selected one."
-    }
-  },
-  button: {
-    text: {
-      add: "Add Merchant",
-      edit: "Save Changes",
-      duplicate: "Duplicate Entry"
-    },
-    className: "flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700",
-  },
-} as const;
+import MerchantForm from "./MerchantForm";
+import { columns, type MerchantRow } from "./schema";
 
 export default function MerchantPage() {
   const searchParams = useSearchParams();
@@ -64,72 +32,13 @@ export default function MerchantPage() {
     name: 'Merchant Table',
     type: 'merchant',
   } : undefined;
-  
+
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [formMode, setFormMode] = useState<FormMode>('add');
   const [selectedRow, setSelectedRow] = useState<MerchantRow | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
 
-  // Define columns for the data table
-  const columns = [
-    {
-      key: "tblidx",
-      label: "ID",
-      type: "number" as const,
-      validation: merchantSchema.shape.tblidx,
-    },
-    {
-      key: "wsznametext",
-      label: "Name",
-      type: "text" as const,
-      validation: merchantSchema.shape.wsznametext,
-    },
-    {
-      key: "bysell_type",
-      label: "Sell Type",
-      type: "number" as const,
-      validation: merchantSchema.shape.bysell_type,
-    },
-    {
-      key: "tab_name",
-      label: "Tab Name",
-      type: "text" as const,
-      validation: merchantSchema.shape.tab_name,
-    },
-    {
-      key: "dwneedmileage",
-      label: "Need Mileage",
-      type: "number" as const,
-      validation: merchantSchema.shape.dwneedmileage,
-    },
-    {
-      key: "aitem_tblidx_0",
-      label: "Item 1 ID",
-      type: "number" as const,
-      validation: merchantSchema.shape.aitem_tblidx_0,
-    },
-    {
-      key: "aneeditemtblidx_0",
-      label: "Need Item 1 ID",
-      type: "number" as const,
-      validation: merchantSchema.shape.aneeditemtblidx_0,
-    },
-    {
-      key: "abyneeditemstack_0",
-      label: "Need Item 1 Stack",
-      type: "number" as const,
-      validation: merchantSchema.shape.abyneeditemstack_0,
-    },
-    {
-      key: "adwneedzenny_0",
-      label: "Need Zenny 1",
-      type: "number" as const,
-      validation: merchantSchema.shape.adwneedzenny_0,
-    },
-  ];
-
-  // Use the custom hook to fetch and manage data
   const {
     data,
     error,
@@ -141,6 +50,7 @@ export default function MerchantPage() {
     handleAddRow,
     handleEditRow,
     handleDeleteRow,
+    handleBulkDelete,
     handleAddFilter,
     handleRemoveFilter,
     handlePageChange,
@@ -177,8 +87,8 @@ export default function MerchantPage() {
         filters={filters}
         selectedCount={selectedRows.size}
         onAddRow={() => {
-          setSelectedRow(null);
           setFormMode('add');
+          setSelectedRow(null);
           setIsFormOpen(true);
         }}
         onImport={() => setIsImportDialogOpen(true)}
@@ -186,7 +96,7 @@ export default function MerchantPage() {
         onRefresh={refreshData}
         onBulkDelete={() => {
           if (selectedRows.size > 0) {
-            handleDeleteRow(Array.from(selectedRows).join(','));
+            handleBulkDelete();
           }
         }}
         onAddFilter={handleAddFilter}
@@ -224,55 +134,81 @@ export default function MerchantPage() {
         onPageSizeChange={handlePageSizeChange}
       />
 
-      {/* Merchant Form */}
       <Sheet open={isFormOpen} onOpenChange={setIsFormOpen}>
         <SheetContent 
           side="right" 
-          className="w-[100vw] sm:w-[85vw] md:w-[75vw] lg:w-[65vw] xl:w-[50vw] bg-gray-900 border-gray-800 p-0"
+          className="w-[100vw] sm:w-[85vw] md:w-[75vw] lg:w-[65vw] xl:w-[50vw] bg-gray-900 border-gray-800 p-0 flex flex-col"
         >
           <SheetHeader className="px-6 py-4 border-b border-gray-200 dark:border-gray-800">
             <SheetTitle className="bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent text-2xl font-bold">
-              {formTheme.title.text[formMode]}
+              {formMode === 'add' ? 'Add New Merchant' : 
+               formMode === 'edit' ? 'Edit Merchant' : 
+               'Duplicate Merchant'}
             </SheetTitle>
             <SheetDescription className="text-gray-500 dark:text-gray-400">
-              {formTheme.description.text[formMode]}
+              {formMode === 'add' ? 'Create a new merchant with the details below.' :
+               formMode === 'edit' ? 'Modify the merchant details.' :
+               'Create a new merchant based on the selected one.'}
             </SheetDescription>
           </SheetHeader>
-          <MerchantForm
-            open={isFormOpen}
-            onOpenChange={setIsFormOpen}
-            mode={formMode === 'duplicate' ? 'add' : formMode}
-            initialData={selectedRow || undefined}
-            onSubmit={(data) => {
-              switch (formMode) {
-                case 'add':
-                  handleAddRow(data as MerchantRow);
-                  break;
-                case 'edit':
-                  if (selectedRow?.id) {
-                    handleEditRow(selectedRow.id, data as MerchantRow);
-                  }
-                  break;
-                case 'duplicate':
-                  handleAddRow(data as MerchantRow);
-                  break;
-              }
-              setIsFormOpen(false);
-            }}
-          />
+          
+          <div className="flex-1 overflow-y-auto">
+            <MerchantForm
+              initialData={selectedRow ?? undefined}
+              onSubmit={(data) => {
+                switch (formMode) {
+                  case 'add':
+                    handleAddRow(data);
+                    break;
+                  case 'edit':
+                    if (selectedRow?.id) {
+                      handleEditRow(selectedRow.id, data);
+                    }
+                    break;
+                  case 'duplicate':
+                    handleAddRow(data);
+                    break;
+                }
+                setIsFormOpen(false);
+              }}
+              onCancel={() => {
+                setSelectedRow(null);
+                setIsFormOpen(false);
+              }}
+              mode={formMode}
+              tableId={tableId}
+            />
+          </div>
+
+          <SheetFooter className="px-6 py-4 border-t border-gray-200 dark:border-gray-800">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setSelectedRow(null);
+                setIsFormOpen(false);
+              }}
+              className="flex-1"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              className="flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700"
+              onClick={() => {
+                const form = document.querySelector('form');
+                if (form) {
+                  form.requestSubmit();
+                }
+              }}
+            >
+              {formMode === 'add' ? 'Add Merchant' :
+               formMode === 'edit' ? 'Save Changes' :
+               'Duplicate Entry'}
+            </Button>
+          </SheetFooter>
         </SheetContent>
       </Sheet>
 
-      {/* Import Dialog */}
-      <ImportDialog
-        isOpen={isImportDialogOpen}
-        onClose={() => setIsImportDialogOpen(false)}
-        onSuccess={refreshData}
-        tableId={tableId}
-        tableName={tableName}
-      />
-
-      {/* Delete Confirmation Dialog */}
       <DeleteDialog
         isOpen={isDeleteDialogOpen}
         onClose={() => setIsDeleteDialogOpen(false)}
@@ -283,6 +219,14 @@ export default function MerchantPage() {
           }
         }}
         itemName={selectedRow?.wsznametext || "this merchant"}
+      />
+
+      <ImportDialog
+        isOpen={isImportDialogOpen}
+        onClose={() => setIsImportDialogOpen(false)}
+        onSuccess={refreshData}
+        tableId={tableId}
+        tableName={tableName}
       />
     </div>
   );
