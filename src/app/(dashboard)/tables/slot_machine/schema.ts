@@ -40,4 +40,22 @@ export const slotMachineSchema = z.object({
   aitemtblidx_9: z.coerce.number().min(0, 'Must be a positive number').nullable(),
   bystack_9: z.coerce.number().min(0, 'Must be a positive number').nullable(),
   wquantity_9: z.coerce.number().min(0, 'Must be a positive number').nullable(),
-}); 
+});
+
+export type SlotMachineFormData = z.infer<typeof slotMachineSchema>;
+
+export const columns = [
+  { key: 'tblidx', label: 'ID', type: 'number' as const, validation: slotMachineSchema.shape.tblidx },
+  { key: 'dwname', label: 'Name', type: 'text' as const, validation: slotMachineSchema.shape.dwname },
+  { key: 'wsznametext', label: 'Display Name', type: 'text' as const, validation: slotMachineSchema.shape.wsznametext },
+  { key: 'szfile_name', label: 'File Name', type: 'text' as const, validation: slotMachineSchema.shape.szfile_name },
+  { key: 'bycoin', label: 'Coin', type: 'number' as const, validation: slotMachineSchema.shape.bycoin },
+  { key: 'bonoff', label: 'On/Off', type: 'number' as const, validation: slotMachineSchema.shape.bonoff },
+  { key: 'bytype', label: 'Type', type: 'number' as const, validation: slotMachineSchema.shape.bytype },
+  { key: 'wfirstwincoin', label: 'First Win Coin', type: 'number' as const, validation: slotMachineSchema.shape.wfirstwincoin },
+  ...Array.from({ length: 10 }, (_, i) => [
+    { key: `aitemtblidx_${i}`, label: `Item ${i} ID`, type: 'number' as const, validation: slotMachineSchema.shape[`aitemtblidx_${i}` as keyof typeof slotMachineSchema.shape] },
+    { key: `bystack_${i}`, label: `Item ${i} Stack`, type: 'number' as const, validation: slotMachineSchema.shape[`bystack_${i}` as keyof typeof slotMachineSchema.shape] },
+    { key: `wquantity_${i}`, label: `Item ${i} Quantity`, type: 'number' as const, validation: slotMachineSchema.shape[`wquantity_${i}` as keyof typeof slotMachineSchema.shape] }
+  ]).flat(),
+]; 

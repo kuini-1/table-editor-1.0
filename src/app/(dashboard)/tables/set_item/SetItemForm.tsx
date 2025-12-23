@@ -1,167 +1,100 @@
-"use client";
-import { z } from "zod";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { toast } from "sonner";
+import { ModularForm } from "@/components/table/ModularForm";
+import type { FormMode } from "@/components/table/ModularForm";
+import type { SetItemFormData } from "./schema";
+import { columns, setItemSchema } from "./schema";
 
-// Import the schema from the page file
-import { setItemSchema } from "./schema";
+const setItemTabs = [
+  {
+    id: "basic",
+    label: "Basic Info",
+    sections: []
+  },
+  {
+    id: "options",
+    label: "Set Options",
+    sections: []
+  },
+  {
+    id: "items",
+    label: "Set Items",
+    sections: [
+      {
+        id: "set-items",
+        title: "Set Items",
+        description: "Configure set items",
+        columns: ["aitemtblidx_0", "aitemtblidx_1", "aitemtblidx_2"]
+      }
+    ]
+  }
+];
 
-type SetItemFormData = z.infer<typeof setItemSchema>;
+const setItemQuickViewSections = [
+  {
+    title: "Basic Information",
+    columns: ["tblidx", "bvalidity_able"]
+  },
+  {
+    title: "Set Options",
+    columns: ["semisetoption", "fullsetoption"]
+  }
+];
+
+const setItemQuickStats = [
+  { 
+    label: 'ID', 
+    column: 'tblidx',
+    formatValue: (value: unknown) => String(value ?? '—'),
+    color: 'mono'
+  },
+  { 
+    label: 'Semi Set Option', 
+    column: 'semisetoption',
+    formatValue: (value: unknown) => String(value ?? '—'),
+    color: 'blue'
+  },
+  { 
+    label: 'Full Set Option', 
+    column: 'fullsetoption',
+    formatValue: (value: unknown) => String(value ?? '—'),
+    color: 'purple'
+  },
+];
 
 interface SetItemFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  mode: "add" | "edit";
+  mode: FormMode;
   initialData?: SetItemFormData;
   onSubmit: (data: SetItemFormData) => void;
+  tableId: string;
 }
 
 export default function SetItemForm({
   mode,
   initialData,
   onSubmit,
+  tableId,
+  onOpenChange,
 }: SetItemFormProps) {
-  const form = useForm<SetItemFormData>({
-    resolver: zodResolver(setItemSchema),
-    defaultValues: initialData || {},
-  });
-
-  const handleSubmit = (data: SetItemFormData) => {
-    try {
-      onSubmit(data);
-      form.reset();
-      toast.success(mode === "add" ? "Set item added successfully" : "Set item updated successfully");
-    } catch (error) {
-      toast.error("Failed to save set item");
-      console.error(error);
-    }
-  };
-
-  // Define field labels and types
-  const fieldConfig: Record<string, { label: string; type: "text" | "number" | "boolean"; tab: string; section: string }> = {
-    tblidx: { label: "ID", type: "number", tab: "basic", section: "Basic Info" },
-    bvalidity_able: { label: "Validity", type: "boolean", tab: "basic", section: "Basic Info" },
-    semisetoption: { label: "Semi Set Option", type: "number", tab: "options", section: "Set Options" },
-    fullsetoption: { label: "Full Set Option", type: "number", tab: "options", section: "Set Options" },
-    aitemtblidx_0: { label: "Item 1 ID", type: "number", tab: "items", section: "Set Items" },
-    aitemtblidx_1: { label: "Item 2 ID", type: "number", tab: "items", section: "Set Items" },
-    aitemtblidx_2: { label: "Item 3 ID", type: "number", tab: "items", section: "Set Items" },
-  };
-
-  // Function to render a field based on its type
-  const renderField = (field: string) => {
-    const config = fieldConfig[field];
-    if (!config) return null;
-
-    if (config.type === 'boolean') {
-      return (
-        <FormField
-          key={field}
-          control={form.control}
-          name={field as keyof SetItemFormData}
-          render={({ field: formField }) => (
-            <FormItem className="space-y-2">
-              <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                {config.label}
-              </FormLabel>
-              <div className="flex items-center h-12 px-3 bg-gray-50 dark:bg-gray-800/50 border-2 border-gray-200 dark:border-gray-700 rounded-lg transition-all duration-200">
-                <FormControl>
-                  <Checkbox
-                    checked={!!formField.value}
-                    onCheckedChange={formField.onChange}
-                    className="h-5 w-5 rounded-md border-2 border-gray-300 dark:border-gray-600 data-[state=checked]:bg-indigo-500 data-[state=checked]:border-indigo-500"
-                  />
-                </FormControl>
-                <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">
-                  {formField.value ? 'Yes' : 'No'}
-                </span>
-              </div>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-      );
-    }
-
-    return (
-      <FormField
-        key={field}
-        control={form.control}
-        name={field as keyof SetItemFormData}
-        render={({ field: formField }) => (
-          <FormItem className="space-y-2">
-            <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              {config.label}
-            </FormLabel>
-            <FormControl>
-              <Input
-                type={config.type === 'number' ? 'number' : 'text'}
-                name={formField.name}
-                value={String(formField.value ?? '')}
-                onChange={formField.onChange}
-                className="h-12 px-3 bg-gray-50 dark:bg-gray-800/50 border-2 border-gray-200 dark:border-gray-700 rounded-lg transition-all duration-200"
-              />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
-    );
-  };
-
-  // Group fields by tab and section
-  const fieldsByTabAndSection = Object.entries(fieldConfig).reduce((acc, [field, config]) => {
-    if (!acc[config.tab]) {
-      acc[config.tab] = {};
-    }
-    if (!acc[config.tab][config.section]) {
-      acc[config.tab][config.section] = [];
-    }
-    acc[config.tab][config.section].push(field);
-    return acc;
-  }, {} as Record<string, Record<string, string[]>>);
-
   return (
-    <div className="flex flex-col h-full">
-      <ScrollArea className="flex-1 px-6 py-4">
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-            <Tabs defaultValue="basic" className="w-full">
-              <TabsList className="grid w-full grid-cols-3 mb-4">
-                <TabsTrigger value="basic">Basic Info</TabsTrigger>
-                <TabsTrigger value="options">Set Options</TabsTrigger>
-                <TabsTrigger value="items">Set Items</TabsTrigger>
-              </TabsList>
-
-              {Object.entries(fieldsByTabAndSection).map(([tab, sections]) => (
-                <TabsContent key={tab} value={tab} className="space-y-6">
-                  {Object.entries(sections).map(([section, fields]) => (
-                    <div key={section} className="space-y-4">
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{section}</h3>
-                      <div className="grid grid-cols-2 gap-4 p-4 border rounded-lg border-gray-200 dark:border-gray-700">
-                        {fields.map((field) => renderField(field))}
-                      </div>
-                    </div>
-                  ))}
-                </TabsContent>
-              ))}
-            </Tabs>
-          </form>
-        </Form>
-      </ScrollArea>
-    </div>
+    <ModularForm<SetItemFormData>
+      columns={columns}
+      initialData={initialData}
+      onSubmit={onSubmit}
+      onCancel={() => onOpenChange(false)}
+      mode={mode}
+      tableId={tableId}
+      tabs={setItemTabs}
+      quickViewSections={setItemQuickViewSections}
+      quickStats={setItemQuickStats}
+      customSchema={setItemSchema}
+      defaultTab="basic"
+      showFooter={true}
+      submitLabel={(mode) => {
+        if (mode === 'add') return 'Add Entry';
+        if (mode === 'edit') return 'Save Changes';
+        return 'Duplicate Entry';
+      }}
+    />
   );
-} 
+}

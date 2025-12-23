@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
 import type { ColumnFilter, ColumnFilters } from '@/components/table/TableFilter';
@@ -28,10 +28,14 @@ export function useTableData<T extends { id: string }>({ config, tableId }: UseT
   const [filters, setFilters] = useState<ColumnFilters>({});
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
   const [permissionCache, setPermissionCache] = useState<Record<string, { result: boolean; timestamp: number }>>({});
+  const [isFiltering, setIsFiltering] = useState(false);
 
   const supabase = createClient();
+  const filterDebounceTimer = useRef<NodeJS.Timeout | null>(null);
+  const pendingFiltersRef = useRef<ColumnFilters>({});
 
   const PERMISSION_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+  const FILTER_DEBOUNCE_MS = 400; // 400ms debounce for filter changes
 
   const checkPermission = useCallback(async (action: 'get' | 'put' | 'post' | 'delete'): Promise<boolean> => {
     if (!tableId) {
@@ -87,10 +91,11 @@ export function useTableData<T extends { id: string }>({ config, tableId }: UseT
     toast.error(errorMessage);
   };
 
-  const fetchData = useCallback(async (currentFilters = filters) => {
+  const fetchData = useCallback(async (currentFilters = filters, useExactCount = false) => {
     if (!tableId) {
       setError('No table ID provided');
       setLoading(false);
+      setIsFiltering(false);
       return;
     }
 
@@ -99,15 +104,20 @@ export function useTableData<T extends { id: string }>({ config, tableId }: UseT
       if (!hasPermission) {
         setError('You do not have permission to view this table');
         setLoading(false);
+        setIsFiltering(false);
         return;
       }
 
       setLoading(true);
       setError(null);
 
+      // Use estimated count for better performance, especially with filters
+      // Only use exact count when explicitly requested (e.g., for export)
+      const countMode = useExactCount ? 'exact' : 'estimated';
+
       let query = supabase
         .from(config.tableName)
-        .select('*', { count: 'exact' })
+        .select('*', { count: countMode })
         .eq('table_id', tableId)
         .range((page - 1) * pageSize, (page * pageSize) - 1);
 
@@ -185,6 +195,7 @@ export function useTableData<T extends { id: string }>({ config, tableId }: UseT
       handleError(err);
     } finally {
       setLoading(false);
+      setIsFiltering(false);
     }
   }, [filters, tableId, checkPermission, supabase, config.tableName, config.columns, page, pageSize]);
 
@@ -323,19 +334,45 @@ export function useTableData<T extends { id: string }>({ config, tableId }: UseT
   };
 
   const handleAddFilter = (column: string, operator: ColumnFilter['operator'], value: string) => {
+    // Clear existing debounce timer
+    if (filterDebounceTimer.current) {
+      clearTimeout(filterDebounceTimer.current);
+    }
+
+    // Update pending filters immediately for UI responsiveness
     const newFilters = {
       ...filters,
       [column]: { operator, value }
     };
-    setFilters(newFilters);
-    setPage(1);
+    pendingFiltersRef.current = newFilters;
+    setIsFiltering(true);
+
+    // Debounce the actual filter application
+    filterDebounceTimer.current = setTimeout(() => {
+      setFilters(pendingFiltersRef.current);
+      setPage(1);
+      filterDebounceTimer.current = null;
+    }, FILTER_DEBOUNCE_MS);
   };
 
   const handleRemoveFilter = (column: string) => {
+    // Clear existing debounce timer
+    if (filterDebounceTimer.current) {
+      clearTimeout(filterDebounceTimer.current);
+    }
+
+    // Update pending filters immediately
     const newFilters = { ...filters };
     delete newFilters[column];
-    setFilters(newFilters);
-    setPage(1);
+    pendingFiltersRef.current = newFilters;
+    setIsFiltering(true);
+
+    // Debounce the actual filter removal
+    filterDebounceTimer.current = setTimeout(() => {
+      setFilters(pendingFiltersRef.current);
+      setPage(1);
+      filterDebounceTimer.current = null;
+    }, FILTER_DEBOUNCE_MS);
   };
 
   const handlePageChange = (newPage: number) => {
@@ -376,6 +413,15 @@ export function useTableData<T extends { id: string }>({ config, tableId }: UseT
     }
   }, [tableId, page, pageSize, filters, fetchData]);
 
+  // Cleanup debounce timer on unmount
+  useEffect(() => {
+    return () => {
+      if (filterDebounceTimer.current) {
+        clearTimeout(filterDebounceTimer.current);
+      }
+    };
+  }, []);
+
   return {
     data,
     loading,
@@ -385,6 +431,7 @@ export function useTableData<T extends { id: string }>({ config, tableId }: UseT
     pageSize,
     filters,
     selectedRows,
+    isFiltering,
     handleAddRow,
     handleEditRow,
     handleDeleteRow,

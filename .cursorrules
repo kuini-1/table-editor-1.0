@@ -37,27 +37,27 @@ Finally, you should always use the official documentation of the library you are
 - For boolean fields in forms, use Checkbox components instead of text inputs for better user experience.
 - When adding new column types, update all relevant interfaces and components to maintain type safety.
 - When adding a new type to an interface, ensure it's consistently added to all related interfaces across components to avoid type errors.
+- Performance Optimization for Large Datasets: For tables with 70k+ rows, implement filter debouncing (300-500ms), use estimated counts instead of exact counts for better performance, add database indexes on commonly filtered columns, and show loading states during filter operations. Server-side pagination is already optimal - only load what's needed per page.
 
 # Scratchpad
 
-Current Task: Create Item Table Page
+Current Task: Performance Optimization for Large Tables (70k+ rows)
 
 Task Description:
-Create a new page for the item table similar to the exp page, with appropriate schema validation, form layout, and functionality.
+Optimize data fetching and filtering performance for large tables. Users need fast filtering and access to all data, but loading all at once is too heavy.
 
-Areas to Check:
-[ ] Examine exp page structure
-[ ] Create item schema with Zod validation
-[ ] Organize columns into logical sections/tabs
-[ ] Implement CRUD operations
-[ ] Set up import/export functionality
+Completed:
+[X] Added filter debouncing (400ms) to reduce query load
+[X] Optimized count queries (use estimated count by default)
+[X] Added loading states for filter operations
+[X] Created database index migration for commonly filtered columns
+[X] Updated TableHeader to show filtering state
+[X] Created performance analysis document
 
-Steps to Create:
-[ ] Create folder structure for item page
-[ ] Define Zod schema for item table
-[ ] Create page component with appropriate layout
-[ ] Organize form fields into logical tabs and sections
-[ ] Implement data fetching and manipulation
-[ ] Test CRUD operations
+Next Steps:
+[ ] Apply database migration to add indexes
+[ ] Test performance improvements with real data
+[ ] Consider query result caching for repeated filters
+[ ] Monitor performance metrics
 
-The item table has many columns including several boolean fields that will need proper styling with our updated checkbox components.
+Previous Task: Create Item Table Page - COMPLETED

@@ -133,7 +133,7 @@ export function TableForm<T extends BaseFormData>({
             </Button>
             <Button
               type="submit"
-              className="flex-1 bg-gradient-to-r from-indigo-500 to-purple-500 text-white dark:text-white hover:from-indigo-600 hover:to-purple-600 shadow-lg shadow-indigo-500/25 dark:shadow-indigo-900/50 transition-all duration-200"
+              className="flex-1 bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 !text-white dark:!text-white shadow-lg shadow-indigo-500/25 dark:shadow-indigo-900/50 transition-all duration-200"
             >
               {isEdit ? 'Update' : 'Create'}
             </Button>

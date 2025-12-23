@@ -1,141 +1,115 @@
-"use client";
+import { ModularForm } from "@/components/table/ModularForm";
+import type { FormMode } from "@/components/table/ModularForm";
+import type { SystemEffectFormData } from "./schema";
+import { columns, systemEffectSchema } from "./schema";
 
-import { z } from "zod";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { toast } from "sonner";
+const systemEffectTabs = [
+  {
+    id: "basic",
+    label: "Basic Info",
+    sections: [
+      {
+        id: "basic-info",
+        title: "Basic Information",
+        description: "Enter basic system effect information",
+        columns: ["effect_info_text"]
+      }
+    ]
+  },
+  {
+    id: "effects",
+    label: "Keep Effects",
+    sections: [
+      {
+        id: "keep-effects",
+        title: "Keep Effects",
+        description: "Configure keep effects",
+        columns: ["keep_effect_name", "bytarget_effect_position", "wkeep_animation_index"]
+      }
+    ]
+  },
+  {
+    id: "success",
+    label: "Success Effects",
+    sections: [
+      {
+        id: "success-effects",
+        title: "Success Effects",
+        description: "Configure success effects",
+        columns: ["szsuccess_effect_name", "bysuccess_projectile_type", "bysuccess_effect_position"]
+      },
+      {
+        id: "end-effects",
+        title: "End Effects",
+        description: "Configure end effects",
+        columns: ["szsuccess_end_effect_name", "byend_effect_position"]
+      }
+    ]
+  }
+];
 
-import { systemEffectSchema } from "./schema";
+const systemEffectQuickViewSections = [
+  {
+    title: "Basic Information",
+    columns: ["tblidx", "wszname", "byeffect_type", "byactive_effect_type", "effect_info_text"]
+  }
+];
 
-type SystemEffectFormData = z.infer<typeof systemEffectSchema>;
+const systemEffectQuickStats = [
+  { 
+    label: 'ID', 
+    column: 'tblidx',
+    formatValue: (value: unknown) => String(value ?? '—'),
+    color: 'mono'
+  },
+  { 
+    label: 'Name', 
+    column: 'wszname',
+    formatValue: (value: unknown) => String(value ?? '—')
+  },
+  { 
+    label: 'Effect Type', 
+    column: 'byeffect_type',
+    formatValue: (value: unknown) => String(value ?? '—'),
+    color: 'blue'
+  },
+];
 
 interface SystemEffectFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  mode: "add" | "edit";
+  mode: FormMode;
   initialData?: SystemEffectFormData;
   onSubmit: (data: SystemEffectFormData) => void;
+  tableId: string;
 }
 
 export default function SystemEffectForm({
   mode,
   initialData,
   onSubmit,
+  tableId,
+  onOpenChange,
 }: SystemEffectFormProps) {
-  const form = useForm<SystemEffectFormData>({
-    resolver: zodResolver(systemEffectSchema),
-    defaultValues: initialData || {},
-  });
-
-  const handleSubmit = (data: SystemEffectFormData) => {
-    try {
-      onSubmit(data);
-      form.reset();
-      toast.success(mode === "add" ? "System effect added successfully" : "System effect updated successfully");
-    } catch (error) {
-      toast.error("Failed to save system effect");
-      console.error(error);
-    }
-  };
-
-  // Define field labels and types
-  const fieldConfig: Record<string, { label: string; type: "text" | "number"; tab: string; section: string }> = {
-    tblidx: { label: "ID", type: "number", tab: "basic", section: "Basic Info" },
-    wszname: { label: "Name", type: "text", tab: "basic", section: "Basic Info" },
-    byeffect_type: { label: "Effect Type", type: "number", tab: "basic", section: "Basic Info" },
-    byactive_effect_type: { label: "Active Effect Type", type: "number", tab: "basic", section: "Basic Info" },
-    effect_info_text: { label: "Effect Info", type: "text", tab: "basic", section: "Basic Info" },
-    keep_effect_name: { label: "Keep Effect Name", type: "text", tab: "effects", section: "Keep Effects" },
-    bytarget_effect_position: { label: "Target Effect Position", type: "number", tab: "effects", section: "Keep Effects" },
-    wkeep_animation_index: { label: "Keep Animation Index", type: "number", tab: "effects", section: "Keep Effects" },
-    szsuccess_effect_name: { label: "Success Effect Name", type: "text", tab: "success", section: "Success Effects" },
-    bysuccess_projectile_type: { label: "Success Projectile Type", type: "number", tab: "success", section: "Success Effects" },
-    bysuccess_effect_position: { label: "Success Effect Position", type: "number", tab: "success", section: "Success Effects" },
-    szsuccess_end_effect_name: { label: "Success End Effect Name", type: "text", tab: "success", section: "End Effects" },
-    byend_effect_position: { label: "End Effect Position", type: "number", tab: "success", section: "End Effects" },
-  };
-
-  // Function to render a field
-  const renderField = (field: string) => {
-    const config = fieldConfig[field];
-    if (!config) return null;
-
-    return (
-      <FormField
-        key={field}
-        control={form.control}
-        name={field as keyof SystemEffectFormData}
-        render={({ field: formField }) => (
-          <FormItem className="space-y-2">
-            <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              {config.label}
-            </FormLabel>
-            <FormControl>
-              <Input
-                {...formField}
-                value={String(formField.value ?? '')}
-                type={config.type}
-                className="h-12 px-3 bg-gray-50 dark:bg-gray-800/50 border-2 border-gray-200 dark:border-gray-700 rounded-lg transition-all duration-200"
-              />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
-    );
-  };
-
-  // Group fields by tab and section
-  const fieldsByTabAndSection = Object.entries(fieldConfig).reduce((acc, [field, config]) => {
-    if (!acc[config.tab]) {
-      acc[config.tab] = {};
-    }
-    if (!acc[config.tab][config.section]) {
-      acc[config.tab][config.section] = [];
-    }
-    acc[config.tab][config.section].push(field);
-    return acc;
-  }, {} as Record<string, Record<string, string[]>>);
-
   return (
-    <div className="flex flex-col h-full">
-      <ScrollArea className="flex-1 px-6 py-4">
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-            <Tabs defaultValue="basic" className="w-full">
-              <TabsList className="grid w-full grid-cols-3 mb-4">
-                <TabsTrigger value="basic">Basic Info</TabsTrigger>
-                <TabsTrigger value="effects">Keep Effects</TabsTrigger>
-                <TabsTrigger value="success">Success Effects</TabsTrigger>
-              </TabsList>
-
-              {Object.entries(fieldsByTabAndSection).map(([tab, sections]) => (
-                <TabsContent key={tab} value={tab} className="space-y-6">
-                  {Object.entries(sections).map(([section, fields]) => (
-                    <div key={section} className="space-y-4">
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{section}</h3>
-                      <div className="grid grid-cols-2 gap-4 p-4 border rounded-lg border-gray-200 dark:border-gray-700">
-                        {fields.map((field) => renderField(field))}
-                      </div>
-                    </div>
-                  ))}
-                </TabsContent>
-              ))}
-            </Tabs>
-          </form>
-        </Form>
-      </ScrollArea>
-    </div>
+    <ModularForm<SystemEffectFormData>
+      columns={columns}
+      initialData={initialData}
+      onSubmit={onSubmit}
+      onCancel={() => onOpenChange(false)}
+      mode={mode}
+      tableId={tableId}
+      tabs={systemEffectTabs}
+      quickViewSections={systemEffectQuickViewSections}
+      quickStats={systemEffectQuickStats}
+      customSchema={systemEffectSchema}
+      defaultTab="basic"
+      showFooter={true}
+      submitLabel={(mode) => {
+        if (mode === 'add') return 'Add Entry';
+        if (mode === 'edit') return 'Save Changes';
+        return 'Duplicate Entry';
+      }}
+    />
   );
-} 
+}

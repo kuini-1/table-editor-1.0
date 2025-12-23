@@ -1,6 +1,6 @@
 import { ModularForm } from '@/components/table/ModularForm';
 import type { FormMode } from '@/components/table/ModularForm';
-import { type HlsItemFormData, columns } from './schema';
+import { type HlsItemFormData, columns, hlsItemSchema } from './schema';
 
 interface HlsFormProps {
   initialData?: Partial<HlsItemFormData>;
@@ -17,6 +17,23 @@ const hlsItemSections = [
     description: 'Enter the basic details for this HLS item',
     columns: ['tblidx', 'wszname', 'wszcjiproductid', 'szicon_name', 'whlsitemtype']
   }
+];
+
+const hlsQuickViewSections = [
+  {
+    title: 'Basic Information',
+    columns: ['tblidx', 'wszname', 'wszcjiproductid', 'szicon_name', 'whlsitemtype']
+  },
+  {
+    title: 'Sale Settings',
+    columns: ['bonsale', 'dwcash', 'bydiscount', 'bystackcount']
+  }
+];
+
+const hlsQuickStats = [
+  { label: 'ID', column: 'tblidx' },
+  { label: 'Item Type', column: 'whlsitemtype' },
+  { label: 'Cash', column: 'dwcash', color: 'purple' },
 ];
 
 const hlsItemTabs = [
@@ -129,7 +146,16 @@ export function HlsForm({
       tableId={tableId}
       sections={hlsItemSections}
       tabs={hlsItemTabs}
-      showFooter={false}
+      quickViewSections={hlsQuickViewSections}
+      quickStats={hlsQuickStats}
+      customSchema={hlsItemSchema}
+      defaultTab="duration"
+      showFooter={true}
+      submitLabel={(mode) => {
+        if (mode === 'add') return 'Add Entry';
+        if (mode === 'edit') return 'Save Changes';
+        return 'Duplicate Entry';
+      }}
     />
   );
 } 

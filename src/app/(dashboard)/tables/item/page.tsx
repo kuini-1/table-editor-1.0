@@ -8,7 +8,6 @@ import {
   SheetHeader,
   SheetTitle,
   SheetDescription,
-  SheetFooter,
 } from "@/components/ui/sheet";
 import { DataTable } from "@/components/table/DataTable";
 import { useTableData } from "@/hooks/useTableData";
@@ -20,7 +19,6 @@ import { itemTableSchema, columns } from "./schema";
 import ItemForm from "./ItemForm";
 import { ErrorDisplay } from '@/components/ErrorDisplay';
 import React from "react";
-import { Button } from "@/components/ui/button";
 
 type ItemTableFormData = z.infer<typeof itemTableSchema>;
 
@@ -55,6 +53,7 @@ export default function ItemTablePage() {
     pageSize,
     filters,
     selectedRows,
+    isFiltering,
     handleAddRow,
     handleEditRow,
     handleDeleteRow,
@@ -131,7 +130,7 @@ export default function ItemTablePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-900">
+    <div className="flex flex-col h-screen bg-gray-900">
       <TableHeader
         title={selectedTable?.name || 'Item Table'}
         description="Manage items and their properties"
@@ -145,9 +144,10 @@ export default function ItemTablePage() {
         onBulkDelete={handleBulkDelete}
         onAddFilter={handleAddFilter}
         onRemoveFilter={handleRemoveFilter}
+        isFiltering={isFiltering}
       />
       
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 overflow-hidden px-4 pb-4">
         <DataTable
           columns={columns}
           data={data}
@@ -170,10 +170,10 @@ export default function ItemTablePage() {
       <Sheet open={isFormOpen} onOpenChange={setIsFormOpen}>
         <SheetContent 
           side="right" 
-          className="w-[100vw] sm:w-[85vw] md:w-[75vw] lg:w-[65vw] xl:w-[50vw] bg-gray-900 border-gray-800 p-0 flex flex-col"
+          className="w-[100vw] sm:w-[95vw] md:w-[95vw] lg:w-[95vw] xl:w-[95vw] bg-gray-900 border-gray-800 p-0 flex flex-col max-w-[95vw]"
         >
-          <SheetHeader className="px-6 py-4 border-b border-gray-200 dark:border-gray-800">
-            <SheetTitle className="bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent text-2xl font-bold">
+          <SheetHeader className="px-6 py-4 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800">
+            <SheetTitle className="text-indigo-600 dark:text-indigo-400 text-2xl font-bold">
               {formMode === 'add' ? 'Add Item' : 
                formMode === 'edit' ? 'Edit Item' : 'Duplicate Item'}
             </SheetTitle>
@@ -184,42 +184,16 @@ export default function ItemTablePage() {
             </SheetDescription>
           </SheetHeader>
           
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-hidden">
             <ItemForm
               open={isFormOpen}
               onOpenChange={setIsFormOpen}
               mode={formMode}
               initialData={selectedRow || undefined}
               onSubmit={handleFormSubmit}
+              tableId={tableId}
             />
           </div>
-
-          <SheetFooter className="px-6 py-4 border-t border-gray-200 dark:border-gray-800">
-            <Button
-              variant="outline"
-              onClick={() => {
-                setSelectedRow(null);
-                setIsFormOpen(false);
-              }}
-              className="flex-1"
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              className="flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700"
-              onClick={() => {
-                const form = document.querySelector('form');
-                if (form) {
-                  form.requestSubmit();
-                }
-              }}
-            >
-              {formMode === 'add' ? 'Add Item' :
-               formMode === 'edit' ? 'Save Changes' :
-               'Duplicate Item'}
-            </Button>
-          </SheetFooter>
         </SheetContent>
       </Sheet>
 

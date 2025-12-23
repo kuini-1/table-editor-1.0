@@ -118,7 +118,7 @@ export default function HlsItemPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-900">
+    <div className="flex flex-col h-screen bg-gray-900">
       <TableHeader
         title={selectedTable?.name || 'HLS Item Table'}
         description="Manage HLS items and their properties"
@@ -137,7 +137,7 @@ export default function HlsItemPage() {
         onRemoveFilter={handleRemoveFilter}
       />
 
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 overflow-hidden px-4 pb-4">
         <DataTable
           columns={columns}
           data={data}
@@ -171,10 +171,10 @@ export default function HlsItemPage() {
       <Sheet open={isFormOpen} onOpenChange={setIsFormOpen}>
         <SheetContent 
           side="right" 
-          className="w-[100vw] sm:w-[85vw] md:w-[75vw] lg:w-[65vw] xl:w-[50vw] bg-gray-900 border-gray-800 p-0 flex flex-col"
+          className="w-[100vw] sm:w-[95vw] md:w-[95vw] lg:w-[95vw] xl:w-[95vw] bg-gray-900 border-gray-800 p-0 flex flex-col max-w-[95vw]"
         >
           <SheetHeader className="px-6 py-4 border-b border-gray-200 dark:border-gray-800">
-            <SheetTitle className="bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent text-2xl font-bold">
+            <SheetTitle className="text-indigo-600 dark:text-indigo-400 text-2xl font-bold">
               {formMode === 'add' ? 'Add HLS Item' : 
                formMode === 'edit' ? 'Edit HLS Item' : 
                'Duplicate HLS Item'}
@@ -228,7 +228,7 @@ export default function HlsItemPage() {
             </Button>
             <Button
               type="submit"
-              className="flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700"
+              className="flex-1 bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 !text-white dark:!text-white"
               onClick={() => {
                 const form = document.querySelector('form');
                 if (form) {

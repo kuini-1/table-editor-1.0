@@ -23,6 +23,7 @@ interface TableHeaderProps {
   onAddFilter: (column: string, operator: ColumnFilter['operator'], value: string) => void;
   onRemoveFilter: (column: string) => void;
   showExport?: boolean;
+  isFiltering?: boolean;
 }
 
 export function TableHeader({
@@ -39,6 +40,7 @@ export function TableHeader({
   onAddFilter,
   onRemoveFilter,
   showExport = true,
+  isFiltering = false,
 }: TableHeaderProps) {
   return (
     <div className="sticky top-0 z-50 w-full border-b border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-900/80 backdrop-blur-lg">
@@ -46,7 +48,7 @@ export function TableHeader({
         <div className="flex flex-col gap-4">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             <div>
-              <h1 className="text-2xl font-semibold bg-gradient-to-r from-gray-900 to-gray-600 dark:from-gray-100 dark:to-gray-400 bg-clip-text text-transparent">
+              <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
                 {title}
               </h1>
               <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -93,13 +95,18 @@ export function TableHeader({
                     Export
                   </Button>
                 )}
-                <div className="w-full">
+                <div className="w-full relative">
                   <TableFilter
                     columns={columns}
                     filters={filters}
                     onAddFilter={onAddFilter}
                     onRemoveFilter={onRemoveFilter}
                   />
+                  {isFiltering && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-white/50 dark:bg-gray-900/50 rounded-md pointer-events-none">
+                      <RefreshCcw className="h-4 w-4 animate-spin text-indigo-600 dark:text-indigo-400" />
+                    </div>
+                  )}
                 </div>
                 <Button
                   variant="outline"
@@ -111,7 +118,7 @@ export function TableHeader({
                 </Button>
                 <Button
                   onClick={onAddRow}
-                  className="col-span-2 md:col-span-4 lg:col-span-1 flex items-center justify-center gap-2 w-full bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white dark:text-white shadow-lg shadow-indigo-500/25 dark:shadow-indigo-900/50 transition-all duration-200"
+                  className="col-span-2 md:col-span-4 lg:col-span-1 flex items-center justify-center gap-2 w-full bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 !text-white dark:!text-white shadow-lg shadow-indigo-500/25 dark:shadow-indigo-900/50 transition-all duration-200"
                 >
                   <Plus className="h-4 w-4" />
                   Add Row

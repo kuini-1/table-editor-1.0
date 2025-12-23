@@ -173,7 +173,7 @@ export function TableFilter({
           </div>
           <Button 
             onClick={handleAddFilter}
-            className="w-full bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white dark:text-white"
+            className="w-full bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 !text-white dark:!text-white"
             disabled={!selectedColumn || (!value.trim() && selectedColumnType !== 'boolean')}
           >
             Add Filter

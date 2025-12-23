@@ -39,8 +39,8 @@ export function DataTable<T extends { id: string }>({
   const isIndeterminate = !isAllSelected && data.some(row => selectedRows.has(row.id));
 
   return (
-    <div className="rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-xl">
-      <div className="relative max-h-[calc(100vh-16rem)] overflow-auto">
+    <div className="rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-xl h-full flex flex-col">
+      <div className="relative flex-1 overflow-auto">
         <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-800">
           <thead className="sticky top-0 z-30">
             <tr className="bg-gray-50/50 dark:bg-gray-800/50 backdrop-blur-sm">

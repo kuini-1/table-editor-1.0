@@ -34,4 +34,28 @@ export const itemOptionSchema = z.object({
   bappliedinpercent_3: z.boolean().optional(),
   nvalue_3: z.number().optional(),
   byscouterinfo_3: z.number().optional(),
-}); 
+});
+
+export type ItemOptionFormData = z.infer<typeof itemOptionSchema>;
+
+export const columns = [
+  { key: 'tblidx', label: 'ID', type: 'number' as const, validation: itemOptionSchema.shape.tblidx },
+  { key: 'wszoption_name', label: 'Option Name', type: 'text' as const, validation: itemOptionSchema.shape.wszoption_name },
+  { key: 'bvalidity_able', label: 'Validity', type: 'number' as const, validation: itemOptionSchema.shape.bvalidity_able },
+  { key: 'byoption_rank', label: 'Option Rank', type: 'number' as const, validation: itemOptionSchema.shape.byoption_rank },
+  { key: 'byitem_group', label: 'Item Group', type: 'number' as const, validation: itemOptionSchema.shape.byitem_group },
+  { key: 'bymaxquality', label: 'Max Quality', type: 'number' as const, validation: itemOptionSchema.shape.bymaxquality },
+  { key: 'byquality', label: 'Quality', type: 'number' as const, validation: itemOptionSchema.shape.byquality },
+  { key: 'byqualityindex', label: 'Quality Index', type: 'number' as const, validation: itemOptionSchema.shape.byqualityindex },
+  { key: 'dwcost', label: 'Cost', type: 'number' as const, validation: itemOptionSchema.shape.dwcost },
+  { key: 'bylevel', label: 'Level', type: 'number' as const, validation: itemOptionSchema.shape.bylevel },
+  { key: 'activeeffect', label: 'Active Effect', type: 'number' as const, validation: itemOptionSchema.shape.activeeffect },
+  { key: 'factiverate', label: 'Active Rate', type: 'number' as const, validation: itemOptionSchema.shape.factiverate },
+  { key: 'sznote', label: 'Note', type: 'text' as const, validation: itemOptionSchema.shape.sznote },
+  ...Array.from({ length: 4 }, (_, i) => [
+    { key: `system_effect_${i}`, label: `System Effect ${i}`, type: 'text' as const, validation: itemOptionSchema.shape[`system_effect_${i}` as keyof typeof itemOptionSchema.shape] },
+    { key: `bappliedinpercent_${i}`, label: `Applied in Percent ${i}`, type: 'boolean' as const, validation: itemOptionSchema.shape[`bappliedinpercent_${i}` as keyof typeof itemOptionSchema.shape] },
+    { key: `nvalue_${i}`, label: `Value ${i}`, type: 'number' as const, validation: itemOptionSchema.shape[`nvalue_${i}` as keyof typeof itemOptionSchema.shape] },
+    { key: `byscouterinfo_${i}`, label: `Scouter Info ${i}`, type: 'number' as const, validation: itemOptionSchema.shape[`byscouterinfo_${i}` as keyof typeof itemOptionSchema.shape] }
+  ]).flat(),
+]; 

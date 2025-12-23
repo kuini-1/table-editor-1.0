@@ -30,7 +30,7 @@ export default function NotFound() {
         <div className="space-y-2">
           {isTablePage ? (
             <>
-              <h1 className="text-7xl font-bold bg-gradient-to-r from-blue-500 to-teal-500 bg-clip-text text-transparent py-2">
+              <h1 className="text-7xl font-bold text-indigo-600 dark:text-indigo-400 py-2">
                 Coming Soon
               </h1>
               <h2 className="text-3xl font-semibold text-gray-900 dark:text-gray-100">
@@ -43,7 +43,7 @@ export default function NotFound() {
             </>
           ) : (
             <>
-              <h1 className="text-7xl font-bold bg-gradient-to-r from-indigo-500 to-purple-500 bg-clip-text text-transparent">
+              <h1 className="text-7xl font-bold text-indigo-600 dark:text-indigo-400">
                 404
               </h1>
               <h2 className="text-3xl font-semibold text-gray-900 dark:text-gray-100">
@@ -61,9 +61,9 @@ export default function NotFound() {
           onClick={handleNavigation}
           className={`${
             isTablePage 
-              ? 'bg-gradient-to-r from-blue-500 to-teal-500 hover:from-blue-600 hover:to-teal-600'
-              : 'bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600'
-          } text-white shadow-lg shadow-indigo-500/25 dark:shadow-indigo-900/50 transition-all duration-200 mt-5`}
+              ? 'bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600'
+              : 'bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600'
+          } !text-white dark:!text-white shadow-lg shadow-indigo-500/25 dark:shadow-indigo-900/50 transition-all duration-200 mt-5`}
         >
           {hasPreviousPage ? (
             <>

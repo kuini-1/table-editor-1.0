@@ -1,6 +1,9 @@
 import { z } from "zod";
 
 export const worldSchema = z.object({
+  table_id: z.string().uuid(),
+  created_at: z.string().optional(),
+  updated_at: z.string().optional(),
   tblidx: z.number().nullable(),
   szname: z.string().nullable(),
   wszname: z.string().nullable(),
@@ -119,4 +122,70 @@ export const worldSchema = z.object({
   abydragonballdroprate_3: z.number().nullable(),
   abydragonballhaverate_4: z.number().nullable(),
   abydragonballdroprate_4: z.number().nullable(),
-}); 
+});
+
+export type WorldFormData = z.infer<typeof worldSchema> & { table_id: string };
+
+// Helper to create coordinate columns
+const createCoordColumns = (prefix: string, label: string) => [
+  { key: `${prefix}_x`, label: `${label} X`, type: 'number' as const, validation: worldSchema.shape[`${prefix}_x` as keyof typeof worldSchema.shape] },
+  { key: `${prefix}_y`, label: `${label} Y`, type: 'number' as const, validation: worldSchema.shape[`${prefix}_y` as keyof typeof worldSchema.shape] },
+  { key: `${prefix}_z`, label: `${label} Z`, type: 'number' as const, validation: worldSchema.shape[`${prefix}_z` as keyof typeof worldSchema.shape] },
+];
+
+export const columns = [
+  { key: 'tblidx', label: 'ID', type: 'number' as const, validation: worldSchema.shape.tblidx },
+  { key: 'szname', label: 'Name', type: 'text' as const, validation: worldSchema.shape.szname },
+  { key: 'wszname', label: 'Wide Name', type: 'text' as const, validation: worldSchema.shape.wszname },
+  { key: 'bdynamic', label: 'Dynamic', type: 'boolean' as const, validation: worldSchema.shape.bdynamic },
+  { key: 'ncreatecount', label: 'Create Count', type: 'number' as const, validation: worldSchema.shape.ncreatecount },
+  { key: 'dwdynamiccreatecountsharegroup', label: 'Dynamic Create Count Share Group', type: 'number' as const, validation: worldSchema.shape.dwdynamiccreatecountsharegroup },
+  { key: 'bydoortype', label: 'Door Type', type: 'number' as const, validation: worldSchema.shape.bydoortype },
+  { key: 'dwdestroytimeinmillisec', label: 'Destroy Time (ms)', type: 'number' as const, validation: worldSchema.shape.dwdestroytimeinmillisec },
+  { key: 'wszmobspawn_table_name', label: 'Mob Spawn Table', type: 'text' as const, validation: worldSchema.shape.wszmobspawn_table_name },
+  { key: 'wsznpcspawn_table_name', label: 'NPC Spawn Table', type: 'text' as const, validation: worldSchema.shape.wsznpcspawn_table_name },
+  { key: 'wszobjspawn_table_name', label: 'Object Spawn Table', type: 'text' as const, validation: worldSchema.shape.wszobjspawn_table_name },
+  ...createCoordColumns('vstart', 'Start'),
+  ...createCoordColumns('vend', 'End'),
+  ...createCoordColumns('vstandardloc', 'Standard Location'),
+  ...createCoordColumns('vbattlestartloc', 'Battle Start Location'),
+  ...createCoordColumns('vbattleendloc', 'Battle End Location'),
+  ...createCoordColumns('vbattlestart2loc', 'Battle Start 2 Location'),
+  ...createCoordColumns('vbattleend2loc', 'Battle End 2 Location'),
+  ...createCoordColumns('voutsidebattlestartloc', 'Outside Battle Start Location'),
+  ...createCoordColumns('voutsidebattleendloc', 'Outside Battle End Location'),
+  ...createCoordColumns('vspectatorstartloc', 'Spectator Start Location'),
+  ...createCoordColumns('vspectatorendloc', 'Spectator End Location'),
+  ...createCoordColumns('vdefaultloc', 'Default Location'),
+  ...createCoordColumns('vdefaultdir', 'Default Direction'),
+  ...createCoordColumns('vstart1loc', 'Start 1 Location'),
+  ...createCoordColumns('vstart1dir', 'Start 1 Direction'),
+  ...createCoordColumns('vstart2loc', 'Start 2 Location'),
+  ...createCoordColumns('vstart2dir', 'Start 2 Direction'),
+  ...createCoordColumns('vwaitingpoint1loc', 'Waiting Point 1 Location'),
+  ...createCoordColumns('vwaitingpoint1dir', 'Waiting Point 1 Direction'),
+  ...createCoordColumns('vwaitingpoint2loc', 'Waiting Point 2 Location'),
+  ...createCoordColumns('vwaitingpoint2dir', 'Waiting Point 2 Direction'),
+  { key: 'fsplitsize', label: 'Split Size', type: 'number' as const, validation: worldSchema.shape.fsplitsize },
+  { key: 'bnight_able', label: 'Night Enabled', type: 'boolean' as const, validation: worldSchema.shape.bnight_able },
+  { key: 'bystatic_time', label: 'Static Time', type: 'number' as const, validation: worldSchema.shape.bystatic_time },
+  { key: 'wfuncflag', label: 'Function Flag', type: 'number' as const, validation: worldSchema.shape.wfuncflag },
+  { key: 'byworldruletype', label: 'World Rule Type', type: 'number' as const, validation: worldSchema.shape.byworldruletype },
+  { key: 'worldruletbldx', label: 'World Rule Table ID', type: 'number' as const, validation: worldSchema.shape.worldruletbldx },
+  { key: 'outworldtblidx', label: 'Outworld Table ID', type: 'number' as const, validation: worldSchema.shape.outworldtblidx },
+  ...createCoordColumns('outworldloc', 'Outworld Location'),
+  ...createCoordColumns('outworlddir', 'Outworld Direction'),
+  { key: 'wszresourcefolder', label: 'Resource Folder', type: 'text' as const, validation: worldSchema.shape.wszresourcefolder },
+  { key: 'fbgmresttime', label: 'BGM Rest Time', type: 'number' as const, validation: worldSchema.shape.fbgmresttime },
+  { key: 'dwworldresourceid', label: 'World Resource ID', type: 'number' as const, validation: worldSchema.shape.dwworldresourceid },
+  { key: 'ffreecamera_height', label: 'Free Camera Height', type: 'number' as const, validation: worldSchema.shape.ffreecamera_height },
+  { key: 'wszenterresourceflash', label: 'Enter Resource Flash', type: 'text' as const, validation: worldSchema.shape.wszenterresourceflash },
+  { key: 'wszleaveresourceflash', label: 'Leave Resource Flash', type: 'text' as const, validation: worldSchema.shape.wszleaveresourceflash },
+  { key: 'wpslinkindex', label: 'PS Link Index', type: 'number' as const, validation: worldSchema.shape.wpslinkindex },
+  { key: 'bystartpointrange', label: 'Start Point Range', type: 'number' as const, validation: worldSchema.shape.bystartpointrange },
+  { key: 'dwprohibition_bit_flag', label: 'Prohibition Bit Flag', type: 'number' as const, validation: worldSchema.shape.dwprohibition_bit_flag },
+  ...Array.from({ length: 5 }, (_, i) => [
+    { key: `abydragonballhaverate_${i}`, label: `Dragon Ball Have Rate ${i}`, type: 'number' as const, validation: worldSchema.shape[`abydragonballhaverate_${i}` as keyof typeof worldSchema.shape] },
+    { key: `abydragonballdroprate_${i}`, label: `Dragon Ball Drop Rate ${i}`, type: 'number' as const, validation: worldSchema.shape[`abydragonballdroprate_${i}` as keyof typeof worldSchema.shape] }
+  ]).flat(),
+]; 

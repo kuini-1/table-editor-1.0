@@ -14,14 +14,12 @@ import {
   SheetHeader,
   SheetTitle,
   SheetDescription,
-  SheetFooter,
 } from "@/components/ui/sheet";
 import { ErrorDisplay } from '@/components/ErrorDisplay';
 import { slotMachineSchema } from './schema';
 import { SlotMachineForm } from './SlotMachineForm';
 import type { FormMode } from '@/components/table/ModularForm';
 import { z } from 'zod';
-import { Button } from '@/components/ui/button';
 
 type SlotMachineFormData = z.infer<typeof slotMachineSchema>;
 
@@ -113,7 +111,7 @@ export default function SlotMachinePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-900">
+    <div className="flex flex-col h-screen bg-gray-900">
       <TableHeader
         title={selectedTable?.name || 'Slot Machine Table'}
         description="Manage slot machines and their properties"
@@ -137,7 +135,7 @@ export default function SlotMachinePage() {
         onRemoveFilter={handleRemoveFilter}
       />
 
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 overflow-hidden px-4 pb-4">
         <DataTable
           columns={columns}
           data={data}
@@ -171,10 +169,10 @@ export default function SlotMachinePage() {
       <Sheet open={isFormOpen} onOpenChange={setIsFormOpen}>
         <SheetContent 
           side="right" 
-          className="w-[100vw] sm:w-[85vw] md:w-[75vw] lg:w-[65vw] xl:w-[50vw] bg-gray-900 border-gray-800 p-0 flex flex-col"
+          className="w-[100vw] sm:w-[95vw] md:w-[95vw] lg:w-[95vw] xl:w-[95vw] bg-gray-900 border-gray-800 p-0 flex flex-col max-w-[95vw]"
         >
           <SheetHeader className="px-6 py-4 border-b border-gray-200 dark:border-gray-800">
-            <SheetTitle className="bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent text-2xl font-bold">
+            <SheetTitle className="text-indigo-600 dark:text-indigo-400 text-2xl font-bold">
               {formTheme.title.text[formMode]}
             </SheetTitle>
             <SheetDescription className="text-gray-500 dark:text-gray-400">
@@ -182,11 +180,11 @@ export default function SlotMachinePage() {
             </SheetDescription>
           </SheetHeader>
           
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-hidden">
             <SlotMachineForm
               open={isFormOpen}
               onOpenChange={setIsFormOpen}
-              mode={formMode === 'duplicate' ? 'add' : formMode}
+              mode={formMode}
               initialData={selectedRow || undefined}
               onSubmit={(data) => {
                 switch (formMode) {
@@ -204,35 +202,9 @@ export default function SlotMachinePage() {
                 }
                 setIsFormOpen(false);
               }}
+              tableId={tableId}
             />
           </div>
-
-          <SheetFooter className="px-6 py-4 border-t border-gray-200 dark:border-gray-800">
-            <Button
-              variant="outline"
-              onClick={() => {
-                setSelectedRow(null);
-                setIsFormOpen(false);
-              }}
-              className="flex-1"
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              className="flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700"
-              onClick={() => {
-                const form = document.querySelector('form');
-                if (form) {
-                  form.requestSubmit();
-                }
-              }}
-            >
-              {formMode === 'add' ? 'Add Slot Machine' :
-               formMode === 'edit' ? 'Save Changes' :
-               'Duplicate Slot Machine'}
-            </Button>
-          </SheetFooter>
         </SheetContent>
       </Sheet>
 

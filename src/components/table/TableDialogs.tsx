@@ -214,7 +214,7 @@ export function ImportDialog({
           {file && (
             <Button 
               onClick={handleImport}
-              className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700"
+              className="bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 !text-white dark:!text-white"
               disabled={isLoading || !!error}
             >
               {isLoading ? "Importing..." : "Import"}

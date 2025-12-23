@@ -1,9 +1,8 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
-import { RefreshCcw, ExternalLink, MoreVertical } from 'lucide-react';
+import { RefreshCcw, MoreVertical, Pin, PinOff, FileText } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -142,6 +141,7 @@ export default function TablesPage() {
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
   const [cachedTables, setCachedTables] = useState<CachedTables | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [pinnedTableIds, setPinnedTableIds] = useState<Set<string>>(new Set());
   const supabase = createClient();
   const [isLoadingMoreLogs, setIsLoadingMoreLogs] = useState(false);
   const [hasMoreLogs, setHasMoreLogs] = useState(true);
@@ -157,6 +157,19 @@ export default function TablesPage() {
     ACTIVITY_LOGS: 2 * 60 * 1000, // 2 minutes
     SUB_ACCOUNTS: 5 * 60 * 1000 // 5 minutes
   };
+
+  // Load pinned table IDs from localStorage on mount
+  useEffect(() => {
+    const storedPinnedIds = localStorage.getItem('pinnedTableIds');
+    if (storedPinnedIds) {
+      try {
+        const parsedIds = JSON.parse(storedPinnedIds);
+        setPinnedTableIds(new Set(Array.isArray(parsedIds) ? parsedIds : []));
+      } catch (error) {
+        console.error('Error parsing pinned table IDs:', error);
+      }
+    }
+  }, []);
 
   useEffect(() => {
     const initProfile = async () => {
@@ -545,10 +558,40 @@ export default function TablesPage() {
     }
   }, [handleActivityLogScroll]);
 
+  // Toggle pin status for a table
+  const togglePinTable = (tableId: string, e?: React.MouseEvent) => {
+    e?.stopPropagation(); // Stop event from bubbling up to row click
+    
+    setPinnedTableIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(tableId)) {
+        newSet.delete(tableId);
+      } else {
+        newSet.add(tableId);
+      }
+      
+      // Save to localStorage
+      localStorage.setItem('pinnedTableIds', JSON.stringify(Array.from(newSet)));
+      
+      return newSet;
+    });
+  };
+
   // Filter tables based on search term
   const filteredTables = tables.filter(table => 
     table.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  // Sort tables: pinned first, then by name
+  const sortedTables = [...filteredTables].sort((a, b) => {
+    const aPinned = pinnedTableIds.has(a.id);
+    const bPinned = pinnedTableIds.has(b.id);
+    
+    if (aPinned && !bPinned) return -1;
+    if (!aPinned && bPinned) return 1;
+    
+    return a.name.localeCompare(b.name);
+  });
 
   if (loading) {
     return (
@@ -641,13 +684,15 @@ export default function TablesPage() {
                       </tr>
                     </thead>
                     <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                      {filteredTables.map((table) => (
+                      {sortedTables.map((table) => {
+                        const isPinned = pinnedTableIds.has(table.id);
+                        return (
                         <tr 
                           key={table.id} 
                           className={`hover:bg-gray-50/80 dark:hover:bg-gray-700/50 cursor-pointer ${
                             selectedTable?.id === table.id ? 'bg-indigo-50/50 dark:bg-indigo-900/20' : ''
-                          }`}
-                          onClick={() => setSelectedTable(table)}
+                          } ${isPinned ? 'bg-amber-50/30 dark:bg-amber-900/10' : ''}`}
+                          onClick={() => window.open(`/tables/${table.type}?id=${table.id}`, '_blank')}
                         >
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
                             {table.name}
@@ -665,13 +710,29 @@ export default function TablesPage() {
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                asChild
-                                className="h-8 w-8 p-0"
+                                onClick={(e) => togglePinTable(table.id, e)}
+                                className={`h-8 w-8 p-0 ${isPinned ? 'text-amber-500 dark:text-amber-400' : ''}`}
+                                title={isPinned ? 'Unpin table' : 'Pin table'}
                               >
-                                <Link href={`/tables/${table.type}?id=${table.id}`} target="_blank">
-                                  <ExternalLink className="h-4 w-4" />
-                                  <span className="sr-only">Open in new tab</span>
-                                </Link>
+                                {isPinned ? (
+                                  <Pin className="h-4 w-4 fill-current" />
+                                ) : (
+                                  <PinOff className="h-4 w-4" />
+                                )}
+                                <span className="sr-only">{isPinned ? 'Unpin table' : 'Pin table'}</span>
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedTable(table);
+                                }}
+                                className={`h-8 w-8 p-0 ${selectedTable?.id === table.id ? 'text-indigo-600 dark:text-indigo-400' : ''}`}
+                                title="View activity log"
+                              >
+                                <FileText className="h-4 w-4" />
+                                <span className="sr-only">View activity log</span>
                               </Button>
                               {userRole === 'owner' && (
                                 <DropdownMenu>
@@ -701,7 +762,8 @@ export default function TablesPage() {
                             </div>
                           </td>
                         </tr>
-                      ))}
+                      );
+                      })}
                     </tbody>
                   </table>
                 </div>

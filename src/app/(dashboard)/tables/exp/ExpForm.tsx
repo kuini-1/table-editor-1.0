@@ -1,7 +1,7 @@
 import { ModularForm } from "@/components/table/ModularForm";
 import type { FormMode } from "@/components/table/ModularForm";
 import type { ExpTableFormData } from "./schema";
-import { columns } from "./schema";
+import { columns, expTableSchema } from "./schema";
 
 const expTableSections = [
   {
@@ -10,6 +10,19 @@ const expTableSections = [
     description: 'Enter the basic details for this experience entry',
     columns: ['tblidx', 'dwExp', 'dwNeed_Exp']
   }
+];
+
+const expQuickViewSections = [
+  {
+    title: 'Basic Information',
+    columns: ['tblidx', 'dwExp', 'dwNeed_Exp']
+  }
+];
+
+const expQuickStats = [
+  { label: 'ID', column: 'tblidx' },
+  { label: 'Experience', column: 'dwExp', color: 'green' },
+  { label: 'Required Exp', column: 'dwNeed_Exp', color: 'blue' },
 ];
 
 const expTableTabs = [
@@ -95,7 +108,16 @@ export function ExpForm({
       tableId={tableId}
       sections={expTableSections}
       tabs={expTableTabs}
-      showFooter={false}
+      quickViewSections={expQuickViewSections}
+      quickStats={expQuickStats}
+      customSchema={expTableSchema}
+      defaultTab="solo"
+      showFooter={true}
+      submitLabel={(mode) => {
+        if (mode === 'add') return 'Add Entry';
+        if (mode === 'edit') return 'Save Changes';
+        return 'Duplicate Entry';
+      }}
     />
   );
 } 
