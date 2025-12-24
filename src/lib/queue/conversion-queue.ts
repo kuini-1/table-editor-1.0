@@ -16,6 +16,14 @@ class ConversionQueue {
   private rateLimits: Map<string, number> = new Map(); // key: userId:tableName:operationType
   private activeWorkers: Set<number> = new Set(); // Set of active worker indices
   private jobIdCounter = 0;
+  private instanceId: string = `queue_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  
+  /**
+   * Get instance ID for debugging
+   */
+  getInstanceId(): string {
+    return this.instanceId;
+  }
 
   /**
    * Generate a unique job ID
@@ -124,8 +132,13 @@ class ConversionQueue {
    * Mark job as completed
    */
   completeJob(jobId: string, downloadUrl?: string): void {
+    console.log(`[Queue ${this.instanceId}] completeJob called for jobId: ${jobId}, downloadUrl: ${downloadUrl}`);
     const job = this.jobs.get(jobId);
     if (!job) {
+      console.error(`[Queue ${this.instanceId}] ERROR: Job ${jobId} not found in jobs Map when trying to complete`);
+      // Log all current job IDs for debugging
+      const allJobIds = Array.from(this.jobs.keys());
+      console.log(`[Queue ${this.instanceId}] Current job IDs in Map (${this.jobs.size} total): ${allJobIds.join(', ')}`);
       return;
     }
 
@@ -134,6 +147,9 @@ class ConversionQueue {
     if (downloadUrl) {
       job.downloadUrl = downloadUrl;
     }
+
+    console.log(`[Queue ${this.instanceId}] Job ${jobId} marked as completed. Status: ${job.status}, downloadUrl: ${job.downloadUrl}`);
+    console.log(`[Queue ${this.instanceId}] Total jobs in Map after completion: ${this.jobs.size}`);
 
     // Find and remove from active workers
     for (const workerIndex of this.activeWorkers) {
@@ -167,7 +183,11 @@ class ConversionQueue {
    * Get job by ID
    */
   getJob(jobId: string): ConversionJob | undefined {
-    return this.jobs.get(jobId);
+    const job = this.jobs.get(jobId);
+    if (!job) {
+      console.log(`[Queue] getJob: Job ${jobId} not found. Total jobs in Map: ${this.jobs.size}`);
+    }
+    return job;
   }
 
   /**
@@ -235,6 +255,7 @@ class ConversionQueue {
    */
   cleanupOldJobs(): void {
     const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
+    let deletedCount = 0;
     for (const [jobId, job] of this.jobs.entries()) {
       if (
         (job.status === 'completed' || job.status === 'failed') &&
@@ -242,8 +263,19 @@ class ConversionQueue {
         job.completedAt < fiveMinutesAgo
       ) {
         this.jobs.delete(jobId);
+        deletedCount++;
       }
     }
+    if (deletedCount > 0) {
+      console.log(`[Queue] Cleaned up ${deletedCount} old jobs. Remaining jobs: ${this.jobs.size}`);
+    }
+  }
+  
+  /**
+   * Debug method to get all job IDs
+   */
+  getAllJobIds(): string[] {
+    return Array.from(this.jobs.keys());
   }
 }
 

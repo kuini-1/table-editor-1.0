@@ -13,14 +13,20 @@ export async function GET(req: Request) {
   }
 
   try {
+    console.log(`[Status API] Checking job ${jobId} in queue instance: ${conversionQueue.getInstanceId()}`);
     const job = conversionQueue.getJob(jobId);
     
     if (!job) {
+      console.error(`[Status API] Job ${jobId} not found in queue instance: ${conversionQueue.getInstanceId()}`);
+      const allJobIds = conversionQueue.getAllJobIds();
+      console.log(`[Status API] Available job IDs (${allJobIds.length} total): ${allJobIds.slice(0, 10).join(', ')}${allJobIds.length > 10 ? '...' : ''}`);
       return NextResponse.json({
         error: 'Job not found',
         details: `Job with ID ${jobId} does not exist`
       }, { status: 404 });
     }
+    
+    console.log(`[Status API] Found job ${jobId} with status: ${job.status}, downloadUrl: ${job.downloadUrl}`);
 
     const queueStatus = conversionQueue.getQueueStatus(jobId);
 

@@ -234,6 +234,10 @@ async function processExportJob(job: ConversionJob, workerIndex: number): Promis
   const csvPath = job.filePath;
   const userDir = job.outputDir;
   const tableName = job.tableName;
+  
+  // Generate timestamp to create unique folder and prevent caching issues
+  const timestamp = Date.now();
+  const storagePath = `${job.userId}/${timestamp}/${tableName}.rdf`;
 
   try {
     // Execute conversion: Convert.exe tableName userId rdf
@@ -264,13 +268,11 @@ async function processExportJob(job: ConversionJob, workerIndex: number): Promis
 
     // Upload to storage
     const rdfContent = fs.readFileSync(rdfPath);
-    const storagePath = `${job.userId}/${tableName}.rdf`;
     
     const { error: uploadError } = await supabase.storage
       .from('exports')
       .upload(storagePath, rdfContent, {
         contentType: 'application/octet-stream',
-        upsert: true,
       });
 
     if (uploadError) {
@@ -283,6 +285,13 @@ async function processExportJob(job: ConversionJob, workerIndex: number): Promis
       .getPublicUrl(storagePath);
 
     console.log(`[Worker ${workerIndex}] Export completed successfully`);
+    console.log(`[Worker ${workerIndex}] Public URL: ${publicUrl}`);
+    console.log(`[Worker ${workerIndex}] Storage path: ${storagePath}`);
+    
+    if (!publicUrl) {
+      throw new Error('Failed to get public URL for exported file');
+    }
+    
     return publicUrl;
   } catch (error) {
     console.error(`[Worker ${workerIndex}] Export error:`, error);
@@ -311,9 +320,27 @@ async function workerLoop(workerIndex: number): Promise<void> {
         if (job.type === 'import') {
           await processImportJob(job, workerIndex);
           conversionQueue.completeJob(job.id);
+          console.log(`[Worker ${workerIndex}] Job ${job.id} marked as completed (import)`);
         } else if (job.type === 'export') {
-          const downloadUrl = await processExportJob(job, workerIndex);
-          conversionQueue.completeJob(job.id, downloadUrl);
+          console.log(`[Worker ${workerIndex}] Starting export job ${job.id}`);
+          try {
+            const downloadUrl = await processExportJob(job, workerIndex);
+            console.log(`[Worker ${workerIndex}] processExportJob returned downloadUrl: ${downloadUrl}`);
+            console.log(`[Worker ${workerIndex}] About to call completeJob for job ${job.id}`);
+            conversionQueue.completeJob(job.id, downloadUrl);
+            console.log(`[Worker ${workerIndex}] completeJob called successfully`);
+            
+            // Verify job is in queue
+            const verifyJob = conversionQueue.getJob(job.id);
+            if (!verifyJob) {
+              console.error(`[Worker ${workerIndex}] ERROR: Job ${job.id} not found in queue after completion!`);
+            } else {
+              console.log(`[Worker ${workerIndex}] Verified job ${job.id} in queue with status: ${verifyJob.status}, downloadUrl: ${verifyJob.downloadUrl}`);
+            }
+          } catch (exportError) {
+            console.error(`[Worker ${workerIndex}] Error in export job processing:`, exportError);
+            throw exportError;
+          }
         }
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
