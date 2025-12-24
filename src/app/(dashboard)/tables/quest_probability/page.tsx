@@ -13,7 +13,6 @@ import {
   SheetContent,
   SheetHeader,
   SheetTitle,
-  SheetDescription,
 } from "@/components/ui/sheet";
 import type { FormMode } from '@/components/table/ModularForm';
 import { ErrorDisplay } from '@/components/ErrorDisplay';
@@ -147,11 +146,6 @@ export default function QuestProbabilityPage() {
                formMode === 'edit' ? 'Edit Quest Probability' : 
                'Duplicate Quest Probability'}
             </SheetTitle>
-            <SheetDescription className="text-gray-500 dark:text-gray-400">
-              {formMode === 'add' ? 'Create a new quest probability entry with the details below.' :
-               formMode === 'edit' ? 'Modify the quest probability values for this entry.' :
-               'Create a new entry based on the selected quest probability data.'}
-            </SheetDescription>
           </SheetHeader>
           
           <div className="flex-1 overflow-hidden">

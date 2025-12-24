@@ -13,7 +13,6 @@ import {
   SheetContent,
   SheetHeader,
   SheetTitle,
-  SheetDescription,
 } from "@/components/ui/sheet";
 import type { FormMode } from '@/components/table/ModularForm';
 import { ErrorDisplay } from '@/components/ErrorDisplay';
@@ -143,11 +142,6 @@ export default function DungeonPage() {
                formMode === 'edit' ? 'Edit Dungeon Entry' : 
                'Duplicate Dungeon Entry'}
             </SheetTitle>
-            <SheetDescription className="text-gray-500 dark:text-gray-400">
-              {formMode === 'add' ? 'Create a new dungeon entry with the details below.' :
-               formMode === 'edit' ? 'Modify the dungeon values for this entry.' :
-               'Create a new entry based on the selected dungeon data.'}
-            </SheetDescription>
           </SheetHeader>
           
           <div className="flex-1 overflow-hidden">

@@ -13,7 +13,6 @@ import {
   SheetContent,
   SheetHeader,
   SheetTitle,
-  SheetDescription,
 } from "@/components/ui/sheet";
 import type { FormMode } from '@/components/table/ModularForm';
 import { ErrorDisplay } from '@/components/ErrorDisplay';
@@ -148,11 +147,6 @@ export default function ItemMixExpPage() {
                formMode === 'edit' ? 'Edit Item Mix Experience Entry' : 
                'Duplicate Item Mix Experience Entry'}
             </SheetTitle>
-            <SheetDescription className="text-gray-500 dark:text-gray-400">
-              {formMode === 'add' ? 'Create a new item mix experience entry.' :
-               formMode === 'edit' ? 'Modify the item mix experience values.' :
-               'Create a new entry based on the selected data.'}
-            </SheetDescription>
           </SheetHeader>
           
           <div className="flex-1 overflow-hidden">

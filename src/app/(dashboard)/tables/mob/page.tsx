@@ -8,7 +8,6 @@ import {
   SheetContent,
   SheetHeader,
   SheetTitle,
-  SheetDescription,
 } from "@/components/ui/sheet";
 import { useTableData } from "@/hooks/useTableData";
 import { TableHeader } from '@/components/table/TableHeader';
@@ -240,9 +239,6 @@ export default function MobPage() {
             <SheetTitle className="text-indigo-600 dark:text-indigo-400 text-2xl font-bold">
               {formTheme.title.text[formMode]}
             </SheetTitle>
-            <SheetDescription className="text-gray-500 dark:text-gray-400">
-              {formTheme.description.text[formMode]}
-            </SheetDescription>
           </SheetHeader>
           
           <div className="flex-1 overflow-hidden">

@@ -1,4 +1,4 @@
-import { useForm } from 'react-hook-form';
+import { useForm, Path } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import {
@@ -15,9 +15,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { useMemo, useRef, useEffect, useState } from "react";
+import { RotateCcw } from "lucide-react";
 
 export type FormMode = 'add' | 'edit' | 'duplicate';
 
@@ -79,7 +78,7 @@ export function ModularForm<T extends BaseFormData>({
   sections,
   tabs,
   quickViewSections,
-  quickStats,
+  quickStats, // Keep for backward compatibility but not used
   initialData,
   onSubmit,
   onCancel,
@@ -93,6 +92,8 @@ export function ModularForm<T extends BaseFormData>({
   compactFieldHeight = false,
   enableQuickView = true,
 }: ModularFormProps<T>) {
+  // Suppress unused variable warning for quickStats (kept for backward compatibility)
+  void quickStats;
   // Use custom schema if provided, otherwise create dynamic schema
   const schema = customSchema || (() => {
     const schemaObject: { [key: string]: z.ZodTypeAny } = {
@@ -120,14 +121,25 @@ export function ModularForm<T extends BaseFormData>({
       table_id: tableId,
       ...(initialData || {}),
     },
+    shouldUnregister: false,
   });
+
+  // Store original values for reset functionality
+  const originalValuesRef = useRef<Partial<FormData>>(initialData || {});
+
+  // Normalize value for comparison (treat null, undefined, and empty string as equivalent)
+  const normalizeValueForComparison = (value: unknown): string | number | null => {
+    if (value === null || value === undefined || value === '') {
+      return null;
+    }
+    return value as string | number;
+  };
 
   const handleSubmit = (data: FormData) => {
     onSubmit(data as T);
+    // Update original values after successful submit
+    originalValuesRef.current = { ...data };
   };
-
-  // Watch form values for quick view display
-  const watchedValues = form.watch();
 
   // Render field in compact mode for quick view
   const renderFieldCompact = (column: Column) => {
@@ -172,18 +184,56 @@ export function ModularForm<T extends BaseFormData>({
               {column.label}
             </FormLabel>
             <FormControl>
-              <Input 
-                type={column.type === 'number' ? 'number' : 'text'} 
-                name={field.name}
-                value={String(field.value ?? '')}
-                onChange={(e) => {
-                  const value = column.type === 'number' 
-                    ? e.target.value === '' ? undefined : Number(e.target.value)
-                    : e.target.value;
-                  field.onChange(value);
-                }}
-                className="h-10 text-sm px-3 bg-gray-50 dark:bg-gray-800/50 border-2 border-gray-200 dark:border-gray-700 rounded-lg focus:border-indigo-500 dark:focus:border-indigo-400 focus:ring-0 transition-all duration-200"
-              />
+              <div className="relative group">
+                <Input 
+                  type={column.type === 'number' ? 'number' : 'text'} 
+                  name={field.name}
+                  value={String(field.value ?? '')}
+                  onChange={(e) => {
+                    if (column.type === 'number') {
+                      const value = e.target.value === '' ? null : Number(e.target.value);
+                      form.setValue(column.key as Path<FormData>, value as FormData[Path<FormData>], {
+                        shouldDirty: true,
+                        shouldValidate: false,
+                        shouldTouch: true,
+                      });
+                    } else {
+                      const value = e.target.value;
+                      form.setValue(column.key as Path<FormData>, value as FormData[Path<FormData>], {
+                        shouldDirty: true,
+                        shouldValidate: false,
+                        shouldTouch: true,
+                      });
+                    }
+                  }}
+                  className="h-10 text-sm px-3 pr-8 bg-gray-50 dark:bg-gray-800/50 border-2 border-gray-200 dark:border-gray-700 rounded-lg focus:border-indigo-500 dark:focus:border-indigo-400 focus:ring-0 transition-all duration-200"
+                />
+                {(() => {
+                  const originalValue = originalValuesRef.current[column.key as keyof FormData];
+                  const currentValue = field.value;
+                  const hasChanged = normalizeValueForComparison(originalValue) !== normalizeValueForComparison(currentValue);
+                  
+                  if (hasChanged) {
+                    return (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          form.setValue(column.key as Path<FormData>, originalValue as FormData[Path<FormData>], {
+                            shouldDirty: true,
+                            shouldValidate: false,
+                            shouldTouch: true,
+                          });
+                        }}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                        title="Reset to original value"
+                      >
+                        <RotateCcw className="h-3.5 w-3.5 text-gray-500 dark:text-gray-400" />
+                      </button>
+                    );
+                  }
+                  return null;
+                })()}
+              </div>
             </FormControl>
             <FormMessage className="text-xs" />
           </FormItem>
@@ -237,18 +287,56 @@ export function ModularForm<T extends BaseFormData>({
               {column.label}
             </FormLabel>
             <FormControl>
-              <Input 
-                type={column.type === 'number' ? 'number' : 'text'} 
-                name={field.name}
-                value={String(field.value ?? '')}
-                onChange={(e) => {
-                  const value = column.type === 'number' 
-                    ? e.target.value === '' ? undefined : Number(e.target.value)
-                    : e.target.value;
-                  field.onChange(value);
-                }}
-                className={`${heightClass} px-3 bg-gray-50 dark:bg-gray-800/50 border-2 border-gray-200 dark:border-gray-700 rounded-lg focus:border-indigo-500 dark:focus:border-indigo-400 focus:ring-0 transition-all duration-200`}
-              />
+              <div className="relative group">
+                <Input 
+                  type={column.type === 'number' ? 'number' : 'text'} 
+                  name={field.name}
+                  value={String(field.value ?? '')}
+                  onChange={(e) => {
+                    if (column.type === 'number') {
+                      const value = e.target.value === '' ? null : Number(e.target.value);
+                      form.setValue(column.key as Path<FormData>, value as FormData[Path<FormData>], {
+                        shouldDirty: true,
+                        shouldValidate: false,
+                        shouldTouch: true,
+                      });
+                    } else {
+                      const value = e.target.value;
+                      form.setValue(column.key as Path<FormData>, value as FormData[Path<FormData>], {
+                        shouldDirty: true,
+                        shouldValidate: false,
+                        shouldTouch: true,
+                      });
+                    }
+                  }}
+                  className={`${heightClass} px-3 pr-8 bg-gray-50 dark:bg-gray-800/50 border-2 border-gray-200 dark:border-gray-700 rounded-lg focus:border-indigo-500 dark:focus:border-indigo-400 focus:ring-0 transition-all duration-200`}
+                />
+                {(() => {
+                  const originalValue = originalValuesRef.current[column.key as keyof FormData];
+                  const currentValue = field.value;
+                  const hasChanged = normalizeValueForComparison(originalValue) !== normalizeValueForComparison(currentValue);
+                  
+                  if (hasChanged) {
+                    return (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          form.setValue(column.key as Path<FormData>, originalValue as FormData[Path<FormData>], {
+                            shouldDirty: true,
+                            shouldValidate: false,
+                            shouldTouch: true,
+                          });
+                        }}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                        title="Reset to original value"
+                      >
+                        <RotateCcw className="h-3.5 w-3.5 text-gray-500 dark:text-gray-400" />
+                      </button>
+                    );
+                  }
+                  return null;
+                })()}
+              </div>
             </FormControl>
             <FormMessage className={compactFieldHeight ? 'text-xs' : ''} />
           </FormItem>
@@ -412,7 +500,7 @@ export function ModularForm<T extends BaseFormData>({
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleSubmit)} className="flex flex-col h-full bg-gray-50 dark:bg-gray-900">
+      <form onSubmit={form.handleSubmit(handleSubmit)} className="flex flex-col h-full">
         <FormField
           control={form.control}
           name="table_id"
@@ -420,30 +508,6 @@ export function ModularForm<T extends BaseFormData>({
             <input type="hidden" {...field} />
           )}
         />
-
-        {/* Quick Stats Overview - Only show if quickViewSections are not present to avoid duplication */}
-        {quickStats && quickStats.length > 0 && !hasQuickView && (
-          <div className="px-6 py-4 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-            <div className="flex items-center gap-4 flex-wrap">
-              {quickStats.map((stat, index) => {
-                const value = watchedValues[stat.column];
-                const displayValue = stat.formatValue ? stat.formatValue(value) : (value ?? '—');
-                return (
-                  <div key={index} className="flex items-center gap-2">
-                    <span className="text-sm text-gray-500 dark:text-gray-400">{stat.label}:</span>
-                    <Badge 
-                      variant="outline" 
-                      className={stat.color ? `text-${stat.color}-600 dark:text-${stat.color}-400` : stat.color === 'mono' ? 'font-mono' : ''}
-                    >
-                      {displayValue}
-                    </Badge>
-                    {index < quickStats.length - 1 && <Separator orientation="vertical" className="h-6" />}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
 
         {/* Main Content Area - Two Column Layout if quickViewSections exist */}
         <div className="flex-1 overflow-hidden flex">

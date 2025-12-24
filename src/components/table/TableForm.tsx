@@ -1,4 +1,5 @@
-import { useForm } from 'react-hook-form';
+import React from 'react';
+import { useForm, Path } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import {
@@ -12,6 +13,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { RotateCcw } from "lucide-react";
 
 interface Column {
   key: string;
@@ -66,10 +68,24 @@ export function TableForm<T extends BaseFormData>({
       table_id: tableId,
       ...initialData,
     },
+    shouldUnregister: false,
   });
+
+  // Store original values for reset functionality
+  const originalValuesRef = React.useRef<Partial<FormData>>(initialData || {});
+
+  // Normalize value for comparison (treat null, undefined, and empty string as equivalent)
+  const normalizeValueForComparison = (value: unknown): string | number | null => {
+    if (value === null || value === undefined || value === '') {
+      return null;
+    }
+    return value as string | number;
+  };
 
   const handleSubmit = (data: FormData) => {
     onSubmit(data as T);
+    // Update original values after successful submit
+    originalValuesRef.current = { ...data };
   };
 
   return (
@@ -104,13 +120,57 @@ export function TableForm<T extends BaseFormData>({
                     <FormItem>
                       <FormLabel>{column.label}</FormLabel>
                       <FormControl>
-                        <Input 
-                          type={column.type === 'number' ? 'number' : 'text'} 
-                          {...field} 
-                          value={field.value ?? ''}
-                          placeholder={`Enter ${column.label.toLowerCase()}`}
-                          className="bg-white dark:bg-gray-900/50 border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-200 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-indigo-500/50 dark:focus:ring-indigo-500/50 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors"
-                        />
+                        <div className="relative group">
+                          <Input 
+                            type={column.type === 'number' ? 'number' : 'text'} 
+                            name={field.name}
+                            value={String(field.value ?? '')}
+                            onChange={(e) => {
+                              if (column.type === 'number') {
+                                const value = e.target.value === '' ? null : Number(e.target.value);
+                                form.setValue(column.key as Path<FormData>, value as FormData[Path<FormData>], {
+                                  shouldDirty: true,
+                                  shouldValidate: false,
+                                  shouldTouch: true,
+                                });
+                              } else {
+                                const value = e.target.value;
+                                form.setValue(column.key as Path<FormData>, value as FormData[Path<FormData>], {
+                                  shouldDirty: true,
+                                  shouldValidate: false,
+                                  shouldTouch: true,
+                                });
+                              }
+                            }}
+                            placeholder={`Enter ${column.label.toLowerCase()}`}
+                            className="bg-white dark:bg-gray-900/50 border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-200 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-indigo-500/50 dark:focus:ring-indigo-500/50 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors pr-8"
+                          />
+                          {(() => {
+                            const originalValue = originalValuesRef.current[column.key as keyof FormData];
+                            const currentValue = field.value;
+                            const hasChanged = normalizeValueForComparison(originalValue) !== normalizeValueForComparison(currentValue);
+                            
+                            if (hasChanged) {
+                              return (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    form.setValue(column.key as Path<FormData>, originalValue as FormData[Path<FormData>], {
+                                      shouldDirty: true,
+                                      shouldValidate: false,
+                                      shouldTouch: true,
+                                    });
+                                  }}
+                                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                                  title="Reset to original value"
+                                >
+                                  <RotateCcw className="h-3.5 w-3.5 text-gray-500 dark:text-gray-400" />
+                                </button>
+                              );
+                            }
+                            return null;
+                          })()}
+                        </div>
                       </FormControl>
                       <FormMessage />
                     </FormItem>

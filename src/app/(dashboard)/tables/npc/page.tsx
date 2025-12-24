@@ -13,7 +13,6 @@ import {
   SheetContent,
   SheetHeader,
   SheetTitle,
-  SheetDescription,
 } from "@/components/ui/sheet";
 import type { FormMode } from '@/components/table/ModularForm';
 import { ErrorDisplay } from '@/components/ErrorDisplay';
@@ -148,11 +147,6 @@ export default function NpcPage() {
                formMode === 'edit' ? 'Edit NPC' : 
                'Duplicate NPC'}
             </SheetTitle>
-            <SheetDescription className="text-gray-500 dark:text-gray-400">
-              {formMode === 'add' ? 'Create a new NPC with the details below.' :
-               formMode === 'edit' ? 'Modify the NPC values for this entry.' :
-               'Create a new entry based on the selected NPC data.'}
-            </SheetDescription>
           </SheetHeader>
           
           <div className="flex-1 overflow-hidden">

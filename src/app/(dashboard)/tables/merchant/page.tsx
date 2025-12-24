@@ -13,7 +13,6 @@ import {
   SheetContent,
   SheetHeader,
   SheetTitle,
-  SheetDescription,
 } from "@/components/ui/sheet";
 import type { FormMode } from '@/components/table/ModularForm';
 import { ErrorDisplay } from '@/components/ErrorDisplay';
@@ -143,11 +142,6 @@ export default function MerchantPage() {
                formMode === 'edit' ? 'Edit Merchant' : 
                'Duplicate Merchant'}
             </SheetTitle>
-            <SheetDescription className="text-gray-500 dark:text-gray-400">
-              {formMode === 'add' ? 'Create a new merchant with the details below.' :
-               formMode === 'edit' ? 'Modify the merchant details.' :
-               'Create a new merchant based on the selected one.'}
-            </SheetDescription>
           </SheetHeader>
           
           <div className="flex-1 overflow-hidden">

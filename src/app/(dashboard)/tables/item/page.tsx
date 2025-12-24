@@ -7,7 +7,6 @@ import {
   SheetContent,
   SheetHeader,
   SheetTitle,
-  SheetDescription,
 } from "@/components/ui/sheet";
 import { DataTable } from "@/components/table/DataTable";
 import { useTableData } from "@/hooks/useTableData";
@@ -177,11 +176,6 @@ export default function ItemTablePage() {
               {formMode === 'add' ? 'Add Item' : 
                formMode === 'edit' ? 'Edit Item' : 'Duplicate Item'}
             </SheetTitle>
-            <SheetDescription className="text-gray-500 dark:text-gray-400">
-              {formMode === 'add' ? 'Create a new item with the details below.' :
-               formMode === 'edit' ? 'Modify the item properties.' :
-               'Create a new item based on the selected item data.'}
-            </SheetDescription>
           </SheetHeader>
           
           <div className="flex-1 overflow-hidden">

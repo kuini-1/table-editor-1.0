@@ -13,7 +13,6 @@ import {
   SheetContent,
   SheetHeader,
   SheetTitle,
-  SheetDescription,
 } from "@/components/ui/sheet";
 import type { FormMode } from '@/components/table/ModularForm';
 import { ErrorDisplay } from '@/components/ErrorDisplay';
@@ -143,11 +142,6 @@ export default function HlsTablePage() {
                formMode === 'edit' ? 'Edit HLS Item' : 
                'Duplicate HLS Item'}
             </SheetTitle>
-            <SheetDescription className="text-gray-500 dark:text-gray-400">
-              {formMode === 'add' ? 'Create a new HLS item with the details below.' :
-               formMode === 'edit' ? 'Modify the HLS item values for this entry.' :
-               'Create a new entry based on the selected HLS item data.'}
-            </SheetDescription>
           </SheetHeader>
           
           <div className="flex-1 overflow-hidden">

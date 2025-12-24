@@ -13,7 +13,6 @@ import {
   SheetContent,
   SheetHeader,
   SheetTitle,
-  SheetDescription,
 } from "@/components/ui/sheet";
 import { ErrorDisplay } from '@/components/ErrorDisplay';
 import { slotMachineSchema } from './schema';
@@ -175,9 +174,6 @@ export default function SlotMachinePage() {
             <SheetTitle className="text-indigo-600 dark:text-indigo-400 text-2xl font-bold">
               {formTheme.title.text[formMode]}
             </SheetTitle>
-            <SheetDescription className="text-gray-500 dark:text-gray-400">
-              {formTheme.description.text[formMode]}
-            </SheetDescription>
           </SheetHeader>
           
           <div className="flex-1 overflow-hidden">

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { z } from "zod";
-import { useForm } from "react-hook-form";
+import { useForm, Path } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Form,
@@ -17,6 +17,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { RotateCcw } from "lucide-react";
 
 import { hlsItemSchema } from "@/app/(dashboard)/tables/hls_item/schema";
 
@@ -51,10 +52,24 @@ export function HlsItemForm({
   const form = useForm<HlsItemFormData>({
     resolver: zodResolver(hlsItemSchema),
     defaultValues: initialData || {},
+    shouldUnregister: false,
   });
+
+  // Store original values for reset functionality
+  const originalValuesRef = useRef<Partial<HlsItemFormData>>(initialData || {});
+
+  // Normalize value for comparison (treat null, undefined, and empty string as equivalent)
+  const normalizeValueForComparison = (value: unknown): string | number | null => {
+    if (value === null || value === undefined || value === '') {
+      return null;
+    }
+    return value as string | number;
+  };
 
   const handleSubmit = (data: HlsItemFormData) => {
     onSubmit(data);
+    // Update original values after successful submit
+    originalValuesRef.current = { ...data };
   };
 
   // Define field labels and types
@@ -269,13 +284,56 @@ export function HlsItemForm({
               {config.label}
             </FormLabel>
             <FormControl>
-              <Input
-                type={config.type === 'number' ? 'number' : 'text'}
-                name={formField.name}
-                value={String(formField.value ?? '')}
-                onChange={formField.onChange}
-                className="h-12 px-3 bg-gray-50 dark:bg-gray-800/50 border-2 border-gray-200 dark:border-gray-700 rounded-lg transition-all duration-200"
-              />
+              <div className="relative group">
+                <Input
+                  type={config.type === 'number' ? 'number' : 'text'}
+                  name={formField.name}
+                  value={String(formField.value ?? '')}
+                  onChange={(e) => {
+                    if (config.type === 'number') {
+                      const value = e.target.value === '' ? null : Number(e.target.value);
+                      form.setValue(field as Path<HlsItemFormData>, value as HlsItemFormData[Path<HlsItemFormData>], {
+                        shouldDirty: true,
+                        shouldValidate: false,
+                        shouldTouch: true,
+                      });
+                    } else {
+                      const value = e.target.value;
+                      form.setValue(field as Path<HlsItemFormData>, value as HlsItemFormData[Path<HlsItemFormData>], {
+                        shouldDirty: true,
+                        shouldValidate: false,
+                        shouldTouch: true,
+                      });
+                    }
+                  }}
+                  className="h-12 px-3 pr-8 bg-gray-50 dark:bg-gray-800/50 border-2 border-gray-200 dark:border-gray-700 rounded-lg transition-all duration-200"
+                />
+                {(() => {
+                  const originalValue = originalValuesRef.current[field as keyof HlsItemFormData];
+                  const currentValue = formField.value;
+                  const hasChanged = normalizeValueForComparison(originalValue) !== normalizeValueForComparison(currentValue);
+                  
+                  if (hasChanged) {
+                    return (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          form.setValue(field as Path<HlsItemFormData>, originalValue as HlsItemFormData[Path<HlsItemFormData>], {
+                            shouldDirty: true,
+                            shouldValidate: false,
+                            shouldTouch: true,
+                          });
+                        }}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                        title="Reset to original value"
+                      >
+                        <RotateCcw className="h-3.5 w-3.5 text-gray-500 dark:text-gray-400" />
+                      </button>
+                    );
+                  }
+                  return null;
+                })()}
+              </div>
             </FormControl>
             <FormMessage />
           </FormItem>
@@ -370,7 +428,23 @@ export function HlsItemForm({
                 type={config.type === 'number' ? 'number' : 'text'}
                 name={formField.name}
                 value={String(formField.value ?? '')}
-                onChange={formField.onChange}
+                onChange={(e) => {
+                  if (config.type === 'number') {
+                    const value = e.target.value === '' ? null : Number(e.target.value);
+                    form.setValue(field as Path<HlsItemFormData>, value as HlsItemFormData[Path<HlsItemFormData>], {
+                      shouldDirty: true,
+                      shouldValidate: false,
+                      shouldTouch: true,
+                    });
+                  } else {
+                    const value = e.target.value;
+                    form.setValue(field as Path<HlsItemFormData>, value as HlsItemFormData[Path<HlsItemFormData>], {
+                      shouldDirty: true,
+                      shouldValidate: false,
+                      shouldTouch: true,
+                    });
+                  }
+                }}
                 className="h-10 text-sm px-3 bg-gray-50 dark:bg-gray-800/50 border-2 border-gray-200 dark:border-gray-700 rounded-lg focus:border-indigo-500 dark:focus:border-indigo-400 focus:ring-0 transition-all duration-200"
               />
             </FormControl>

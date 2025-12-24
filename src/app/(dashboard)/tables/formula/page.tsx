@@ -13,7 +13,6 @@ import {
   SheetContent,
   SheetHeader,
   SheetTitle,
-  SheetDescription,
 } from "@/components/ui/sheet";
 import type { FormMode } from '@/components/table/ModularForm';
 import { ErrorDisplay } from '@/components/ErrorDisplay';
@@ -143,11 +142,6 @@ export default function FormulaPage() {
                formMode === 'edit' ? 'Edit Formula Entry' : 
                'Duplicate Formula Entry'}
             </SheetTitle>
-            <SheetDescription className="text-gray-500 dark:text-gray-400">
-              {formMode === 'add' ? 'Create a new formula entry with the details below.' :
-               formMode === 'edit' ? 'Modify the formula values for this entry.' :
-               'Create a new entry based on the selected formula data.'}
-            </SheetDescription>
           </SheetHeader>
           
           <div className="flex-1 overflow-hidden">

@@ -13,7 +13,6 @@ import {
   SheetContent,
   SheetHeader,
   SheetTitle,
-  SheetDescription,
 } from "@/components/ui/sheet";
 import type { FormMode } from '@/components/table/ModularForm';
 import { ErrorDisplay } from '@/components/ErrorDisplay';
@@ -143,11 +142,6 @@ export default function ItemEnchantPage() {
                formMode === 'edit' ? 'Edit Item Enchant' : 
                'Duplicate Item Enchant'}
             </SheetTitle>
-            <SheetDescription className="text-gray-500 dark:text-gray-400">
-              {formMode === 'add' ? 'Create a new item enchant with the details below.' :
-               formMode === 'edit' ? 'Modify the item enchant values for this entry.' :
-               'Create a new entry based on the selected item enchant data.'}
-            </SheetDescription>
           </SheetHeader>
           
           <div className="flex-1 overflow-hidden">
