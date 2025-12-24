@@ -121,24 +121,31 @@ async function processImportJob(job: ConversionJob, workerIndex: number): Promis
     }
 
     // Prepare records for insertion
+    // Note: Column names are preserved as-is from CSV to match database schema (case-sensitive)
     const recordsToInsert = (records as Record<string, unknown>[]).map((record: Record<string, unknown>) => {
-      const lowercaseRecord: Record<string, unknown> = {};
+      const processedRecord: Record<string, unknown> = {};
       for (const key in record) {
-        const lowercaseKey = key.toLowerCase();
+        // Preserve original column name (database columns are case-sensitive)
         let value = record[key];
         
+        // Convert string numbers to actual numbers
         if (typeof value === 'string') {
-          const num = Number(value);
-          if (!isNaN(num)) {
-            value = num;
+          const trimmedValue = value.trim();
+          if (trimmedValue !== '') {
+            const num = Number(trimmedValue);
+            if (!isNaN(num) && isFinite(num)) {
+              value = num;
+            }
+          } else {
+            value = null; // Empty strings become null
           }
         }
         
-        lowercaseRecord[lowercaseKey] = value;
+        processedRecord[key] = value;
       }
 
       return {
-        ...lowercaseRecord,
+        ...processedRecord,
         table_id: job.tableId,
       };
     });
