@@ -4,7 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import { conversionQueue } from './conversion-queue';
 import type { ConversionJob } from './types';
-import { createClient } from '@/lib/supabase/server';
+import { createClient as createServiceClient } from '@supabase/supabase-js';
 import Papa from 'papaparse';
 
 const execAsync = promisify(exec);
@@ -38,10 +38,24 @@ function verifyExecutable(workerIndex: number): boolean {
 }
 
 /**
+ * Get Supabase service client for workers
+ */
+function getSupabaseClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  
+  if (!supabaseUrl || !serviceRoleKey) {
+    throw new Error('Missing Supabase service role credentials');
+  }
+
+  return createServiceClient(supabaseUrl, serviceRoleKey);
+}
+
+/**
  * Process an import job
  */
 async function processImportJob(job: ConversionJob, workerIndex: number): Promise<void> {
-  const supabase = createClient();
+  const supabase = getSupabaseClient();
   const exePath = getExecutablePath(workerIndex);
   const workingDir = path.join(process.cwd(), 'exports');
 
@@ -192,7 +206,7 @@ async function ensureExportsBucket(): Promise<boolean> {
  * Process an export job
  */
 async function processExportJob(job: ConversionJob, workerIndex: number): Promise<string> {
-  const supabase = createClient();
+  const supabase = getSupabaseClient();
   
   // Ensure exports bucket exists
   if (!await ensureExportsBucket()) {
