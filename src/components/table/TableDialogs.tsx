@@ -45,14 +45,59 @@ export function ImportDialog({
   const [isLoading, setIsLoading] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [jobId, setJobId] = useState<string | null>(null);
+  const [queuePosition, setQueuePosition] = useState<number>(0);
+  const [estimatedWaitTime, setEstimatedWaitTime] = useState<number>(0);
+  const [status, setStatus] = useState<'pending' | 'processing' | 'completed' | 'failed' | null>(null);
 
   // Reset file state when dialog opens/closes
   useEffect(() => {
     if (!isOpen) {
       setFile(null);
       setError(null);
+      setJobId(null);
+      setQueuePosition(0);
+      setEstimatedWaitTime(0);
+      setStatus(null);
     }
   }, [isOpen]);
+
+  // Poll job status
+  useEffect(() => {
+    if (!jobId || !isOpen) return;
+
+    const pollStatus = async () => {
+      try {
+        const response = await fetch(`/api/conversion/status?jobId=${jobId}`);
+        if (!response.ok) {
+          throw new Error('Failed to get job status');
+        }
+
+        const data = await response.json();
+        setQueuePosition(data.position || 0);
+        setEstimatedWaitTime(data.estimatedWaitTime || 0);
+        setStatus(data.status);
+
+        if (data.status === 'completed') {
+          setIsLoading(false);
+          toast.success('Data imported successfully');
+          onSuccess?.();
+          onClose();
+        } else if (data.status === 'failed') {
+          setIsLoading(false);
+          setError(data.error || 'Import failed');
+          toast.error(data.error || 'Import failed');
+        }
+      } catch (err) {
+        console.error('Error polling status:', err);
+      }
+    };
+
+    const interval = setInterval(pollStatus, 1500); // Poll every 1.5 seconds
+    pollStatus(); // Initial poll
+
+    return () => clearInterval(interval);
+  }, [jobId, isOpen, onSuccess, onClose]);
 
   const validateFile = (file: File) => {
     const allowedExtensions = ['.rdf'];  // Only allow RDF files
@@ -95,19 +140,32 @@ export function ImportDialog({
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to import data');
+        const errorMessage = errorData.details || errorData.error || 'Failed to import data';
+        throw new Error(errorMessage);
       }
 
-      toast.success('Data imported successfully');
-      onSuccess?.();
-      onClose();
+      const data = await response.json();
+      setJobId(data.jobId);
+      setQueuePosition(data.position || 0);
+      setEstimatedWaitTime(data.estimatedWaitTime || 0);
+      setStatus(data.status || 'pending');
+
+      if (data.status === 'completed') {
+        // Job completed immediately (shouldn't happen, but handle it)
+        setIsLoading(false);
+        toast.success('Data imported successfully');
+        onSuccess?.();
+        onClose();
+      } else {
+        // Job is queued or processing, polling will handle completion
+        toast.info('Import job queued. Processing...');
+      }
     } catch (err) {
       console.error('Import error:', err);
       const errorMessage = err instanceof Error ? err.message : 'Failed to import data';
       setError(errorMessage);
-      toast.error(errorMessage);
-    } finally {
       setIsLoading(false);
+      toast.error(errorMessage);
     }
   };
 
@@ -204,6 +262,28 @@ export function ImportDialog({
           </div>
           {error && (
             <p className="text-sm text-destructive">{error}</p>
+          )}
+          {jobId && status && status !== 'completed' && status !== 'failed' && (
+            <div className="space-y-2 p-4 bg-muted/50 rounded-lg">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Status:</span>
+                <span className="text-sm capitalize">{status}</span>
+              </div>
+              {queuePosition > 0 && (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Position in queue:</span>
+                  <span className="text-sm font-medium">{queuePosition}</span>
+                </div>
+              )}
+              {estimatedWaitTime > 0 && (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Estimated wait:</span>
+                  <span className="text-sm font-medium">
+                    {Math.ceil(estimatedWaitTime / 1000)}s
+                  </span>
+                </div>
+              )}
+            </div>
           )}
         </div>
 
@@ -307,24 +387,82 @@ export interface ExportDialogProps {
 }
 
 export function useExport({ tableId, tableName }: ExportDialogProps) {
+  const [jobId, setJobId] = useState<string | null>(null);
+
+  // Poll job status for export
+  useEffect(() => {
+    if (!jobId) return;
+
+    const pollStatus = async () => {
+      try {
+        const response = await fetch(`/api/conversion/status?jobId=${jobId}`);
+        if (!response.ok) {
+          throw new Error('Failed to get job status');
+        }
+
+        const data = await response.json();
+
+        if (data.status === 'completed' && data.downloadUrl) {
+          // Download the file
+          const a = document.createElement('a');
+          a.href = data.downloadUrl;
+          a.download = `${tableName}.rdf`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+
+          toast.success('Data exported successfully');
+          setJobId(null);
+        } else if (data.status === 'failed') {
+          toast.error(data.error || 'Export failed');
+          setJobId(null);
+        }
+        // If pending or processing, continue polling
+      } catch (err) {
+        console.error('Error polling status:', err);
+      }
+    };
+
+    const interval = setInterval(pollStatus, 1500); // Poll every 1.5 seconds
+    pollStatus(); // Initial poll
+
+    return () => clearInterval(interval);
+  }, [jobId, tableName]);
+
   const handleExport = async () => {
     try {
       const response = await fetch(`/api/export?table=${tableName}&table_id=${tableId}`);
-      if (!response.ok) throw new Error('Export failed');
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        const errorMessage = errorData.details || errorData.error || 'Export failed';
+        throw new Error(errorMessage);
+      }
 
       const data = await response.json();
-      if (!data.downloadUrl) throw new Error('No download URL provided');
 
-      const a = document.createElement('a');
-      a.href = data.downloadUrl;
-      a.download = `${tableName}.rdf`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-
-      toast.success('Data exported successfully');
+      // Check if job was completed immediately (unlikely but possible)
+      if (data.status === 'completed' && data.downloadUrl) {
+        const a = document.createElement('a');
+        a.href = data.downloadUrl;
+        a.download = `${tableName}.rdf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        toast.success('Data exported successfully');
+      } else {
+        // Job is queued or processing
+        setJobId(data.jobId);
+        if (data.position > 0) {
+          toast.info(`Export queued. Position: ${data.position}`);
+        } else {
+          toast.info('Export processing...');
+        }
+      }
     } catch (error: object | unknown) {
-      toast.error(error instanceof Error ? error.message : 'Failed to export data');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to export data';
+      toast.error(errorMessage);
+      setJobId(null);
     }
   };
 

@@ -3,11 +3,8 @@ import { createClient as createServiceClient, SupabaseClient } from '@supabase/s
 import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
-import { exec } from 'child_process';
-import { promisify } from 'util';
-
-const execAsync = promisify(exec);
-const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+import { conversionQueue } from '@/lib/queue/conversion-queue';
+import '@/lib/queue/worker'; // Ensure workers are started
 
 interface StorageFile {
   name: string;
@@ -18,10 +15,6 @@ interface StorageFile {
   metadata: Record<string, unknown>;
 }
 
-const LOCK_FILE = path.join(process.cwd(), 'exports', '.lock');
-const MAX_RETRIES = 60; // Maximum number of retries (60 * 1000ms = 60 seconds max wait)
-const RETRY_INTERVAL = 1000; // 1 second between retries
-
 function getServiceClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -31,55 +24,6 @@ function getServiceClient() {
   }
 
   return createServiceClient(supabaseUrl, serviceRoleKey);
-}
-
-async function verifyConvertExecutable() {
-  const exePath = path.join(process.cwd(), 'exports', 'Convert.exe');
-  
-  if (!fs.existsSync(exePath)) {
-    return false;
-  }
-
-  try {
-    fs.accessSync(exePath, fs.constants.X_OK);
-    return true;
-  } catch (error) {
-    console.error('Error verifying convert executable:', error);
-    return false;
-  }
-}
-
-async function acquireLock(): Promise<boolean> {
-  let retries = 0;
-  
-  while (retries < MAX_RETRIES) {
-    try {
-      // Try to create the lock file
-      const lockFileHandle = fs.openSync(LOCK_FILE, 'wx');
-      fs.closeSync(lockFileHandle);
-      return true;
-    } catch (error: object | unknown) {
-      // If file exists, wait and retry
-      if (error instanceof Error && 'code' in error && error.code === 'EEXIST') {
-        await sleep(RETRY_INTERVAL);
-        retries++;
-        continue;
-      }
-      throw error;
-    }
-  }
-  
-  return false;
-}
-
-function releaseLock() {
-  try {
-    if (fs.existsSync(LOCK_FILE)) {
-      fs.unlinkSync(LOCK_FILE);
-    }
-  } catch (error) {
-    console.error('Error releasing lock:', error);
-  }
 }
 
 async function cleanupExistingFiles(supabase: SupabaseClient, userId: string, userDir: string) {
@@ -151,13 +95,6 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: 'Missing required parameters' }, { status: 400 });
   }
 
-  if (!await verifyConvertExecutable()) {
-    return NextResponse.json({
-      error: 'Server configuration error',
-      details: 'Conversion utility is not properly configured'
-    }, { status: 500 });
-  }
-
   try {
     const supabase = createClient();
     
@@ -183,26 +120,13 @@ export async function GET(req: Request) {
       }, { status: 401 });
     }
 
-    // let body;
-    // try {
-    //   body = await req.json();
-    // } catch (parseError: any) {
-    //   return NextResponse.json({ 
-    //     error: 'Invalid request body',
-    //     details: parseError.message
-    //   }, { status: 400 });
-    // }
-
-    // const { tableId, tableName } = body;
-
-    if (!tableId || !table) {
+    // Check rate limiting
+    if (conversionQueue.isRateLimited(user.id, table, 'export')) {
+      console.log('Rate limited:', { userId: user.id, tableName: table, type: 'export' });
       return NextResponse.json({
-        error: 'Missing required fields',
-        details: {
-          tableId: !tableId ? 'Table ID is required' : null,
-          tableName: !table ? 'Table name is required' : null
-        }
-      }, { status: 400 });
+        error: 'Too Many Requests',
+        details: 'Please wait before exporting this table again. You can export different tables without limits.'
+      }, { status: 429 });
     }
 
     // Ensure exports directory exists
@@ -268,107 +192,43 @@ export async function GET(req: Request) {
       }, { status: 500 });
     }
 
-    // Acquire lock
-    const lockAcquired = await acquireLock();
-    if (!lockAcquired) {
+    // Add job to queue
+    let job;
+    try {
+      job = conversionQueue.addJob(
+        user.id,
+        table,
+        tableId,
+        'export',
+        csvPath,
+        userDir
+      );
+      console.log('Job added to queue:', job.id);
+    } catch (queueError: object | unknown) {
+      console.error('Failed to add job to queue:', queueError);
+      // Clean up files
       try {
-        // Clean up if lock fails
         fs.unlinkSync(csvPath);
         fs.rmdirSync(userDir);
-      } catch (cleanupError: object | unknown) {
-        console.error('Cleanup error after lock failure:', cleanupError);
+      } catch (cleanupError) {
+        console.error('Cleanup error:', cleanupError);
       }
       return NextResponse.json({
-        error: 'Server is busy',
-        details: 'Could not acquire lock for conversion process. Please try again later.'
+        error: 'Queue is full',
+        details: queueError instanceof Error ? queueError.message : 'Please try again later.'
       }, { status: 503 });
     }
 
-    try {
-      // Execute conversion
-      const exePath = path.join(process.cwd(), 'exports', 'Convert.exe');
-      const workingDir = path.join(process.cwd(), 'exports');
-      
-      if (!fs.existsSync(exePath)) {
-        throw new Error(`Conversion executable not found at: ${exePath}`);
-      }
+    // Get queue status
+    const queueStatus = conversionQueue.getQueueStatus(job.id);
 
-      try {
-        // Execute with output capture and working directory set
-        await execAsync(
-          `"${exePath}" "${table}" "${user.id}" "rdf"`, 
-          { 
-            cwd: workingDir,
-            env: {
-              ...process.env,
-              PATH: `${workingDir};${process.env.PATH}`,
-              CSV_PATH: csvPath, // Pass CSV path as environment variable
-              OUTPUT_DIR: userDir // Pass output directory as environment variable
-            }
-          }
-        );
-      } catch (execError: object | unknown) {
-        console.error('Conversion execution error:', execError);
-        // Log more details about the error
-        if (execError instanceof Error && 'code' in execError) console.error('Exit code:', execError.code);
-        if (execError instanceof Error && 'signal' in execError) console.error('Signal:', execError.signal);
-        if (execError instanceof Error && 'killed' in execError) console.error('Process was killed');
-        throw new Error(`Conversion process failed: ${execError instanceof Error ? execError.message : 'Unknown error'}`);
-      }
-
-      // Verify RDF file was created
-      const rdfPath = path.join(userDir, `${table}.rdf`);
-      
-      if (!fs.existsSync(rdfPath)) {
-        throw new Error(`RDF file was not generated at expected path: ${rdfPath}`);
-      }
-
-      // Check file size to ensure it's not empty
-      const stats = fs.statSync(rdfPath);
-      if (stats.size === 0) {
-        throw new Error('RDF file was generated but is empty');
-      }
-
-      // Upload to storage
-      const rdfContent = fs.readFileSync(rdfPath);
-      const storagePath = `${user.id}/${table}.rdf`;
-      
-      const { error: uploadError } = await supabase.storage
-        .from('exports')
-        .upload(storagePath, rdfContent, {
-          contentType: 'application/octet-stream',
-          upsert: true
-        });
-
-      if (uploadError) {
-        throw uploadError;
-      }
-
-      // Get the public URL for the uploaded file
-      const { data: { publicUrl } } = supabase.storage
-        .from('exports')
-        .getPublicUrl(storagePath);
-
-      // Clean up local files
-      fs.unlinkSync(csvPath);
-      fs.unlinkSync(rdfPath);
-      fs.rmdirSync(userDir);
-
-      return NextResponse.json({ 
-        success: true,
-        filePath: storagePath,
-        downloadUrl: publicUrl
-      });
-
-    } catch (processError: object | unknown) {
-      console.error('Processing error:', processError);
-      return NextResponse.json({
-        error: 'Export processing failed',
-        details: processError instanceof Error ? processError.message : 'Unknown error'
-      }, { status: 500 });
-    } finally {
-      releaseLock();
-    }
+    return NextResponse.json({
+      success: true,
+      jobId: job.id,
+      position: queueStatus?.position || 0,
+      estimatedWaitTime: queueStatus?.estimatedWaitTime || 0,
+      status: job.status
+    });
 
   } catch (error: object | unknown) {
     console.error('Unexpected export error:', error);
@@ -378,4 +238,4 @@ export async function GET(req: Request) {
       stack: process.env.NODE_ENV === 'development' ? (error as Error).stack : undefined
     }, { status: 500 });
   }
-} 
+}

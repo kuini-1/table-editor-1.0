@@ -2,10 +2,9 @@ import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
-import { exec } from 'child_process';
-import { promisify } from 'util';
-import Papa from 'papaparse';
 import { SupabaseClient } from '@supabase/supabase-js';
+import { conversionQueue } from '@/lib/queue/conversion-queue';
+import '@/lib/queue/worker'; // Ensure workers are started
 
 interface StorageFile {
   name: string;
@@ -14,68 +13,6 @@ interface StorageFile {
   created_at: string;
   last_accessed_at: string;
   metadata: Record<string, unknown>;
-}
-
-const execAsync = promisify(exec);
-
-// Add these helper functions from export route
-const LOCK_FILE = path.join(process.cwd(), 'exports', '.lock');
-const MAX_RETRIES = 60;
-const RETRY_INTERVAL = 1000;
-
-async function verifyConvertExecutable() {
-  const exePath = path.join(process.cwd(), 'exports', 'Convert.exe');
-  console.log('Verifying Convert.exe at:', exePath);
-  if (!fs.existsSync(exePath)) {
-    console.error('Convert.exe not found at:', exePath);
-    return false;
-  }
-  try {
-    fs.accessSync(exePath, fs.constants.X_OK);
-    console.log('Convert.exe is executable');
-    return true;
-  } catch (error) {
-    console.error('Convert.exe access error:', error);
-    return false;
-  }
-}
-
-async function acquireLock(): Promise<boolean> {
-  let retries = 0;
-  console.log('Attempting to acquire lock file:', LOCK_FILE);
-  while (retries < MAX_RETRIES) {
-    try {
-      const lockFileHandle = fs.openSync(LOCK_FILE, 'wx');
-      fs.closeSync(lockFileHandle);
-      console.log('Lock acquired successfully');
-      return true;
-    } catch (error: object | unknown) {
-      if (error instanceof Error && 'code' in error && error.code === 'EEXIST') {
-        console.log(`Lock acquisition attempt ${retries + 1}/${MAX_RETRIES} failed, retrying...`);
-        await new Promise(resolve => setTimeout(resolve, RETRY_INTERVAL));
-        retries++;
-        continue;
-      }
-      console.error('Lock acquisition error:', error);
-      throw error;
-    }
-  }
-  console.error('Failed to acquire lock after maximum retries');
-  return false;
-}
-
-function releaseLock() {
-  console.log('Attempting to release lock');
-  try {
-    if (fs.existsSync(LOCK_FILE)) {
-      fs.unlinkSync(LOCK_FILE);
-      console.log('Lock released successfully');
-    } else {
-      console.log('Lock file not found during release');
-    }
-  } catch (error) {
-    console.error('Error releasing lock:', error);
-  }
 }
 
 async function cleanupExistingFiles(supabase: SupabaseClient, userId: string, userDir: string) {
@@ -112,14 +49,6 @@ async function cleanupExistingFiles(supabase: SupabaseClient, userId: string, us
 export async function POST(req: Request) {
   console.log('Starting import process');
   
-  if (!await verifyConvertExecutable()) {
-    console.error('Convert.exe verification failed');
-    return NextResponse.json({
-      error: 'Server configuration error',
-      details: 'Conversion utility is not properly configured'
-    }, { status: 500 });
-  }
-
   try {
     const supabase = createClient();
     console.log('Supabase client created');
@@ -161,6 +90,15 @@ export async function POST(req: Request) {
       }, { status: 400 });
     }
 
+    // Check rate limiting
+    if (conversionQueue.isRateLimited(user.id, tableName, 'import')) {
+      console.log('Rate limited:', { userId: user.id, tableName, type: 'import' });
+      return NextResponse.json({
+        error: 'Too Many Requests',
+        details: 'Please wait before importing this table again. You can import different tables without limits.'
+      }, { status: 429 });
+    }
+
     // Create user directory
     const userDir = path.join(process.cwd(), 'exports', user.id);
     try {
@@ -194,8 +132,12 @@ export async function POST(req: Request) {
     // Verify RDF file
     if (!fs.existsSync(rdfPath)) {
       console.error('RDF file verification failed - file does not exist');
-      throw new Error('RDF file was not written');
+      return NextResponse.json({
+        error: 'RDF file was not written',
+        details: 'Failed to write RDF file to disk'
+      }, { status: 500 });
     }
+
     const rdfStats = fs.statSync(rdfPath);
     console.log('RDF file details:', {
       path: rdfPath,
@@ -203,161 +145,43 @@ export async function POST(req: Request) {
       exists: fs.existsSync(rdfPath)
     });
 
-    // Acquire lock
-    const lockAcquired = await acquireLock();
-    if (!lockAcquired) {
-      console.error('Failed to acquire lock for conversion');
+    // Add job to queue
+    let job;
+    try {
+      job = conversionQueue.addJob(
+        user.id,
+        tableName,
+        tableId,
+        'import',
+        rdfPath,
+        userDir
+      );
+      console.log('Job added to queue:', job.id);
+    } catch (queueError: object | unknown) {
+      console.error('Failed to add job to queue:', queueError);
+      // Clean up files
       try {
-        console.log('Cleaning up after lock acquisition failure');
         fs.unlinkSync(rdfPath);
         fs.rmdirSync(userDir);
-      } catch (cleanupError: object | unknown) {
-        console.error('Cleanup error after lock failure:', cleanupError);
+      } catch (cleanupError) {
+        console.error('Cleanup error:', cleanupError);
       }
       return NextResponse.json({
-        error: 'Server is busy',
-        details: 'Could not acquire lock for conversion process. Please try again later.'
+        error: 'Queue is full',
+        details: queueError instanceof Error ? queueError.message : 'Please try again later.'
       }, { status: 503 });
     }
 
-    try {
-      // Execute conversion
-      const exePath = path.join(process.cwd(), 'exports', 'Convert.exe');
-      const workingDir = path.join(process.cwd(), 'exports');
-      
-      if (!fs.existsSync(exePath)) {
-        console.error('Conversion executable not found:', exePath);
-        throw new Error(`Conversion executable not found at: ${exePath}`);
-      }
+    // Get queue status
+    const queueStatus = conversionQueue.getQueueStatus(job.id);
 
-      try {
-        console.log('Starting conversion with:', {
-          command: `"${exePath}" "${tableName}" "${user.id}" "csv"`,
-          workingDir,
-          rdfPath,
-          userDir
-        });
-
-        const { stdout, stderr } = await execAsync(
-          `"${exePath}" "${tableName}" "${user.id}" "csv"`, 
-          { 
-            cwd: workingDir,
-            env: {
-              ...process.env,
-              PATH: `${workingDir};${process.env.PATH}`,
-              RDF_PATH: rdfPath,
-              OUTPUT_DIR: userDir
-            }
-          }
-        );
-        
-        console.log('Conversion stdout:', stdout);
-        if (stderr) console.error('Conversion stderr:', stderr);
-      } catch (execError: object | unknown) {
-        console.error('Conversion execution error:', execError);
-        throw new Error(`Conversion failed: ${execError instanceof Error ? execError.message : 'Unknown error'}`);
-      }
-
-      // Add delay and verification
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      // Check if CSV was generated
-      const csvPath = path.join(userDir, `${tableName}.csv`);
-      console.log('Checking for CSV file:', csvPath);
-      if (!fs.existsSync(csvPath)) {
-        console.error('CSV file not found after conversion');
-        throw new Error('CSV file was not generated');
-      }
-
-      // Read and parse CSV
-      console.log('Reading CSV file');
-      const csvContent = fs.readFileSync(csvPath, 'utf8');
-      console.log('CSV Content preview:', csvContent.substring(0, 200));
-
-      console.log('Parsing CSV content');
-      const { data: records, errors, meta } = Papa.parse(csvContent, {
-        header: true,
-        skipEmptyLines: true,
-        dynamicTyping: true
-      });
-
-      console.log('CSV parsing results:', {
-        recordCount: records.length,
-        errorCount: errors.length,
-        firstRecord: records[0],
-        meta
-      });
-
-      if (errors.length > 0) {
-        console.error('CSV parsing errors:', errors);
-        throw new Error(`CSV parsing error: ${errors[0].message}`);
-      }
-
-      // Delete existing data
-      console.log('Deleting existing data for table:', tableName);
-      const { error: deleteError } = await supabase
-        .from(tableName)
-        .delete()
-        .eq('table_id', tableId);
-
-      if (deleteError) {
-        console.error('Error deleting existing data:', deleteError);
-        throw new Error(`Failed to clear existing data: ${deleteError.message}`);
-      }
-
-      // Prepare records for insertion
-      console.log('Preparing records for insertion');
-      const recordsToInsert = (records as Record<string, unknown>[]).map((record: Record<string, unknown>) => {
-        const lowercaseRecord: Record<string, unknown> = {};
-        for (const key in record) {
-          const lowercaseKey = key.toLowerCase();
-          let value = record[key];
-          
-          if (typeof value === 'string') {
-            const num = Number(value);
-            if (!isNaN(num)) {
-              value = num;
-            }
-          }
-          
-          lowercaseRecord[lowercaseKey] = value;
-        }
-
-        return {
-          ...lowercaseRecord,
-          table_id: tableId
-        };
-      });
-
-      console.log('Insertion preparation complete:', {
-        recordCount: recordsToInsert.length,
-        sampleRecord: recordsToInsert[0]
-      });
-
-      // Insert new data
-      console.log('Inserting records into database');
-      const { error: insertError } = await supabase
-        .from(tableName)
-        .insert(recordsToInsert);
-
-      if (insertError) {
-        console.error('Database insertion error:', insertError);
-        throw new Error(`Failed to insert new data: ${insertError.message}`);
-      }
-
-      console.log('Data insertion completed successfully');
-
-    } finally {
-      console.log('Releasing lock');
-      releaseLock();
-    }
-
-    // Clean up
-    console.log('Cleaning up temporary files');
-    fs.rmSync(userDir, { recursive: true, force: true });
-    console.log('Cleanup completed');
-
-    return NextResponse.json({ success: true });
+    return NextResponse.json({
+      success: true,
+      jobId: job.id,
+      position: queueStatus?.position || 0,
+      estimatedWaitTime: queueStatus?.estimatedWaitTime || 0,
+      status: job.status
+    });
 
   } catch (error: object | unknown) {
     console.error('Import process error:', error);
@@ -368,4 +192,4 @@ export async function POST(req: Request) {
       stack: error instanceof Error ? error.stack : 'No stack trace available'
     }, { status: 500 });
   }
-} 
+}
