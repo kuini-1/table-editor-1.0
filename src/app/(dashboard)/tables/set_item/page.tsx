@@ -18,6 +18,7 @@ import { useStore } from "@/lib/store";
 import { setItemSchema } from "./schema";
 import SetItemForm from "./SetItemForm";
 import { ErrorDisplay } from '@/components/ErrorDisplay';
+import { DataTableSkeleton } from '@/components/ui/DataTableSkeleton';
 
 type SetItemFormData = z.infer<typeof setItemSchema>;
 
@@ -119,6 +120,7 @@ export default function SetItemPage() {
   // Use the custom hook to fetch and manage data
   const {
     data,
+    loading,
     error,
     totalRows,
     page,
@@ -143,6 +145,10 @@ export default function SetItemPage() {
   });
 
   const handleExport = useExport({ tableId, tableName });
+
+  if (loading) {
+    return <DataTableSkeleton columnCount={columns.length} />;
+  }
 
   if (error) {
     return (

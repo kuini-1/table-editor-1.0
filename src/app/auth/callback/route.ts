@@ -6,8 +6,9 @@ export async function GET(request: Request) {
   // Extract search parameters and origin from the request URL
   const { searchParams, origin } = new URL(request.url)
  
-  // Get the authorization code
+  // Get the authorization code and type
   const code = searchParams.get("code")
+  const type = searchParams.get("type")
  
   if (code) {
     // Create a Supabase client
@@ -17,7 +18,12 @@ export async function GET(request: Request) {
     const { error } = await supabase.auth.exchangeCodeForSession(code)
  
     if (!error) {
-      // If successful, always redirect to tables page
+      // If this is a password recovery flow, redirect to reset password page
+      if (type === "recovery") {
+        return NextResponse.redirect(`${origin}/reset-password`)
+      }
+      
+      // Otherwise, redirect to tables page (normal login/email verification)
       return NextResponse.redirect(`${origin}/tables`)
     }
   }

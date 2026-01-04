@@ -2,17 +2,12 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { RefreshCcw, MoreVertical, Pin, PinOff, FileText } from 'lucide-react';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { RefreshCcw, Pin, PinOff, FileText, Users } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useStore } from '@/lib/store';
+import { TableListSkeleton } from '@/components/ui/TableListSkeleton';
+import { getFolderNameForType } from '@/lib/tableTypeMapping';
 
 interface ActivityLogResponse {
   id: string;
@@ -137,6 +132,7 @@ export default function TablesPage() {
   const [selectedTable, setSelectedTable] = useState<Table | null>(null);
   const [isManageDialogOpen, setIsManageDialogOpen] = useState(false);
   const [subAccounts, setSubAccounts] = useState<SubOwnerPermission[]>([]);
+  const [isLoadingSubAccounts, setIsLoadingSubAccounts] = useState(false);
   const [userRole, setUserRole] = useState<string>('');
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
   const [cachedTables, setCachedTables] = useState<CachedTables | null>(null);
@@ -179,7 +175,8 @@ export default function TablesPage() {
       }
     };
     initProfile();
-  });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run once on mount
 
   useEffect(() => {
     if (selectedTable) {
@@ -348,10 +345,13 @@ export default function TablesPage() {
 
   const fetchSubAccounts = async (tableId: string) => {
     try {
+      setIsLoadingSubAccounts(true);
+      
       // Check if we have cached sub-accounts
       const cachedSubAccounts = cachedTables?.data.find(t => t.id === tableId)?.subAccounts;
       if (cachedSubAccounts && Date.now() - (cachedTables?.timestamp || 0) < CACHE_DURATION.SUB_ACCOUNTS) {
         setSubAccounts(cachedSubAccounts);
+        setIsLoadingSubAccounts(false);
         return;
       }
 
@@ -405,6 +405,8 @@ export default function TablesPage() {
       setSubAccounts(formattedPermissions);
     } catch (err) {
       console.error('Error fetching sub accounts:', err);
+    } finally {
+      setIsLoadingSubAccounts(false);
     }
   };
 
@@ -594,13 +596,7 @@ export default function TablesPage() {
   });
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4">
-        <div className="max-w-7xl mx-auto text-gray-900 dark:text-gray-100">
-          Loading...
-        </div>
-      </div>
-    );
+    return <TableListSkeleton />;
   }
 
   if (error) {
@@ -692,7 +688,7 @@ export default function TablesPage() {
                           className={`hover:bg-gray-50/80 dark:hover:bg-gray-700/50 cursor-pointer ${
                             selectedTable?.id === table.id ? 'bg-indigo-50/50 dark:bg-indigo-900/20' : ''
                           } ${isPinned ? 'bg-amber-50/30 dark:bg-amber-900/10' : ''}`}
-                          onClick={() => window.open(`/tables/${table.type}?id=${table.id}`, '_blank')}
+                          onClick={() => window.open(`/tables/${getFolderNameForType(table.type)}?id=${table.id}`, '_blank')}
                         >
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
                             {table.name}
@@ -735,29 +731,19 @@ export default function TablesPage() {
                                 <span className="sr-only">View activity log</span>
                               </Button>
                               {userRole === 'owner' && (
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
                                     <Button
                                       variant="ghost"
                                       size="icon"
-                                      className="h-8 w-8 p-0"
-                                    >
-                                      <MoreVertical className="h-4 w-4" />
-                                      <span className="sr-only">Open menu</span>
-                                    </Button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end">
-                                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                    <DropdownMenuItem 
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         handleManageSubAccounts(table, e);
                                       }}
-                                    >
-                                      Manage Sub-Accounts
-                                    </DropdownMenuItem>
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
+                                  className="h-8 w-8 p-0"
+                                  title="Manage sub-accounts"
+                                >
+                                  <Users className="h-4 w-4" />
+                                  <span className="sr-only">Manage sub-accounts</span>
+                                </Button>
                               )}
                             </div>
                           </td>
@@ -832,8 +818,16 @@ export default function TablesPage() {
                           </div>
                         ))}
                         {isLoadingMoreLogs && (
-                          <div className="text-center py-4">
-                            <p className="text-sm text-gray-500 dark:text-gray-400">Loading more logs...</p>
+                          <div className="text-center py-4 space-y-2">
+                            {[...Array(2)].map((_, i) => (
+                              <div key={i} className="flex items-center space-x-3 px-4">
+                                <div className="h-3 w-3 bg-gray-200 dark:bg-gray-800 rounded-full animate-pulse" />
+                                <div className="flex-1 space-y-2">
+                                  <div className="h-3 w-3/4 bg-gray-200 dark:bg-gray-800 rounded animate-pulse" />
+                                  <div className="h-2 w-1/2 bg-gray-200 dark:bg-gray-800 rounded animate-pulse" />
+                                </div>
+                              </div>
+                            ))}
                           </div>
                         )}
                         {!hasMoreLogs && activityLogs.length > 0 && (
@@ -870,6 +864,7 @@ export default function TablesPage() {
                   setIsManageDialogOpen(false);
                   setSelectedTable(null);
                   setSubAccounts([]);
+                  setIsLoadingSubAccounts(false);
                 }
               }}
             >
@@ -884,7 +879,16 @@ export default function TablesPage() {
                 </DialogHeader>
                 
                 <div className="p-6">
-                  {subAccounts.length > 0 ? (
+                  {isLoadingSubAccounts ? (
+                    <div className="flex items-center justify-center py-12">
+                      <div className="flex flex-col items-center space-y-3">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                          Loading sub-accounts...
+                        </p>
+                      </div>
+                    </div>
+                  ) : subAccounts.length > 0 ? (
                     <div className="rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
                       <table className="w-full">
                         <thead>

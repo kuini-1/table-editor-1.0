@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/sheet";
 import type { FormMode } from '@/components/table/ModularForm';
 import { ErrorDisplay } from '@/components/ErrorDisplay';
+import { DataTableSkeleton } from '@/components/ui/DataTableSkeleton';
 import { type ItemBagListFormData, type NewItemBagListFormData, columns } from './schema';
 import { ItemBagListForm } from './ItemBagListForm';
 
@@ -38,6 +39,7 @@ export default function ItemBagListPage() {
 
   const {
     data,
+    loading,
     error,
     totalRows,
     page,
@@ -63,6 +65,10 @@ export default function ItemBagListPage() {
   });
 
   const handleExport = useExport({ tableId, tableName });
+
+  if (loading) {
+    return <DataTableSkeleton columnCount={columns.length} />;
+  }
 
   if (error) {
     return (

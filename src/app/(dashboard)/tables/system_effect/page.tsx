@@ -18,6 +18,7 @@ import { useStore } from "@/lib/store";
 import { systemEffectSchema } from "./schema";
 import SystemEffectForm from "./SystemEffectForm";
 import { ErrorDisplay } from '@/components/ErrorDisplay';
+import { DataTableSkeleton } from '@/components/ui/DataTableSkeleton';
 
 type SystemEffectFormData = z.infer<typeof systemEffectSchema>;
 
@@ -122,6 +123,7 @@ export default function SystemEffectPage() {
 
   const {
     data,
+    loading,
     error,
     totalRows,
     page,
@@ -146,6 +148,10 @@ export default function SystemEffectPage() {
   });
 
   const handleExport = useExport({ tableId, tableName });
+
+  if (loading) {
+    return <DataTableSkeleton columnCount={columns.length} />;
+  }
 
   if (error) {
     return (

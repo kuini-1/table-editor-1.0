@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { z } from 'zod';
-import { worldSchema } from './schema';
+import { worldSchema, columns as worldColumns } from './schema';
 import WorldForm from './WorldForm';
 import { DataTable } from '@/components/table/DataTable';
 import { TableHeader } from '@/components/table/TableHeader';
@@ -12,6 +12,7 @@ import { DeleteDialog, ImportDialog, useExport } from '@/components/table/TableD
 import { useTableData } from '@/hooks/useTableData';
 import { useStore } from '@/lib/store';
 import { ErrorDisplay } from '@/components/ErrorDisplay';
+import { DataTableSkeleton } from '@/components/ui/DataTableSkeleton';
 import {
   Sheet,
   SheetContent,
@@ -65,41 +66,18 @@ export default function WorldPage() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
 
-  const columns = [
-    {
-      key: 'tblidx',
-      label: 'ID',
-      type: 'number' as const,
-      validation: worldSchema.shape.tblidx,
-    },
-    {
-      key: 'szname',
-      label: 'Name',
-      type: 'text' as const,
-      validation: worldSchema.shape.szname,
-    },
-    {
-      key: 'wszname',
-      label: 'Wide Name',
-      type: 'text' as const,
-      validation: worldSchema.shape.wszname,
-    },
-    {
-      key: 'bdynamic',
-      label: 'Dynamic',
-      type: 'boolean' as const,
-      validation: worldSchema.shape.bdynamic,
-    },
-    {
-      key: 'ncreatecount',
-      label: 'Create Count',
-      type: 'number' as const,
-      validation: worldSchema.shape.ncreatecount,
-    },
-  ];
+  // Use columns from schema to avoid recreating on every render
+  const columns = useMemo(() => worldColumns, []);
+
+  // Memoize config object to prevent re-renders
+  const tableConfig = useMemo(() => ({
+    tableName,
+    columns,
+  }), [columns, tableName]);
 
   const {
     data,
+    loading,
     error,
     totalRows,
     page,
@@ -116,14 +94,15 @@ export default function WorldPage() {
     handleRowSelection,
     refreshData,
   } = useTableData<WorldData>({
-    config: {
-      tableName,
-      columns,
-    },
+    config: tableConfig,
     tableId,
   });
 
   const handleExport = useExport({ tableId, tableName });
+
+  if (loading) {
+    return <DataTableSkeleton columnCount={columns.length} />;
+  }
 
   if (error) {
     return (

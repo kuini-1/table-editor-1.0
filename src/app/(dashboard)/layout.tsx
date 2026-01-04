@@ -245,15 +245,15 @@ export default function DashboardLayout({
           })}
         </nav>
 
-        <div className="flex-shrink-0 p-2 border-t border-gray-200 dark:border-gray-700">
+        <div className="flex-shrink-0 px-2 py-4 border-t border-gray-200 dark:border-gray-700 space-y-1">
           <button
             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-            className={`w-full flex items-center px-2 py-2 text-sm font-medium rounded-lg transition-colors
+            className={`group w-full flex items-center px-2 py-2 text-sm font-medium rounded-lg transition-colors
               text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-white`}
             suppressHydrationWarning
           >
             <svg
-              className="h-6 w-6"
+              className={`flex-shrink-0 h-6 w-6 text-gray-400 dark:text-gray-500 group-hover:text-gray-700 dark:group-hover:text-gray-300`}
               fill="none"
               viewBox="0 0 24 24"
               strokeWidth={1.5}
@@ -273,20 +273,25 @@ export default function DashboardLayout({
                 />
               )}
             </svg>
-            {isExpanded && (
-              <span className="ml-3" suppressHydrationWarning>
+            <span 
+              className={`ml-3 whitespace-nowrap inline-block transition-all duration-300 ease-in-out overflow-hidden ${
+                isExpanded 
+                  ? 'opacity-100 w-24' 
+                  : 'opacity-0 w-0'
+              }`}
+              suppressHydrationWarning
+            >
                 {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
               </span>
-            )}
           </button>
 
           <button
             onClick={handleSignOut}
-            className={`w-full flex items-center px-2 py-2 mt-2 text-sm font-medium rounded-lg transition-colors
+            className={`group w-full flex items-center px-2 py-2 text-sm font-medium rounded-lg transition-colors
               text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/50 hover:text-red-700 dark:hover:text-red-300`}
           >
             <svg
-              className="h-6 w-6"
+              className={`flex-shrink-0 h-6 w-6 text-red-500 dark:text-red-400 group-hover:text-red-700 dark:group-hover:text-red-300`}
               fill="none"
               viewBox="0 0 24 24"
               strokeWidth={1.5}
@@ -298,9 +303,15 @@ export default function DashboardLayout({
                 d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75"
               />
             </svg>
-            {isExpanded && (
-              <span className="ml-3">Sign Out</span>
-            )}
+            <span 
+              className={`ml-3 whitespace-nowrap inline-block transition-all duration-300 ease-in-out overflow-hidden ${
+                isExpanded 
+                  ? 'opacity-100 w-20' 
+                  : 'opacity-0 w-0'
+              }`}
+            >
+              Sign Out
+            </span>
           </button>
         </div>
       </div>

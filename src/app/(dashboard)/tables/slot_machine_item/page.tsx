@@ -18,6 +18,7 @@ import { useStore } from "@/lib/store";
 import { slotMachineItemSchema } from "./schema";
 import SlotMachineItemForm from "./SlotMachineItemForm";
 import { ErrorDisplay } from '@/components/ErrorDisplay';
+import { DataTableSkeleton } from '@/components/ui/DataTableSkeleton';
 
 type SlotMachineItemFormData = z.infer<typeof slotMachineItemSchema>;
 
@@ -110,6 +111,7 @@ export default function SlotMachineItemPage() {
 
   const {
     data,
+    loading,
     error,
     totalRows,
     page,
@@ -134,6 +136,10 @@ export default function SlotMachineItemPage() {
   });
 
   const handleExport = useExport({ tableId, tableName });
+
+  if (loading) {
+    return <DataTableSkeleton columnCount={columns.length} />;
+  }
 
   if (error) {
     return (

@@ -18,6 +18,7 @@ import { useStore } from "@/lib/store";
 import { useItemSchema } from "./schema";
 import UseItemForm from "./UseItemForm";
 import { ErrorDisplay } from '@/components/ErrorDisplay';
+import { DataTableSkeleton } from '@/components/ui/DataTableSkeleton';
 
 type UseItemFormData = z.infer<typeof useItemSchema>;
 
@@ -124,6 +125,7 @@ export default function UseItemPage() {
 
   const {
     data,
+    loading,
     error,
     totalRows,
     page,
@@ -148,6 +150,10 @@ export default function UseItemPage() {
   });
 
   const handleExport = useExport({ tableId, tableName });
+
+  if (loading) {
+    return <DataTableSkeleton columnCount={columns.length} />;
+  }
 
   if (error) {
     return (

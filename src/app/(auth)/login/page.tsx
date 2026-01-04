@@ -5,8 +5,6 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTheme } from 'next-themes';
 import { createClient } from "@/lib/supabase/client";
-import OneTapComponent from '@/components/OneTapComponent';
-import Image from 'next/image';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -15,7 +13,6 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const { theme, setTheme } = useTheme();
   const supabase = createClient();
-  const [isGoogleLoading, setIsGoogleLoading] = useState<boolean>(false);
   
   // Handle theme hydration
   useEffect(() => {
@@ -105,35 +102,7 @@ export default function LoginPage() {
         </div>
 
         <div className="mt-8 bg-white dark:bg-gray-800 py-8 px-4 shadow-xl dark:shadow-gray-900/50 rounded-2xl border border-gray-100 dark:border-gray-700 sm:px-10">
-          <OneTapComponent onStateChange={setIsGoogleLoading}>
-            <button
-              type="button"
-              disabled={isGoogleLoading}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <Image
-                src="/google.svg"
-                alt="Google"
-                width={20}
-                height={20}
-                className="w-5 h-5"
-              />
-              {isGoogleLoading ? 'Signing in...' : 'Continue with Google'}
-            </button>
-          </OneTapComponent>
-
-          <div className="mt-6 relative">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-300 dark:border-gray-600" />
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400">
-                Sign in with email
-              </span>
-            </div>
-          </div>
-
-          <form className="mt-6 space-y-6" onSubmit={handleEmailLogin}>
+          <form className="space-y-6" onSubmit={handleEmailLogin}>
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Email address

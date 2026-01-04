@@ -18,6 +18,7 @@ import {
 import * as z from 'zod';
 import type { FormMode } from '@/components/table/ModularForm';
 import { ErrorDisplay } from '@/components/ErrorDisplay';
+import { DataTableSkeleton } from '@/components/ui/DataTableSkeleton';
 import { hlsItemSchema } from './schema';
 import { HlsItemForm } from './HlsItemForm';
 import { Button } from "@/components/ui/button";
@@ -80,6 +81,7 @@ export default function HlsItemPage() {
 
   const {
     data,
+    loading,
     error,
     totalRows,
     page,
@@ -104,6 +106,10 @@ export default function HlsItemPage() {
   });
 
   const handleExport = useExport({ tableId, tableName });
+
+  if (loading) {
+    return <DataTableSkeleton columnCount={columns.length} />;
+  }
 
   if (error) {
     return (

@@ -21,7 +21,15 @@ const supabaseAdmin = createServiceClient(
 
 export async function POST(request: Request) {
   try {
-    const { email, password, full_name, owner_id } = await request.json();
+    const { email, password, full_name, owner_id, default_permissions } = await request.json();
+    
+    // Extract default permissions or use all false as default
+    const defaults = default_permissions || {
+      can_get: false,
+      can_put: false,
+      can_post: false,
+      can_delete: false,
+    };
 
     console.log('Attempting to create user with email:', email);
 
@@ -115,12 +123,16 @@ export async function POST(request: Request) {
 
     console.log('Profile created successfully');
 
-    // Create sub_owner record
+    // Create sub_owner record with default permissions
     const { data: subOwnerData, error: subOwnerError } = await supabaseAdmin
       .from('sub_owners')
       .insert({
         profile_id: authData.user.id,
         owner_id,
+        default_can_get: defaults.can_get,
+        default_can_put: defaults.can_put,
+        default_can_post: defaults.can_post,
+        default_can_delete: defaults.can_delete,
       })
       .select()
       .single();
@@ -147,20 +159,20 @@ export async function POST(request: Request) {
 
     console.log('Found tables:', tables?.length || 0);
 
-    // Create default permissions (all false) for each table
+    // Create permissions for each table using the default permissions
     if (tables && tables.length > 0) {
-      const defaultPermissions = tables.map(table => ({
+      const tablePermissions = tables.map(table => ({
         table_id: table.id,
         sub_owner_id: subOwnerData.id,
-        can_get: false,
-        can_put: false,
-        can_post: false,
-        can_delete: false
+        can_get: defaults.can_get,
+        can_put: defaults.can_put,
+        can_post: defaults.can_post,
+        can_delete: defaults.can_delete
       }));
 
       const { error: permissionsError } = await supabaseAdmin
         .from('sub_owner_permissions')
-        .insert(defaultPermissions);
+        .insert(tablePermissions);
 
       if (permissionsError) {
         console.log('Permissions creation error:', permissionsError);

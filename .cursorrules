@@ -41,23 +41,17 @@ Finally, you should always use the official documentation of the library you are
 
 # Scratchpad
 
-Current Task: Performance Optimization for Large Tables (70k+ rows)
+Current Task: Add Default Permissions Feature for Users
 
 Task Description:
-Optimize data fetching and filtering performance for large tables. Users need fast filtering and access to all data, but loading all at once is too heavy.
+Allow owners to set default permissions for all tables per user in the /users page, so they don't need to manually set permissions one by one in the /tables page unless they want to override for specific tables.
 
 Completed:
-[X] Added filter debouncing (400ms) to reduce query load
-[X] Optimized count queries (use estimated count by default)
-[X] Added loading states for filter operations
-[X] Created database index migration for commonly filtered columns
-[X] Updated TableHeader to show filtering state
-[X] Created performance analysis document
+[X] Created database migration to add default permissions columns to sub_owners table
+[X] Updated users page UI to allow setting default permissions per user
+[X] Updated API route to use default permissions when creating new users
+[X] Added database trigger to automatically apply default permissions when new tables are created
+[X] Added UI to edit default permissions for existing users
+[X] Added option to apply default permissions to all existing tables when updating defaults
 
-Next Steps:
-[ ] Apply database migration to add indexes
-[ ] Test performance improvements with real data
-[ ] Consider query result caching for repeated filters
-[ ] Monitor performance metrics
-
-Previous Task: Create Item Table Page - COMPLETED
+Previous Task: Performance Optimization for Large Tables (70k+ rows) - COMPLETED

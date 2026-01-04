@@ -13,6 +13,7 @@ import { Switch } from "@/components/ui/switch";
 import { Loader2, User, Mail, Lock, CreditCard, Shield, Bell } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { SettingsPageSkeleton } from '@/components/ui/SettingsPageSkeleton';
 
 interface UserProfile {
   id: string;
@@ -682,11 +683,7 @@ const SettingsPage = () => {
   };
 
   if (loadingPrices) {
-    return (
-      <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    );
+    return <SettingsPageSkeleton />;
   }
 
   return (
@@ -1054,9 +1051,18 @@ const SettingsPage = () => {
                   
                   <div className="p-4">
                     {loadingSession ? (
-                      <div className="text-center">
-                        <Loader2 className="h-5 w-5 animate-spin mx-auto" />
-                        <p className="text-sm text-muted-foreground mt-2">Loading session information...</p>
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <div className="h-4 w-32 bg-gray-200 dark:bg-gray-800 rounded animate-pulse" />
+                            <div className="h-4 w-24 bg-gray-200 dark:bg-gray-800 rounded animate-pulse" />
+                          </div>
+                          <div className="h-3 w-48 bg-gray-200 dark:bg-gray-800 rounded animate-pulse" />
+                        </div>
+                        <div className="space-y-2">
+                          <div className="h-4 w-28 bg-gray-200 dark:bg-gray-800 rounded animate-pulse" />
+                          <div className="h-3 w-40 bg-gray-200 dark:bg-gray-800 rounded animate-pulse" />
+                        </div>
                       </div>
                     ) : currentSession ? (
                       <div className="space-y-4">

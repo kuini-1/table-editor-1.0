@@ -27,12 +27,18 @@ export function useTableData<T extends { id: string }>({ config, tableId }: UseT
   const [pageSize, setPageSize] = useState(50);
   const [filters, setFilters] = useState<ColumnFilters>({});
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
-  const [permissionCache, setPermissionCache] = useState<Record<string, { result: boolean; timestamp: number }>>({});
+  const permissionCacheRef = useRef<Record<string, { result: boolean; timestamp: number }>>({});
   const [isFiltering, setIsFiltering] = useState(false);
 
-  const supabase = createClient();
+  // Memoize supabase client to prevent recreation
+  const supabaseRef = useRef(createClient());
+  const supabase = supabaseRef.current;
   const filterDebounceTimer = useRef<NodeJS.Timeout | null>(null);
   const pendingFiltersRef = useRef<ColumnFilters>({});
+  
+  // Extract config values to refs to avoid dependency issues
+  const configRef = useRef(config);
+  configRef.current = config;
 
   const PERMISSION_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
   const FILTER_DEBOUNCE_MS = 400; // 400ms debounce for filter changes
@@ -44,7 +50,7 @@ export function useTableData<T extends { id: string }>({ config, tableId }: UseT
     }
 
     const cacheKey = `${tableId}-${action}`;
-    const cached = permissionCache[cacheKey];
+    const cached = permissionCacheRef.current[cacheKey];
     if (cached && Date.now() - cached.timestamp < PERMISSION_CACHE_DURATION) {
       return cached.result;
     }
@@ -73,17 +79,17 @@ export function useTableData<T extends { id: string }>({ config, tableId }: UseT
       }
 
       const result = !!data;
-      setPermissionCache(prev => ({
-        ...prev,
+      permissionCacheRef.current = {
+        ...permissionCacheRef.current,
         [cacheKey]: { result, timestamp: Date.now() }
-      }));
+      };
 
       return result;
     } catch (error) {
       console.error('Error checking permission:', error);
       return false;
     }
-  }, [tableId, supabase, permissionCache]);
+  }, [tableId, supabase]);
 
   const handleError = (err: object | unknown) => {
     const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred';
@@ -116,14 +122,14 @@ export function useTableData<T extends { id: string }>({ config, tableId }: UseT
       const countMode = useExactCount ? 'exact' : 'estimated';
 
       let query = supabase
-        .from(config.tableName)
+        .from(configRef.current.tableName)
         .select('*', { count: countMode })
         .eq('table_id', tableId)
         .range((page - 1) * pageSize, (page * pageSize) - 1);
 
       // Apply filters
       for (const [column, filter] of Object.entries(currentFilters)) {
-        const columnConfig = config.columns.find(col => col.key === column);
+        const columnConfig = configRef.current.columns.find(col => col.key === column);
         const value = filter.value.trim();
         const isNumericColumn = columnConfig?.type === 'number';
         const isBooleanColumn = columnConfig?.type === 'boolean';
@@ -150,7 +156,7 @@ export function useTableData<T extends { id: string }>({ config, tableId }: UseT
               break;
             case 'contains': {
               const { data: matchingRows, error: rpcError } = await supabase.rpc('search_partial_number', {
-                table_name: config.tableName,
+                table_name: configRef.current.tableName,
                 column_name: column,
                 search_value: value
               });
@@ -197,7 +203,7 @@ export function useTableData<T extends { id: string }>({ config, tableId }: UseT
       setLoading(false);
       setIsFiltering(false);
     }
-  }, [filters, tableId, checkPermission, supabase, config.tableName, config.columns, page, pageSize]);
+  }, [filters, tableId, checkPermission, page, pageSize]);
 
   const handleAddRow = async (formData: Omit<T, 'id'>) => {
     try {
@@ -207,7 +213,7 @@ export function useTableData<T extends { id: string }>({ config, tableId }: UseT
       }
 
       const { data: newRow, error } = await supabase
-        .from(config.tableName)
+        .from(configRef.current.tableName)
         .insert([{ ...formData, table_id: tableId }])
         .select()
         .single();
@@ -232,7 +238,7 @@ export function useTableData<T extends { id: string }>({ config, tableId }: UseT
       }
 
       const { data: updatedRow, error } = await supabase
-        .from(config.tableName)
+        .from(configRef.current.tableName)
         .update(formData)
         .eq('id', id)
         .select()
@@ -257,7 +263,7 @@ export function useTableData<T extends { id: string }>({ config, tableId }: UseT
       }
 
       const { error } = await supabase
-        .from(config.tableName)
+        .from(configRef.current.tableName)
         .delete()
         .eq('id', id);
 
@@ -286,7 +292,7 @@ export function useTableData<T extends { id: string }>({ config, tableId }: UseT
 
       const deletePromises = Array.from(selectedRows).map(id =>
         supabase
-          .from(config.tableName)
+          .from(configRef.current.tableName)
           .delete()
           .eq('id', id)
       );
@@ -316,7 +322,7 @@ export function useTableData<T extends { id: string }>({ config, tableId }: UseT
       }
 
       const { data: newRow, error } = await supabase
-        .from(config.tableName)
+        .from(configRef.current.tableName)
         .insert([{ ...formData, table_id: tableId }])
         .select()
         .single();

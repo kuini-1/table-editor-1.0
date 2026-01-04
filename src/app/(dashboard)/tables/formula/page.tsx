@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/sheet";
 import type { FormMode } from '@/components/table/ModularForm';
 import { ErrorDisplay } from '@/components/ErrorDisplay';
+import { DataTableSkeleton } from '@/components/ui/DataTableSkeleton';
 import { FormulaForm } from './FormulaForm';
 import { columns, type FormulaFormData, type FormulaRow } from './schema';
 
@@ -38,6 +39,7 @@ export default function FormulaPage() {
 
   const {
     data,
+    loading,
     error,
     totalRows,
     page,
@@ -63,6 +65,10 @@ export default function FormulaPage() {
   });
 
   const handleExport = useExport({ tableId, tableName });
+
+  if (loading) {
+    return <DataTableSkeleton columnCount={columns.length} />;
+  }
 
   if (error) {
     return (

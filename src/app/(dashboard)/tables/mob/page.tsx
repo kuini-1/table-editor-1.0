@@ -18,6 +18,7 @@ import { useStore } from "@/lib/store";
 import { mobSchema } from "./schema";
 import { MobForm } from "./MobForm";
 import { ErrorDisplay } from '@/components/ErrorDisplay';
+import { DataTableSkeleton } from '@/components/ui/DataTableSkeleton';
 
 type MobFormData = z.infer<typeof mobSchema>;
 
@@ -137,6 +138,7 @@ export default function MobPage() {
   // Use the custom hook to fetch and manage data
   const {
     data,
+    loading,
     error,
     totalRows,
     page,
@@ -161,6 +163,10 @@ export default function MobPage() {
   });
 
   const handleExport = useExport({ tableId, tableName });
+
+  if (loading) {
+    return <DataTableSkeleton columnCount={columns.length} />;
+  }
 
   if (error) {
     return (

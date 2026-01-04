@@ -1,49 +1,20 @@
 import Link from 'next/link';
 
-const tiers = [
-  {
-    name: 'Basic',
-    price: '$9',
-    description: 'Perfect for small teams and startups',
-    features: [
-      'Up to 5 tables',
-      '2 team members',
-      'Basic activity logging',
-      'Email support',
-    ],
-    cta: 'Start with Basic',
-    href: '/register?plan=basic',
-  },
-  {
-    name: 'Pro',
-    price: '$29',
-    description: 'Best for growing businesses',
-    features: [
-      'Up to 20 tables',
-      '10 team members',
-      'Advanced activity logging',
-      'Priority email support',
-      'Custom permissions',
-    ],
-    cta: 'Start with Pro',
-    href: '/register?plan=pro',
-    featured: true,
-  },
-  {
-    name: 'Enterprise',
-    price: 'Custom',
-    description: 'For large organizations',
-    features: [
-      'Unlimited tables',
-      'Unlimited team members',
-      'Advanced activity logging',
-      '24/7 phone & email support',
-      'Custom permissions',
-      'Custom integrations',
-    ],
-    cta: 'Contact Sales',
-    href: '/contact',
-  },
+const features = [
+  '60+ Game Table Types',
+  'Unlimited Tables & Data',
+  'Advanced Role-Based Permissions',
+  'Default Permissions per User',
+  'Per-Table Permission Overrides',
+  'Sub-Owner Management',
+  'Advanced Filtering & Search',
+  'Server-Side Pagination',
+  'Export & Import Data',
+  'Activity Logs & Tracking',
+  'High Performance (70k+ rows)',
+  'Real-Time Collaboration',
+  'Dark Mode Support',
+  'Secure & Reliable',
 ];
 
 export default function PricingPage() {
@@ -70,60 +41,56 @@ export default function PricingPage() {
       </header>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto pt-24 pb-12 px-4 sm:px-6 lg:px-8">
-        <div className="sm:flex sm:flex-col sm:align-center">
-          <h1 className="text-5xl font-bold text-gray-900 dark:text-white text-center">
-            Pricing Plans
+      <div className="max-w-4xl mx-auto pt-24 pb-12 px-4 sm:px-6 lg:px-8">
+        <div className="text-center mb-12">
+          <h1 className="text-5xl font-bold text-gray-900 dark:text-white">
+            Simple, Transparent Pricing
           </h1>
-          <p className="mt-5 text-xl text-gray-600 dark:text-gray-300 text-center">
-            Choose the perfect plan for your needs
+          <p className="mt-5 text-xl text-gray-600 dark:text-gray-300">
+            Everything you need to manage your game data tables
           </p>
         </div>
-        <div className="mt-12 space-y-4 sm:mt-16 sm:space-y-0 sm:grid sm:grid-cols-2 sm:gap-6 lg:max-w-4xl lg:mx-auto xl:max-w-none xl:mx-0 xl:grid-cols-3">
-          {tiers.map((tier) => (
-            <div
-              key={tier.name}
-              className={`rounded-2xl shadow-xl dark:shadow-gray-900/30 divide-y divide-gray-200 dark:divide-gray-700 ${
-                tier.featured
-                  ? 'border-2 border-indigo-500 dark:border-indigo-400 bg-white dark:bg-gray-800 scale-105 z-10'
-                  : 'border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800'
-              }`}
-            >
-              <div className="p-6">
-                <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">
-                  {tier.name}
+
+        {/* Single Pricing Card */}
+        <div className="rounded-2xl shadow-2xl dark:shadow-gray-900/30 border-2 border-indigo-500 dark:border-indigo-400 bg-white dark:bg-gray-800 overflow-hidden">
+          <div className="p-8 sm:p-12">
+            <div className="text-center mb-8">
+              <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+                TableEditor Pro
                 </h2>
-                <p className="mt-4 text-sm text-gray-600 dark:text-gray-300">{tier.description}</p>
-                <p className="mt-8">
-                  <span className="text-4xl font-bold text-gray-900 dark:text-white">
-                    {tier.price}
+              <p className="text-lg text-gray-600 dark:text-gray-300 mb-6">
+                Complete game data management solution
+              </p>
+              <div className="flex items-baseline justify-center">
+                <span className="text-6xl font-bold text-gray-900 dark:text-white">
+                  $29
                   </span>
-                  {tier.price !== 'Custom' && (
-                    <span className="text-base font-medium text-gray-500 dark:text-gray-400">
+                <span className="text-xl font-medium text-gray-500 dark:text-gray-400 ml-2">
                       /month
                     </span>
-                  )}
+              </div>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+                Start your 14-day free trial. No credit card required.
                 </p>
+            </div>
+
                 <Link
-                  href={tier.href}
-                  className={`mt-8 block w-full py-3 px-4 rounded-lg text-sm font-medium text-center transition-colors ${
-                    tier.featured
-                      ? 'bg-indigo-600 dark:bg-indigo-500 text-white hover:bg-indigo-700 dark:hover:bg-indigo-600'
-                      : 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 hover:bg-indigo-100 dark:hover:bg-indigo-900/30 border border-indigo-500 dark:border-indigo-400'
-                  }`}
+              href="/register"
+              className="block w-full py-4 px-6 rounded-lg bg-indigo-600 dark:bg-indigo-500 text-white text-lg font-semibold text-center hover:bg-indigo-700 dark:hover:bg-indigo-600 transition-colors shadow-lg hover:shadow-indigo-500/50"
                 >
-                  {tier.cta}
+              Start Free Trial
                 </Link>
               </div>
-              <div className="pt-6 pb-8 px-6">
-                <h3 className="text-xs font-medium text-gray-900 dark:text-white tracking-wide uppercase">
-                  What&apos;s included
+
+          <div className="border-t border-gray-200 dark:border-gray-700 pt-8 pb-8 px-8 sm:px-12">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6 text-center">
+              Everything Included
                 </h3>
-                <ul className="mt-6 space-y-4">
-                  {tier.features.map((feature) => (
-                    <li key={feature} className="flex space-x-3">
+            <div className="grid sm:grid-cols-2 gap-4">
+              {features.map((feature) => (
+                <div key={feature} className="flex items-start space-x-3">
                       <svg
-                        className="flex-shrink-0 h-5 w-5 text-green-500 dark:text-green-400"
+                    className="flex-shrink-0 h-5 w-5 text-green-500 dark:text-green-400 mt-0.5"
                         xmlns="http://www.w3.org/2000/svg"
                         viewBox="0 0 20 20"
                         fill="currentColor"
@@ -135,12 +102,17 @@ export default function PricingPage() {
                         />
                       </svg>
                       <span className="text-sm text-gray-600 dark:text-gray-300">{feature}</span>
-                    </li>
+                </div>
                   ))}
-                </ul>
-              </div>
             </div>
-          ))}
+          </div>
+        </div>
+
+        {/* Additional Info */}
+        <div className="mt-12 text-center">
+          <p className="text-gray-600 dark:text-gray-300">
+            Need help? <Link href="/login" className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 font-medium">Contact Support</Link>
+          </p>
         </div>
       </div>
     </div>

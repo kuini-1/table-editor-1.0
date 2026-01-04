@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/sheet";
 import type { FormMode } from '@/components/table/ModularForm';
 import { ErrorDisplay } from '@/components/ErrorDisplay';
+import { DataTableSkeleton } from '@/components/ui/DataTableSkeleton';
 import { columns } from './schema';
 import { ItemMixExpForm } from './ItemMixExpForm';
 import type { ItemMixExpFormData } from './schema';
@@ -43,6 +44,7 @@ export default function ItemMixExpPage() {
 
   const {
     data,
+    loading,
     error,
     totalRows,
     page,
@@ -68,6 +70,10 @@ export default function ItemMixExpPage() {
   });
 
   const handleExport = useExport({ tableId, tableName });
+
+  if (loading) {
+    return <DataTableSkeleton columnCount={columns.length} />;
+  }
 
   if (error) {
     return (

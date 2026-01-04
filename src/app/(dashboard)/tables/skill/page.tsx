@@ -18,6 +18,7 @@ import { useStore } from "@/lib/store";
 import { skillSchema } from "./schema";
 import SkillForm from "./SkillForm";
 import { ErrorDisplay } from '@/components/ErrorDisplay';
+import { DataTableSkeleton } from '@/components/ui/DataTableSkeleton';
 
 type SkillFormData = z.infer<typeof skillSchema>;
 
@@ -137,6 +138,7 @@ export default function SkillPage() {
   // Use the custom hook to fetch and manage data
   const {
     data,
+    loading,
     error,
     totalRows,
     page,
@@ -161,6 +163,10 @@ export default function SkillPage() {
   });
 
   const handleExport = useExport({ tableId, tableName });
+
+  if (loading) {
+    return <DataTableSkeleton columnCount={columns.length} />;
+  }
 
   if (error) {
     return (

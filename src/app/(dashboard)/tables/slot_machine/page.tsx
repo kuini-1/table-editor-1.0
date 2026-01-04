@@ -15,6 +15,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { ErrorDisplay } from '@/components/ErrorDisplay';
+import { DataTableSkeleton } from '@/components/ui/DataTableSkeleton';
 import { slotMachineSchema } from './schema';
 import { SlotMachineForm } from './SlotMachineForm';
 import type { FormMode } from '@/components/table/ModularForm';
@@ -73,6 +74,7 @@ export default function SlotMachinePage() {
 
   const {
     data,
+    loading,
     error,
     totalRows,
     page,
@@ -97,6 +99,10 @@ export default function SlotMachinePage() {
   });
 
   const handleExport = useExport({ tableId, tableName });
+
+  if (loading) {
+    return <DataTableSkeleton columnCount={columns.length} />;
+  }
 
   if (error) {
     return (

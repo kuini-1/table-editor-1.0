@@ -17,6 +17,7 @@ import { useStore } from "@/lib/store";
 import { itemTableSchema, columns } from "./schema";
 import ItemForm from "./ItemForm";
 import { ErrorDisplay } from '@/components/ErrorDisplay';
+import { DataTableSkeleton } from '@/components/ui/DataTableSkeleton';
 import React from "react";
 
 type ItemTableFormData = z.infer<typeof itemTableSchema>;
@@ -46,6 +47,7 @@ export default function ItemTablePage() {
   // Use table data hook
   const {
     data,
+    loading,
     error,
     totalRows,
     page,
@@ -116,6 +118,10 @@ export default function ItemTablePage() {
       handleDuplicate(selectedRow);
     }
   }, [formMode, selectedRow, handleAddRow, handleEditRow, handleDuplicate]);
+
+  if (loading) {
+    return <DataTableSkeleton columnCount={columns.length} />;
+  }
 
   if (error) {
     return (
