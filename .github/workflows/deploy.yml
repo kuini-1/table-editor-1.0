@@ -41,42 +41,40 @@ jobs:
           cache: 'npm'
 
       - name: Create deployment archive
+        continue-on-error: true
         run: |
           # Create a tar archive excluding node_modules and .next, but including exports folder
           # CRITICAL: The exports/ folder contains Convert.exe files required for backend conversion
           echo "Creating deployment archive (exports folder will be included)..."
           # Create archive in /tmp first to avoid "file changed as we read it" error
-          # Use bash without -e flag by invoking it explicitly
-          bash +e -c '
-            tar --warning=no-file-changed \
-                --exclude="node_modules" \
-                --exclude=".next" \
-                --exclude=".git" \
-                --exclude=".github" \
-                --exclude=".DS_Store" \
-                --exclude="*.log" \
-                --exclude=".env*" \
-                --exclude="deployment.tar.gz" \
-                -czf /tmp/deployment.tar.gz . 2>&1
-            TAR_EXIT=$?
-            
-            # Check if archive was created successfully (this is what matters, not the exit code)
-            if [ ! -f /tmp/deployment.tar.gz ]; then
-              echo "ERROR: Archive file was not created!"
-              exit 1
-            fi
-            
-            if [ $TAR_EXIT -ne 0 ]; then
-              echo "Warning: tar exited with code $TAR_EXIT (files may have changed during archive), but archive was created successfully."
-            else
-              echo "Archive created successfully without warnings."
-            fi
-            
-            echo "Archive file exists at /tmp/deployment.tar.gz"
-          '
+          # Note: tar may exit with code 1 if files change during archive, but archive is still valid
+          # This step uses continue-on-error to allow the workflow to continue even if tar exits with code 1
+          tar --warning=no-file-changed \
+              --exclude='node_modules' \
+              --exclude='.next' \
+              --exclude='.git' \
+              --exclude='.github' \
+              --exclude='.DS_Store' \
+              --exclude='*.log' \
+              --exclude='.env*' \
+              --exclude='deployment.tar.gz' \
+              -czf /tmp/deployment.tar.gz . 2>&1 || echo "tar completed with warnings (files may have changed)"
+        
+      - name: Verify and move archive
+        run: |
+          # Check if archive was created successfully (this is what matters, not tar's exit code)
+          if [ ! -f /tmp/deployment.tar.gz ]; then
+            echo "ERROR: Archive file was not created! Deployment cannot continue."
+            exit 1
+          fi
           
-          # Move archive to current directory (outside the bash +e context)
+          echo "✓ Archive file exists at /tmp/deployment.tar.gz"
+          echo "Moving archive to current directory..."
+          
+          # Move archive to current directory
           mv /tmp/deployment.tar.gz deployment.tar.gz
+          
+          echo "✓ Archive moved successfully"
           
           # Verify exports folder is included
           echo "Verifying exports folder is included in archive..."
