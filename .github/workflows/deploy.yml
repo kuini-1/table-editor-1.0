@@ -42,18 +42,17 @@ jobs:
 
       - name: Create deployment archive
         continue-on-error: true
-        shell: bash {0}
         run: |
-          # CRITICAL: Override shell to not use -e flag, preventing exit on tar's code 1
-          # Shell is overridden above to use 'bash {0}' instead of default 'bash -e {0}'
+          # Create a wrapper script that handles tar errors gracefully
+          cat > /tmp/create_archive.sh << 'SCRIPT_EOF'
+          #!/bin/bash
+          # Disable exit-on-error for this script
           set +e
           
-          # Create a tar archive excluding node_modules and .next, but including exports folder
-          # CRITICAL: The exports/ folder contains Convert.exe files required for backend conversion
           echo "Creating deployment archive (exports folder will be included)..."
           echo "DEBUG: Starting tar command..."
           echo "DEBUG: Current directory: $(pwd)"
-          echo "DEBUG: set +e is active, errors will not cause exit"
+          echo "DEBUG: Script running with set +e, errors will not cause exit"
           
           # Create archive in /tmp first to avoid "file changed as we read it" error
           # Note: tar may exit with code 1 if files change during archive, but archive is still valid
@@ -71,9 +70,6 @@ jobs:
           
           echo "DEBUG: tar command completed with exit code: $TAR_EXIT"
           
-          # Re-enable exit-on-error for the verification step
-          set -e
-          
           # Check if archive was created successfully (this is what matters, not tar's exit code)
           echo "DEBUG: Checking if archive file exists..."
           if [ ! -f /tmp/deployment.tar.gz ]; then
@@ -87,6 +83,14 @@ jobs:
           else
             echo "✓ Archive created successfully without warnings."
           fi
+          
+          # Always exit successfully if archive exists
+          exit 0
+          SCRIPT_EOF
+          
+          # Make script executable and run it (without -e flag)
+          chmod +x /tmp/create_archive.sh
+          bash /tmp/create_archive.sh
         
       - name: Verify and move archive
         run: |
