@@ -45,6 +45,7 @@ jobs:
           # Create a tar archive excluding node_modules and .next, but including exports folder
           # CRITICAL: The exports/ folder contains Convert.exe files required for backend conversion
           echo "Creating deployment archive (exports folder will be included)..."
+          # Create archive in /tmp first to avoid "file changed as we read it" error
           tar --exclude='node_modules' \
               --exclude='.next' \
               --exclude='.git' \
@@ -52,9 +53,11 @@ jobs:
               --exclude='.DS_Store' \
               --exclude='*.log' \
               --exclude='.env*' \
-              -czf deployment.tar.gz \
               --exclude='deployment.tar.gz' \
-              .
+              -czf /tmp/deployment.tar.gz .
+          
+          # Move archive to current directory
+          mv /tmp/deployment.tar.gz deployment.tar.gz
           
           # Verify exports folder is included
           echo "Verifying exports folder is included in archive..."
