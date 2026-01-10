@@ -43,6 +43,9 @@ jobs:
       - name: Create deployment archive
         continue-on-error: true
         run: |
+          # CRITICAL: Disable exit-on-error at the VERY start, before any commands
+          set +e
+          echo "DEBUG: Step starting, set +e is active"
           # Create a wrapper script that handles tar errors gracefully
           cat > /tmp/create_archive.sh << 'SCRIPT_EOF'
           #!/bin/bash
@@ -88,9 +91,26 @@ jobs:
           exit 0
           SCRIPT_EOF
           
-          # Make script executable and run it (without -e flag)
+          # Make script executable and run it (ensure it doesn't fail parent script)
+          echo "DEBUG: Making script executable..."
           chmod +x /tmp/create_archive.sh
+          echo "DEBUG: Script is executable, about to run it..."
+          echo "DEBUG: Current directory before script: $(pwd)"
+          # Use || true to prevent parent script from exiting, then verify archive exists
+          # Disable exit-on-error for this command specifically
+          set +e
           bash /tmp/create_archive.sh
+          SCRIPT_EXIT=$?
+          set -e
+          echo "DEBUG: Wrapper script exited with code: $SCRIPT_EXIT"
+          
+          # Verify archive was created regardless of script exit code
+          echo "DEBUG: Checking archive after script execution..."
+          if [ ! -f /tmp/deployment.tar.gz ]; then
+            echo "ERROR: Archive file was not created! Deployment cannot continue."
+            exit 1
+          fi
+          echo "DEBUG: Archive verified to exist (size: $(ls -lh /tmp/deployment.tar.gz | awk '{print $5}')), workflow can continue"
         
       - name: Verify and move archive
         run: |
