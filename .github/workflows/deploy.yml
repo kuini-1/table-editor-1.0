@@ -258,25 +258,58 @@ jobs:
             -o UserKnownHostsFile=/dev/null \
             deploy.ps1 "${VPS_USER}@${VPS_HOST}:${SCP_PATH}/"
           
+          # Create a base64-encoded JSON file with environment variables to avoid quote/special character issues
+          # This is safer than passing parameters directly via SSH
+          python3 << 'PYTHON_SCRIPT'
+          import json
+          import base64
+          import os
+          
+          env_vars = {
+              "DeployPath": os.environ.get("VPS_DEPLOY_PATH", ""),
+              "Pm2AppName": os.environ.get("PM2_APP_NAME", ""),
+              "NextPublicSupabaseUrl": os.environ.get("NEXT_PUBLIC_SUPABASE_URL", ""),
+              "NextPublicSupabaseAnonKey": os.environ.get("NEXT_PUBLIC_SUPABASE_ANON_KEY", ""),
+              "NextPublicGoogleClientId": os.environ.get("NEXT_PUBLIC_GOOGLE_CLIENT_ID", ""),
+              "SupabaseServiceRoleKey": os.environ.get("SUPABASE_SERVICE_ROLE_KEY", ""),
+              "StripeSecretKey": os.environ.get("STRIPE_SECRET_KEY", ""),
+              "NextPublicStripePublishableKey": os.environ.get("NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY", ""),
+              "StripeWebhookSecret": os.environ.get("STRIPE_WEBHOOK_SECRET", ""),
+              "ConversionWorkerPoolSize": os.environ.get("CONVERSION_WORKER_POOL_SIZE", ""),
+              "ConversionQueueMaxSize": os.environ.get("CONVERSION_QUEUE_MAX_SIZE", ""),
+              "ConversionRateLimitCooldown": os.environ.get("CONVERSION_RATE_LIMIT_COOLDOWN", "")
+          }
+          
+          json_str = json.dumps(env_vars)
+          encoded = base64.b64encode(json_str.encode('utf-8')).decode('utf-8')
+          
+          with open('env_vars.b64', 'w') as f:
+              f.write(encoded)
+          
+          print(f"Environment variables encoded: {len(encoded)} characters")
+          PYTHON_SCRIPT
+          
+          # Transfer the base64-encoded file to VPS
+          SCP_PATH=$(echo "$VPS_DEPLOY_PATH" | sed 's|\\|/|g')
+          sshpass -p "$VPS_PASSWORD" scp -o StrictHostKeyChecking=no \
+            -o UserKnownHostsFile=/dev/null \
+            env_vars.b64 "${VPS_USER}@${VPS_HOST}:${SCP_PATH}/"
+          
           # Execute deployment commands on Windows VPS via SSH
-          # Use proper PowerShell escaping for paths with spaces or special characters
-          # Pass all environment variables as parameters to the PowerShell script
+          # Decode and read environment variables from base64 file to avoid quote/special character issues
           sshpass -p "$VPS_PASSWORD" ssh -o StrictHostKeyChecking=no \
             -o UserKnownHostsFile=/dev/null \
             "${VPS_USER}@${VPS_HOST}" \
-            "powershell -ExecutionPolicy Bypass -File \"${VPS_DEPLOY_PATH}\\deploy.ps1\" \
-              -DeployPath \"${VPS_DEPLOY_PATH}\" \
-              -Pm2AppName \"${PM2_APP_NAME}\" \
-              -NextPublicSupabaseUrl \"${NEXT_PUBLIC_SUPABASE_URL}\" \
-              -NextPublicSupabaseAnonKey \"${NEXT_PUBLIC_SUPABASE_ANON_KEY}\" \
-              -NextPublicGoogleClientId \"${NEXT_PUBLIC_GOOGLE_CLIENT_ID}\" \
-              -SupabaseServiceRoleKey \"${SUPABASE_SERVICE_ROLE_KEY}\" \
-              -StripeSecretKey \"${STRIPE_SECRET_KEY}\" \
-              -NextPublicStripePublishableKey \"${NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY}\" \
-              -StripeWebhookSecret \"${STRIPE_WEBHOOK_SECRET}\" \
-              -ConversionWorkerPoolSize \"${CONVERSION_WORKER_POOL_SIZE}\" \
-              -ConversionQueueMaxSize \"${CONVERSION_QUEUE_MAX_SIZE}\" \
-              -ConversionRateLimitCooldown \"${CONVERSION_RATE_LIMIT_COOLDOWN}\""
+            "powershell -ExecutionPolicy Bypass -Command \"\$encoded = Get-Content '${VPS_DEPLOY_PATH}\\env_vars.b64' -Raw; \$json = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String(\$encoded.Trim())); \$envVars = \$json | ConvertFrom-Json; & '${VPS_DEPLOY_PATH}\\deploy.ps1' -DeployPath \$envVars.DeployPath -Pm2AppName \$envVars.Pm2AppName -NextPublicSupabaseUrl \$envVars.NextPublicSupabaseUrl -NextPublicSupabaseAnonKey \$envVars.NextPublicSupabaseAnonKey -NextPublicGoogleClientId \$envVars.NextPublicGoogleClientId -SupabaseServiceRoleKey \$envVars.SupabaseServiceRoleKey -StripeSecretKey \$envVars.StripeSecretKey -NextPublicStripePublishableKey \$envVars.NextPublicStripePublishableKey -StripeWebhookSecret \$envVars.StripeWebhookSecret -ConversionWorkerPoolSize \$envVars.ConversionWorkerPoolSize -ConversionQueueMaxSize \$envVars.ConversionQueueMaxSize -ConversionRateLimitCooldown \$envVars.ConversionRateLimitCooldown\""
+          
+          # Clean up base64 file from VPS
+          sshpass -p "$VPS_PASSWORD" ssh -o StrictHostKeyChecking=no \
+            -o UserKnownHostsFile=/dev/null \
+            "${VPS_USER}@${VPS_HOST}" \
+            "powershell -Command \"Remove-Item -Path '${VPS_DEPLOY_PATH}\\env_vars.b64' -Force -ErrorAction SilentlyContinue\""
+          
+          # Clean up local base64 file
+          rm -f env_vars.b64
           
           # Clean up the script from VPS
           sshpass -p "$VPS_PASSWORD" ssh -o StrictHostKeyChecking=no \
@@ -284,8 +317,8 @@ jobs:
             "${VPS_USER}@${VPS_HOST}" \
             "powershell -Command \"Remove-Item -Path '${VPS_DEPLOY_PATH}\\deploy.ps1' -Force -ErrorAction SilentlyContinue\""
           
-          # Clean up local script
-          rm -f deploy.ps1
+          # Clean up local files
+          rm -f deploy.ps1 env_vars.b64
 
       - name: Cleanup
         if: always()
