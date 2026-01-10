@@ -41,12 +41,13 @@ jobs:
           cache: 'npm'
 
       - name: Create deployment archive
+        continue-on-error: true
         run: |
           # Create a tar archive excluding node_modules and .next, but including exports folder
           # CRITICAL: The exports/ folder contains Convert.exe files required for backend conversion
           echo "Creating deployment archive (exports folder will be included)..."
           # Create archive in /tmp first to avoid "file changed as we read it" error
-          # Use || true to prevent failure when tar exits with code 1 (files changed during archive)
+          # Note: tar may exit with code 1 if files change during archive, but archive is still valid
           tar --warning=no-file-changed \
               --exclude='node_modules' \
               --exclude='.next' \
@@ -56,9 +57,11 @@ jobs:
               --exclude='*.log' \
               --exclude='.env*' \
               --exclude='deployment.tar.gz' \
-              -czf /tmp/deployment.tar.gz . || true
-          
-          # Check if archive was created successfully (tar may exit with 1 if files changed, but archive is still valid)
+              -czf /tmp/deployment.tar.gz .
+        
+      - name: Verify archive was created
+        run: |
+          # Check if archive was created successfully
           if [ ! -f /tmp/deployment.tar.gz ]; then
             echo "ERROR: Archive creation failed!"
             exit 1
