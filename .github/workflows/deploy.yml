@@ -43,74 +43,37 @@ jobs:
       - name: Create deployment archive
         continue-on-error: true
         run: |
-          # CRITICAL: Disable exit-on-error at the VERY start, before any commands
-          set +e
-          echo "DEBUG: Step starting, set +e is active"
-          # Create a wrapper script that handles tar errors gracefully
-          cat > /tmp/create_archive.sh << 'SCRIPT_EOF'
-          #!/bin/bash
-          # Disable exit-on-error for this script
-          set +e
-          
           echo "Creating deployment archive (exports folder will be included)..."
-          echo "DEBUG: Starting tar command..."
-          echo "DEBUG: Current directory: $(pwd)"
-          echo "DEBUG: Script running with set +e, errors will not cause exit"
           
-          # Create archive in /tmp first to avoid "file changed as we read it" error
-          # Note: tar may exit with code 1 if files change during archive, but archive is still valid
-          tar --warning=no-file-changed \
-              --exclude='node_modules' \
-              --exclude='.next' \
-              --exclude='.git' \
-              --exclude='.github' \
-              --exclude='.DS_Store' \
-              --exclude='*.log' \
-              --exclude='.env*' \
-              --exclude='deployment.tar.gz' \
-              -czf /tmp/deployment.tar.gz . 2>&1
-          TAR_EXIT=$?
+          # Use a subshell that always exits 0 if archive exists, regardless of tar's exit code
+          # This bypasses bash -e because the subshell handles the exit code
+          (
+            set +e
+            tar --warning=no-file-changed \
+                --exclude='node_modules' \
+                --exclude='.next' \
+                --exclude='.git' \
+                --exclude='.github' \
+                --exclude='.DS_Store' \
+                --exclude='*.log' \
+                --exclude='.env*' \
+                --exclude='deployment.tar.gz' \
+                -czf /tmp/deployment.tar.gz . 2>&1
+            if [ -f /tmp/deployment.tar.gz ]; then
+              echo "✓ Archive created successfully"
+              exit 0
+            else
+              echo "ERROR: Archive was not created"
+              exit 1
+            fi
+          )
           
-          echo "DEBUG: tar command completed with exit code: $TAR_EXIT"
-          
-          # Check if archive was created successfully (this is what matters, not tar's exit code)
-          echo "DEBUG: Checking if archive file exists..."
+          # Final check - if archive doesn't exist, fail the step
           if [ ! -f /tmp/deployment.tar.gz ]; then
-            echo "ERROR: Archive file was not created! Deployment cannot continue."
+            echo "ERROR: Archive file verification failed!"
             exit 1
           fi
-          
-          echo "DEBUG: Archive file exists, size: $(ls -lh /tmp/deployment.tar.gz | awk '{print $5}')"
-          if [ $TAR_EXIT -ne 0 ]; then
-            echo "Warning: tar exited with code $TAR_EXIT (files may have changed during archive), but archive was created successfully."
-          else
-            echo "✓ Archive created successfully without warnings."
-          fi
-          
-          # Always exit successfully if archive exists
-          exit 0
-          SCRIPT_EOF
-          
-          # Make script executable and run it (ensure it doesn't fail parent script)
-          echo "DEBUG: Making script executable..."
-          chmod +x /tmp/create_archive.sh
-          echo "DEBUG: Script is executable, about to run it..."
-          echo "DEBUG: Current directory before script: $(pwd)"
-          # Use || true to prevent parent script from exiting, then verify archive exists
-          # Disable exit-on-error for this command specifically
-          set +e
-          bash /tmp/create_archive.sh
-          SCRIPT_EXIT=$?
-          set -e
-          echo "DEBUG: Wrapper script exited with code: $SCRIPT_EXIT"
-          
-          # Verify archive was created regardless of script exit code
-          echo "DEBUG: Checking archive after script execution..."
-          if [ ! -f /tmp/deployment.tar.gz ]; then
-            echo "ERROR: Archive file was not created! Deployment cannot continue."
-            exit 1
-          fi
-          echo "DEBUG: Archive verified to exist (size: $(ls -lh /tmp/deployment.tar.gz | awk '{print $5}')), workflow can continue"
+          echo "Archive verified: $(ls -lh /tmp/deployment.tar.gz | awk '{print $5}')"
         
       - name: Verify and move archive
         run: |
