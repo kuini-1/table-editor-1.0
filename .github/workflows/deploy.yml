@@ -1,0 +1,219 @@
+name: Deploy to Windows VPS
+
+# This workflow deploys the application to a Windows VPS when a version tag is pushed
+# Required GitHub Secrets:
+#   VPS_HOST: VPS IP address or hostname
+#   VPS_USER: SSH username
+#   VPS_PASSWORD: SSH password (or use VPS_SSH_KEY for key-based auth)
+#   VPS_DEPLOY_PATH: Deployment directory path on VPS (e.g., C:\xampp\htdocs)
+#   PM2_APP_NAME: PM2 application name to restart
+#   NEXT_PUBLIC_SUPABASE_URL: Supabase project URL
+#   NEXT_PUBLIC_SUPABASE_ANON_KEY: Supabase anonymous key
+#   NEXT_PUBLIC_GOOGLE_CLIENT_ID: Google OAuth client ID
+#   SUPABASE_SERVICE_ROLE_KEY: Supabase service role key
+#   STRIPE_SECRET_KEY: Stripe secret key
+#   NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: Stripe publishable key
+#   STRIPE_WEBHOOK_SECRET: Stripe webhook secret
+#   CONVERSION_WORKER_POOL_SIZE: Conversion worker pool size
+#   CONVERSION_QUEUE_MAX_SIZE: Conversion queue max size
+#   CONVERSION_RATE_LIMIT_COOLDOWN: Conversion rate limit cooldown
+
+on:
+  push:
+    tags:
+      - 'v*'  # Triggers on tags like v1.0.0, v1.2.3, etc.
+
+jobs:
+  deploy:
+    name: Deploy to Windows VPS
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Create deployment archive
+        run: |
+          # Create a tar archive excluding node_modules and .next, but including exports folder
+          # CRITICAL: The exports/ folder contains Convert.exe files required for backend conversion
+          echo "Creating deployment archive (exports folder will be included)..."
+          tar --exclude='node_modules' \
+              --exclude='.next' \
+              --exclude='.git' \
+              --exclude='.github' \
+              --exclude='.DS_Store' \
+              --exclude='*.log' \
+              --exclude='.env*' \
+              -czf deployment.tar.gz \
+              --exclude='deployment.tar.gz' \
+              .
+          
+          # Verify exports folder is included
+          echo "Verifying exports folder is included in archive..."
+          if tar -tzf deployment.tar.gz | grep -q "^exports/"; then
+            echo "✓ exports folder found in archive"
+            tar -tzf deployment.tar.gz | grep "^exports/" | head -5
+          else
+            echo "✗ ERROR: exports folder not found in archive!"
+            exit 1
+          fi
+
+      - name: Transfer files to VPS
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PASSWORD: ${{ secrets.VPS_PASSWORD }}
+          VPS_DEPLOY_PATH: ${{ secrets.VPS_DEPLOY_PATH }}
+        run: |
+          # Install sshpass for password authentication
+          sudo apt-get update && sudo apt-get install -y sshpass
+          
+          # Convert Windows path format for SCP (Windows OpenSSH accepts both formats)
+          # Escape backslashes and ensure proper quoting
+          DEPLOY_PATH=$(echo "$VPS_DEPLOY_PATH" | sed 's|\\|/|g')
+          
+          # Transfer the archive to VPS
+          sshpass -p "$VPS_PASSWORD" scp -o StrictHostKeyChecking=no \
+            -o UserKnownHostsFile=/dev/null \
+            deployment.tar.gz "${VPS_USER}@${VPS_HOST}:${DEPLOY_PATH}/"
+
+      - name: Deploy and restart on VPS
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PASSWORD: ${{ secrets.VPS_PASSWORD }}
+          VPS_DEPLOY_PATH: ${{ secrets.VPS_DEPLOY_PATH }}
+          PM2_APP_NAME: ${{ secrets.PM2_APP_NAME }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${{ secrets.NEXT_PUBLIC_GOOGLE_CLIENT_ID }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+          NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}
+          STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
+          CONVERSION_WORKER_POOL_SIZE: ${{ secrets.CONVERSION_WORKER_POOL_SIZE }}
+          CONVERSION_QUEUE_MAX_SIZE: ${{ secrets.CONVERSION_QUEUE_MAX_SIZE }}
+          CONVERSION_RATE_LIMIT_COOLDOWN: ${{ secrets.CONVERSION_RATE_LIMIT_COOLDOWN }}
+        run: |
+          # Install sshpass if not already installed
+          sudo apt-get update && sudo apt-get install -y sshpass
+          
+          # Create PowerShell deployment script with environment variables
+          cat > deploy.ps1 << 'POWERSHELL'
+          param(
+            [string]$DeployPath,
+            [string]$Pm2AppName,
+            [string]$NextPublicSupabaseUrl,
+            [string]$NextPublicSupabaseAnonKey,
+            [string]$NextPublicGoogleClientId,
+            [string]$SupabaseServiceRoleKey,
+            [string]$StripeSecretKey,
+            [string]$NextPublicStripePublishableKey,
+            [string]$StripeWebhookSecret,
+            [string]$ConversionWorkerPoolSize,
+            [string]$ConversionQueueMaxSize,
+            [string]$ConversionRateLimitCooldown
+          )
+          
+          # Navigate to deployment directory
+          Set-Location -Path $DeployPath
+          
+          # Extract the archive (using tar if available, or 7zip)
+          Write-Host "Extracting deployment archive..."
+          if (Get-Command tar -ErrorAction SilentlyContinue) {
+            tar -xzf deployment.tar.gz
+          } elseif (Get-Command 7z -ErrorAction SilentlyContinue) {
+            7z x deployment.tar.gz -so | tar -xzf -
+          } else {
+            Write-Error "Neither tar nor 7z found. Please install one of them."
+            exit 1
+          }
+          
+          # Remove the archive after extraction
+          Remove-Item -Path deployment.tar.gz -Force
+          
+          # Create .env.local file with all environment variables
+          Write-Host "Creating .env.local file..."
+          $envLines = @(
+            "NEXT_PUBLIC_SUPABASE_URL=$NextPublicSupabaseUrl",
+            "NEXT_PUBLIC_SUPABASE_ANON_KEY=$NextPublicSupabaseAnonKey",
+            "NEXT_PUBLIC_GOOGLE_CLIENT_ID=$NextPublicGoogleClientId",
+            "SUPABASE_SERVICE_ROLE_KEY=$SupabaseServiceRoleKey",
+            "STRIPE_SECRET_KEY=$StripeSecretKey",
+            "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=$NextPublicStripePublishableKey",
+            "STRIPE_WEBHOOK_SECRET=$StripeWebhookSecret",
+            "CONVERSION_WORKER_POOL_SIZE=$ConversionWorkerPoolSize",
+            "CONVERSION_QUEUE_MAX_SIZE=$ConversionQueueMaxSize",
+            "CONVERSION_RATE_LIMIT_COOLDOWN=$ConversionRateLimitCooldown"
+          )
+          $envLines | Out-File -FilePath ".env.local" -Encoding utf8 -Force
+          Write-Host "✓ .env.local file created with environment variables"
+          
+          # Install/update dependencies
+          Write-Host "Installing dependencies..."
+          npm install --production=false
+          
+          # Build the application
+          Write-Host "Building application..."
+          npm run build
+          
+          # Restart PM2 process
+          Write-Host "Restarting PM2 process: $Pm2AppName"
+          pm2 reload $Pm2AppName --update-env
+          
+          # Show PM2 status
+          pm2 status
+          
+          Write-Host "Deployment completed successfully!"
+          POWERSHELL
+          
+          # Convert Windows path for SCP (use forward slashes)
+          SCP_PATH=$(echo "$VPS_DEPLOY_PATH" | sed 's|\\|/|g')
+          
+          # Transfer the PowerShell script to VPS
+          sshpass -p "$VPS_PASSWORD" scp -o StrictHostKeyChecking=no \
+            -o UserKnownHostsFile=/dev/null \
+            deploy.ps1 "${VPS_USER}@${VPS_HOST}:${SCP_PATH}/"
+          
+          # Execute deployment commands on Windows VPS via SSH
+          # Use proper PowerShell escaping for paths with spaces or special characters
+          # Pass all environment variables as parameters to the PowerShell script
+          sshpass -p "$VPS_PASSWORD" ssh -o StrictHostKeyChecking=no \
+            -o UserKnownHostsFile=/dev/null \
+            "${VPS_USER}@${VPS_HOST}" \
+            "powershell -ExecutionPolicy Bypass -File \"${VPS_DEPLOY_PATH}\\deploy.ps1\" \
+              -DeployPath \"${VPS_DEPLOY_PATH}\" \
+              -Pm2AppName \"${PM2_APP_NAME}\" \
+              -NextPublicSupabaseUrl \"${NEXT_PUBLIC_SUPABASE_URL}\" \
+              -NextPublicSupabaseAnonKey \"${NEXT_PUBLIC_SUPABASE_ANON_KEY}\" \
+              -NextPublicGoogleClientId \"${NEXT_PUBLIC_GOOGLE_CLIENT_ID}\" \
+              -SupabaseServiceRoleKey \"${SUPABASE_SERVICE_ROLE_KEY}\" \
+              -StripeSecretKey \"${STRIPE_SECRET_KEY}\" \
+              -NextPublicStripePublishableKey \"${NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY}\" \
+              -StripeWebhookSecret \"${STRIPE_WEBHOOK_SECRET}\" \
+              -ConversionWorkerPoolSize \"${CONVERSION_WORKER_POOL_SIZE}\" \
+              -ConversionQueueMaxSize \"${CONVERSION_QUEUE_MAX_SIZE}\" \
+              -ConversionRateLimitCooldown \"${CONVERSION_RATE_LIMIT_COOLDOWN}\""
+          
+          # Clean up the script from VPS
+          sshpass -p "$VPS_PASSWORD" ssh -o StrictHostKeyChecking=no \
+            -o UserKnownHostsFile=/dev/null \
+            "${VPS_USER}@${VPS_HOST}" \
+            "powershell -Command \"Remove-Item -Path '${VPS_DEPLOY_PATH}\\deploy.ps1' -Force -ErrorAction SilentlyContinue\""
+          
+          # Clean up local script
+          rm -f deploy.ps1
+
+      - name: Cleanup
+        if: always()
+        run: |
+          rm -f deployment.tar.gz
+

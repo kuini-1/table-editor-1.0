@@ -3,8 +3,8 @@ import * as z from 'zod';
 export const eventSystemDynamicTableSchema = z.object({
   table_id: z.string().uuid(),
   tblidx: z.coerce.number().min(0, 'Must be a positive number').max(9999999999, 'Cannot exceed 10 digits'),
-  wszName: z.string(),
-  bOnOff: z.boolean(),
+  wszName: z.string().nullable().transform(e => e === null ? "" : e),
+  bOnOff: z.coerce.boolean().transform(val => val ? 1 : 0),
   byServerFarm: z.coerce.number().min(0, 'Must be a positive number').max(32767, 'Cannot exceed SMALLINT max'),
   dwConnectionTime: z.coerce.number().min(0, 'Must be a positive number'),
   byType: z.coerce.number().min(0, 'Must be a positive number').max(32767, 'Cannot exceed SMALLINT max'),

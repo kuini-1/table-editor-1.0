@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { z } from "zod";
 import { useSearchParams } from "next/navigation";
 import {
@@ -10,11 +10,16 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { useTableData } from "@/hooks/useTableData";
+import { useEditingSession } from '@/hooks/useEditingSession';
+import { useEditingIndicators } from '@/hooks/useEditingIndicators';
 import { TableHeader } from '@/components/table/TableHeader';
 import { TablePagination } from '@/components/table/TablePagination';
 import { DataTable } from "@/components/table/DataTable";
 import { DeleteDialog, ImportDialog, useExport } from '@/components/table/TableDialogs';
+import { EditConflictWarning } from '@/components/table/EditConflictWarning';
+import { EditingIndicator } from '@/components/table/EditingIndicator';
 import { useStore } from "@/lib/store";
+import { createClient } from '@/lib/supabase/client';
 import { itemOptionSchema } from "./schema";
 import { ItemOptionForm } from "./ItemOptionForm";
 import { ErrorDisplay } from '@/components/ErrorDisplay';
@@ -70,6 +75,36 @@ export default function ItemOptionPage() {
   const [selectedRow, setSelectedRow] = useState<ItemOptionRow | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | undefined>();
+
+  const supabase = createClient();
+
+  // Get current user ID
+  useEffect(() => {
+    const fetchUserId = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setCurrentUserId(user?.id);
+    };
+    fetchUserId();
+  }, [supabase]);
+
+  // Track editing session when edit form is open
+  useEditingSession({
+    tableId,
+    rowId: formMode === 'edit' && selectedRow ? selectedRow.id : null,
+    sessionType: 'editing',
+    enabled: isFormOpen && formMode === 'edit' && !!selectedRow,
+  });
+
+  // Get real-time editing indicators
+  const {
+    viewing,
+    editing,
+    getOtherUsersEditingRow,
+  } = useEditingIndicators({
+    tableId,
+    enabled: !!tableId,
+  });
 
   // Define columns for the data table
   const columns = [
@@ -183,7 +218,14 @@ export default function ItemOptionPage() {
     <div className="flex flex-col h-screen bg-gray-900">
       <TableHeader
         title={selectedTable?.name || 'Item Option Table'}
-        description="Manage item options and their properties"
+        description={
+          <div className="flex items-center gap-2">
+            <span>Manage item options and their properties</span>
+            
+              <EditingIndicator sessions={viewing} type="viewing" currentUserId={currentUserId} />
+            
+          </div>
+        }
         columns={columns}
         filters={filters}
         selectedCount={selectedRows.size}
@@ -220,7 +262,12 @@ export default function ItemOptionPage() {
             setFormMode('duplicate');
             setIsFormOpen(true);
           }}
-          onDelete={(row) => handleDeleteRow(row.id)}
+          onDelete={(row) => {
+            setSelectedRow(row);
+            setIsDeleteDialogOpen(true);
+          }}
+          editingSessions={editing}
+          currentUserId={currentUserId}
         />
       </div>
 
@@ -244,8 +291,22 @@ export default function ItemOptionPage() {
             </SheetTitle>
           </SheetHeader>
           
-          <div className="flex-1 overflow-hidden">
-            <ItemOptionForm
+          <div className="flex-1 overflow-hidden bg-white dark:bg-gray-800">
+            {formMode === 'edit' && selectedRow && (
+              <div className="px-6 pt-4">
+                <EditConflictWarning
+                  sessions={getOtherUsersEditingRow(selectedRow.id, currentUserId)}
+                  currentUserId={currentUserId}
+                  onCancel={() => {
+                    setIsFormOpen(false);
+                    setSelectedRow(null);
+                  }}
+                />
+              </div>
+            )}
+            
+            <div className="flex-1 overflow-hidden">
+              <ItemOptionForm
               open={isFormOpen}
               onOpenChange={setIsFormOpen}
               mode={formMode}
@@ -268,6 +329,7 @@ export default function ItemOptionPage() {
               }}
               tableId={tableId}
             />
+            </div>
           </div>
         </SheetContent>
       </Sheet>

@@ -3,7 +3,7 @@ import * as z from 'zod';
 export const chatFilterTableSchema = z.object({
   table_id: z.string().uuid(),
   tblidx: z.coerce.number().min(0, 'Must be a positive number').max(9999999999, 'Cannot exceed 10 digits'),
-  wszSlangText: z.string(),
+  wszSlangText: z.string().nullable().transform(e => e === null ? "" : e),
   filteringTextIndex: z.coerce.number().min(0, 'Must be a positive number'),
 });
 

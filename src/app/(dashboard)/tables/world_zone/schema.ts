@@ -6,8 +6,8 @@ export const worldZoneTableSchema = z.object({
   wFunctionBitFlag: z.coerce.number().min(0, 'Must be a positive number').max(32767, 'Cannot exceed SMALLINT max'),
   worldTblidx: z.coerce.number().min(0, 'Must be a positive number'),
   nameTblidx: z.coerce.number().min(0, 'Must be a positive number'),
-  wszName_Text: z.string(),
-  bForbidden_Vehicle: z.boolean(),
+  wszName_Text: z.string().nullable().transform(e => e === null ? "" : e),
+  bForbidden_Vehicle: z.coerce.boolean().transform(val => val ? 1 : 0),
 });
 
 export type WorldZoneTableFormData = z.infer<typeof worldZoneTableSchema>;

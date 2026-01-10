@@ -14,6 +14,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { RotateCcw } from "lucide-react";
+import { RelatedTableEditButton } from "./RelatedTableEditButton";
+import { getRelatedTableConfig } from "@/lib/relatedTableConfig";
 
 interface Column {
   key: string;
@@ -34,6 +36,7 @@ interface TableFormProps<T extends BaseFormData> {
   onCancel: () => void;
   isEdit?: boolean;
   tableId: string;
+  tableType?: string; // Optional: table type for related table configuration
 }
 
 export function TableForm<T extends BaseFormData>({
@@ -43,6 +46,7 @@ export function TableForm<T extends BaseFormData>({
   onCancel,
   isEdit,
   tableId,
+  tableType,
 }: TableFormProps<T>) {
   // Create a dynamic schema based on columns
   const schemaObject: { [key: string]: z.ZodTypeAny } = {
@@ -121,6 +125,30 @@ export function TableForm<T extends BaseFormData>({
                       <FormLabel>{column.label}</FormLabel>
                       <FormControl>
                         <div className="relative group">
+                          {(() => {
+                            // Check if this field has a related table configuration
+                            const relatedTableConfig = tableType ? getRelatedTableConfig(tableType, column.key) : undefined;
+                            const hasRelatedTable = !!relatedTableConfig;
+                            const hasValue = field.value !== null && field.value !== undefined && field.value !== '';
+                            
+                            // Check if reset button should be shown
+                            const originalValue = originalValuesRef.current[column.key as keyof FormData];
+                            const currentValue = field.value;
+                            const hasChanged = normalizeValueForComparison(originalValue) !== normalizeValueForComparison(currentValue);
+                            const showResetButton = hasChanged;
+                            
+                            // Calculate padding based on which buttons are actually visible
+                            let rightPadding = 'pr-8'; // Default padding
+                            if (hasRelatedTable && hasValue && showResetButton) {
+                              rightPadding = 'pr-20'; // Both buttons visible
+                            } else if (hasRelatedTable && hasValue) {
+                              rightPadding = 'pr-10'; // Only related table button
+                            } else if (showResetButton) {
+                              rightPadding = 'pr-10'; // Only reset button
+                            }
+                            
+                            return (
+                              <>
                           <Input 
                             type={column.type === 'number' ? 'number' : 'text'} 
                             name={field.name}
@@ -143,32 +171,37 @@ export function TableForm<T extends BaseFormData>({
                               }
                             }}
                             placeholder={`Enter ${column.label.toLowerCase()}`}
-                            className="bg-white dark:bg-gray-900/50 border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-200 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-indigo-500/50 dark:focus:ring-indigo-500/50 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors pr-8"
+                                  className={`bg-white dark:bg-gray-900/50 border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-200 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-indigo-500/50 dark:focus:ring-indigo-500/50 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors ${rightPadding}`}
                           />
-                          {(() => {
-                            const originalValue = originalValuesRef.current[column.key as keyof FormData];
-                            const currentValue = field.value;
-                            const hasChanged = normalizeValueForComparison(originalValue) !== normalizeValueForComparison(currentValue);
-                            
-                            if (hasChanged) {
-                              return (
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    form.setValue(column.key as Path<FormData>, originalValue as FormData[Path<FormData>], {
-                                      shouldDirty: true,
-                                      shouldValidate: false,
-                                      shouldTouch: true,
-                                    });
-                                  }}
-                                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-                                  title="Reset to original value"
-                                >
-                                  <RotateCcw className="h-3.5 w-3.5 text-gray-500 dark:text-gray-400" />
-                                </button>
-                              );
-                            }
-                            return null;
+                                
+                                {/* Related table edit button */}
+                                {hasRelatedTable && hasValue && relatedTableConfig && (
+                                  <RelatedTableEditButton
+                                    config={relatedTableConfig}
+                                    value={field.value as string | number}
+                                    relatedTableId={tableId}
+                                  />
+                                )}
+                                
+                                {/* Reset button */}
+                                {showResetButton && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      form.setValue(column.key as Path<FormData>, originalValue as FormData[Path<FormData>], {
+                                        shouldDirty: true,
+                                        shouldValidate: false,
+                                        shouldTouch: true,
+                                      });
+                                    }}
+                                    className={`absolute ${hasRelatedTable && hasValue ? 'right-10' : 'right-2'} top-1/2 -translate-y-1/2 p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors`}
+                                    title="Reset to original value"
+                                  >
+                                    <RotateCcw className="h-3.5 w-3.5 text-gray-500 dark:text-gray-400" />
+                                  </button>
+                                )}
+                              </>
+                            );
                           })()}
                         </div>
                       </FormControl>

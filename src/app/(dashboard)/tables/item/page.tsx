@@ -1,5 +1,5 @@
 "use client";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { z } from "zod";
 import { useSearchParams } from "next/navigation";
 import {
@@ -10,10 +10,15 @@ import {
 } from "@/components/ui/sheet";
 import { DataTable } from "@/components/table/DataTable";
 import { useTableData } from "@/hooks/useTableData";
+import { useEditingSession } from "@/hooks/useEditingSession";
+import { useEditingIndicators } from "@/hooks/useEditingIndicators";
 import { TableHeader } from '@/components/table/TableHeader';
 import { TablePagination } from '@/components/table/TablePagination';
 import { DeleteDialog, ImportDialog, useExport } from '@/components/table/TableDialogs';
+import { EditConflictWarning } from '@/components/table/EditConflictWarning';
+import { EditingIndicator } from '@/components/table/EditingIndicator';
 import { useStore } from "@/lib/store";
+import { createClient } from "@/lib/supabase/client";
 import { itemTableSchema, columns } from "./schema";
 import ItemForm from "./ItemForm";
 import { ErrorDisplay } from '@/components/ErrorDisplay';
@@ -78,6 +83,36 @@ export default function ItemTablePage() {
   const [selectedRow, setSelectedRow] = useState<ItemTableRow | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | undefined>();
+
+  const supabase = createClient();
+
+  // Get current user ID
+  useEffect(() => {
+    const fetchUserId = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setCurrentUserId(user?.id);
+    };
+    fetchUserId();
+  }, [supabase]);
+
+  // Track editing session when edit form is open
+  useEditingSession({
+    tableId,
+    rowId: formMode === 'edit' && selectedRow ? selectedRow.id : null,
+    sessionType: 'editing',
+    enabled: isFormOpen && formMode === 'edit' && !!selectedRow,
+  });
+
+  // Get real-time editing indicators
+  const {
+    viewing,
+    editing,
+    getOtherUsersEditingRow,
+  } = useEditingIndicators({
+    tableId,
+    enabled: !!tableId,
+  });
 
   // Memoize handlers to prevent unnecessary re-renders
   const handleAdd = useMemo(() => () => {
@@ -115,9 +150,12 @@ export default function ItemTablePage() {
     } else if (formMode === 'edit' && selectedRow) {
       handleEditRow(selectedRow.id, data);
     } else if (formMode === 'duplicate' && selectedRow) {
-      handleDuplicate(selectedRow);
+      handleAddRow(data); // For duplicate, add as new row
     }
-  }, [formMode, selectedRow, handleAddRow, handleEditRow, handleDuplicate]);
+    // Close the form after submission
+    setIsFormOpen(false);
+    setSelectedRow(null);
+  }, [formMode, selectedRow, handleAddRow, handleEditRow]);
 
   if (loading) {
     return <DataTableSkeleton columnCount={columns.length} />;
@@ -138,7 +176,12 @@ export default function ItemTablePage() {
     <div className="flex flex-col h-screen bg-gray-900">
       <TableHeader
         title={selectedTable?.name || 'Item Table'}
-        description="Manage items and their properties"
+        description={
+          <div className="flex items-center gap-2">
+            <span>Manage items and their properties</span>
+            <EditingIndicator sessions={viewing} type="viewing" currentUserId={currentUserId} />
+          </div>
+        }
         columns={columns}
         filters={filters}
         selectedCount={selectedRows.size}
@@ -161,6 +204,8 @@ export default function ItemTablePage() {
           onEdit={handleEdit}
           onDuplicate={handleDuplicate}
           onDelete={handleDelete}
+          editingSessions={editing}
+          currentUserId={currentUserId}
         />
       </div>
       
@@ -184,15 +229,29 @@ export default function ItemTablePage() {
             </SheetTitle>
           </SheetHeader>
           
-          <div className="flex-1 overflow-hidden">
-            <ItemForm
-              open={isFormOpen}
-              onOpenChange={setIsFormOpen}
-              mode={formMode}
-              initialData={selectedRow || undefined}
-              onSubmit={handleFormSubmit}
-              tableId={tableId}
-            />
+          <div className="flex-1 overflow-hidden bg-white dark:bg-gray-800">
+            {formMode === 'edit' && selectedRow && (
+              <div className="px-6 pt-4">
+                <EditConflictWarning
+                  sessions={getOtherUsersEditingRow(selectedRow.id, currentUserId)}
+                  currentUserId={currentUserId}
+                  onCancel={() => {
+                    setIsFormOpen(false);
+                    setSelectedRow(null);
+                  }}
+                />
+              </div>
+            )}
+            <div className="flex-1 overflow-hidden">
+              <ItemForm
+                open={isFormOpen}
+                onOpenChange={setIsFormOpen}
+                mode={formMode}
+                initialData={selectedRow || undefined}
+                onSubmit={handleFormSubmit}
+                tableId={tableId}
+              />
+            </div>
           </div>
         </SheetContent>
       </Sheet>

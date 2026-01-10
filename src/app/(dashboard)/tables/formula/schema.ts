@@ -5,7 +5,7 @@ const baseFormulaSchema = z.object({
   created_at: z.string().nullable(),
   updated_at: z.string().nullable(),
   tblidx: z.number().nullable(),
-  bvalidity_able: z.boolean().nullable(),
+  bvalidity_able: z.coerce.boolean().nullable().transform(val => val ? 1 : 0),
   afrate_0: z.number().nullable(),
   afrate_1: z.number().nullable(),
   afrate_2: z.number().nullable(),

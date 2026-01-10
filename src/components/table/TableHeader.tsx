@@ -1,3 +1,4 @@
+import React from "react";
 import { Button } from "@/components/ui/button";
 import { Plus, Upload, Download, RefreshCcw, Trash2 } from "lucide-react";
 import { TableFilter } from "./TableFilter";
@@ -11,7 +12,7 @@ interface Column {
 
 interface TableHeaderProps {
   title: string;
-  description: string;
+  description: string | React.ReactNode;
   columns: Column[];
   filters: ColumnFilters;
   selectedCount: number;
@@ -51,9 +52,15 @@ export function TableHeader({
               <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
                 {title}
               </h1>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                {description}
-              </p>
+              {typeof description === 'string' ? (
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  {description}
+                </p>
+              ) : (
+                <div className="text-sm text-gray-500 dark:text-gray-400">
+                  {description}
+                </div>
+              )}
             </div>
             <div className="flex flex-col gap-4 lg:gap-0">
               {selectedCount > 0 && onBulkDelete && (

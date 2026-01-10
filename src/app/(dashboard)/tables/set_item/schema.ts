@@ -6,7 +6,7 @@ export const setItemSchema = z.object({
   created_at: z.string().optional(),
   updated_at: z.string().optional(),
   tblidx: z.number().optional(),
-  bvalidity_able: z.boolean().optional(),
+  bvalidity_able: z.coerce.boolean().optional().transform(val => val ? 1 : 0),
   semisetoption: z.number().optional(),
   fullsetoption: z.number().optional(),
   aitemtblidx_0: z.number().optional(),

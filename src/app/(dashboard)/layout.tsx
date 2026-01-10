@@ -4,10 +4,11 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useTheme } from 'next-themes';
 import { createClient } from '@/lib/supabase/client';
 import { getUserRole } from '@/lib/get-user-role';
+import { useStore } from '@/lib/store';
 
 interface NavItem {
   name: string;
@@ -95,22 +96,55 @@ export default function DashboardLayout({
   const [isExpanded, setIsExpanded] = useState(false);
   const [mounted, setMounted] = useState(false);
   const { theme, setTheme } = useTheme();
+  const { userProfile, fetchUserProfile } = useStore();
   const [userRole, setUserRole] = useState<string | null>(null);
+  const hasFetchedRoleRef = useRef(false);
 
   // Handle hydration mismatch
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // Fetch user role
+  // Fetch user role - use store's userProfile if available to avoid duplicate API calls
   useEffect(() => {
+    // Prevent duplicate calls in React Strict Mode
+    if (hasFetchedRoleRef.current) {
+      return;
+    }
+
+    // Use userProfile from store if available (avoids duplicate API calls)
+    if (userProfile?.data?.role) {
+      setUserRole(userProfile.data.role);
+      hasFetchedRoleRef.current = true;
+      return;
+    }
+    
+    // Only fetch if store doesn't have it yet
     const fetchUserRole = async () => {
+      // Prevent duplicate calls
+      if (hasFetchedRoleRef.current) {
+        return;
+      }
+      hasFetchedRoleRef.current = true;
+
+      // Try to load userProfile in store first (it's cached)
+      if (!userProfile) {
+        await fetchUserProfile();
+        // After fetching, check if we got the role
+        const updatedProfile = useStore.getState().userProfile;
+        if (updatedProfile?.data?.role) {
+          setUserRole(updatedProfile.data.role);
+          return;
+        }
+      }
+      
+      // Fallback: fetch role directly (but it's cached in getUserRole)
       const role = await getUserRole();
       setUserRole(role);
     };
 
     fetchUserRole();
-  }, []);
+  }, [userProfile, fetchUserProfile]);
 
   // Filter navigation items based on user role
   const filteredNavigation = navigation.filter(item => 

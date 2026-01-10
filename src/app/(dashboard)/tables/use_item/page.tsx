@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { z } from "zod";
 import { useSearchParams } from "next/navigation";
 import {
@@ -10,11 +10,16 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { useTableData } from "@/hooks/useTableData";
+import { useEditingSession } from '@/hooks/useEditingSession';
+import { useEditingIndicators } from '@/hooks/useEditingIndicators';
 import { TableHeader } from '@/components/table/TableHeader';
 import { TablePagination } from '@/components/table/TablePagination';
 import { DataTable } from "@/components/table/DataTable";
 import { DeleteDialog, ImportDialog, useExport } from '@/components/table/TableDialogs';
+import { EditConflictWarning } from '@/components/table/EditConflictWarning';
+import { EditingIndicator } from '@/components/table/EditingIndicator';
 import { useStore } from "@/lib/store";
+import { createClient } from '@/lib/supabase/client';
 import { useItemSchema } from "./schema";
 import UseItemForm from "./UseItemForm";
 import { ErrorDisplay } from '@/components/ErrorDisplay';
@@ -70,6 +75,36 @@ export default function UseItemPage() {
   const [selectedRow, setSelectedRow] = useState<UseItemRow | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | undefined>();
+
+  const supabase = createClient();
+
+  // Get current user ID
+  useEffect(() => {
+    const fetchUserId = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setCurrentUserId(user?.id);
+    };
+    fetchUserId();
+  }, [supabase]);
+
+  // Track editing session when edit form is open
+  useEditingSession({
+    tableId,
+    rowId: formMode === 'edit' && selectedRow ? selectedRow.id : null,
+    sessionType: 'editing',
+    enabled: isFormOpen && formMode === 'edit' && !!selectedRow,
+  });
+
+  // Get real-time editing indicators
+  const {
+    viewing,
+    editing,
+    getOtherUsersEditingRow,
+  } = useEditingIndicators({
+    tableId,
+    enabled: !!tableId,
+  });
 
   // Define columns for the data table
   const columns = [
@@ -170,7 +205,14 @@ export default function UseItemPage() {
     <div className="flex flex-col h-screen bg-gray-900">
       <TableHeader
         title={selectedTable?.name || 'Use Item Table'}
-        description="Manage use items and their properties"
+        description={
+          <div className="flex items-center gap-2">
+            <span>Manage use items and their properties</span>
+            
+              <EditingIndicator sessions={viewing} type="viewing" currentUserId={currentUserId} />
+            
+          </div>
+        }
         columns={columns}
         filters={filters}
         selectedCount={selectedRows.size}
@@ -211,6 +253,8 @@ export default function UseItemPage() {
             setSelectedRow(row);
             setIsDeleteDialogOpen(true);
           }}
+          editingSessions={editing}
+          currentUserId={currentUserId}
         />
       </div>
 
@@ -225,16 +269,30 @@ export default function UseItemPage() {
       <Sheet open={isFormOpen} onOpenChange={setIsFormOpen}>
         <SheetContent 
           side="right" 
-          className="w-[100vw] sm:w-[95vw] md:w-[95vw] lg:w-[95vw] xl:w-[95vw] bg-gray-900 border-gray-800 p-0 flex flex-col max-w-[95vw]"
+          className="w-[100vw] sm:w-[95vw] md:w-[95vw] lg:w-[95vw] xl:w-[95vw] bg-gray-900 border-gray-800 p-0 flex flex-col max-w-[95vw] overflow-hidden"
         >
-          <SheetHeader className="px-6 py-4 border-b border-gray-200 dark:border-gray-800">
+          <SheetHeader className="px-6 py-4 border-b border-gray-200 dark:border-gray-800 flex-shrink-0">
             <SheetTitle className="text-indigo-600 dark:text-indigo-400 text-2xl font-bold">
               {formTheme.title.text[formMode]}
             </SheetTitle>
           </SheetHeader>
           
-          <div className="flex-1 overflow-hidden">
-            <UseItemForm
+          <div className="flex-1 min-h-0 overflow-hidden bg-white dark:bg-gray-800 flex flex-col">
+            {formMode === 'edit' && selectedRow && (
+              <div className="px-6 pt-4 flex-shrink-0">
+                <EditConflictWarning
+                  sessions={getOtherUsersEditingRow(selectedRow.id, currentUserId)}
+                  currentUserId={currentUserId}
+                  onCancel={() => {
+                    setIsFormOpen(false);
+                    setSelectedRow(null);
+                  }}
+                />
+              </div>
+            )}
+            
+            <div className="flex-1 min-h-0 overflow-hidden">
+              <UseItemForm
               open={isFormOpen}
               onOpenChange={setIsFormOpen}
               mode={formMode}
@@ -257,6 +315,7 @@ export default function UseItemPage() {
               }}
               tableId={tableId}
             />
+            </div>
           </div>
         </SheetContent>
       </Sheet>

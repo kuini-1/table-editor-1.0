@@ -13,7 +13,6 @@ import { Switch } from "@/components/ui/switch";
 import { Loader2, User, Mail, Lock, CreditCard, Shield, Bell } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { SettingsPageSkeleton } from '@/components/ui/SettingsPageSkeleton';
 
 interface UserProfile {
   id: string;
@@ -681,10 +680,6 @@ const SettingsPage = () => {
       setSaving(false);
     }
   };
-
-  if (loadingPrices) {
-    return <SettingsPageSkeleton />;
-  }
 
   return (
     <div className="space-y-6 p-6 pb-16">

@@ -1,6 +1,8 @@
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Edit, Copy, Trash2 } from "lucide-react";
+import { RowEditingIndicator } from "./EditingIndicator";
+import type { EditingSession } from "@/hooks/useEditingIndicators";
 
 interface Column {
   key: string;
@@ -16,6 +18,8 @@ interface DataTableProps<T> {
   onEdit: (row: T) => void;
   onDuplicate: (row: T) => void;
   onDelete: (row: T) => void;
+  editingSessions?: Map<string, EditingSession[]>;
+  currentUserId?: string;
 }
 
 export function DataTable<T extends { id: string }>({
@@ -26,6 +30,8 @@ export function DataTable<T extends { id: string }>({
   onEdit,
   onDuplicate,
   onDelete,
+  editingSessions,
+  currentUserId,
 }: DataTableProps<T>) {
   const handleSelectAll = (checked: boolean) => {
     onRowSelect(checked ? 'all' : 'none');
@@ -101,6 +107,14 @@ export function DataTable<T extends { id: string }>({
                 ))}
                 <td className="sticky right-0 z-20 bg-white dark:bg-gray-900 group-hover:bg-gray-50 dark:group-hover:bg-gray-800 w-[120px] px-4 py-3 text-right transition-colors">
                   <div className="flex items-center justify-end space-x-2">
+                    {editingSessions && (
+                      <RowEditingIndicator
+                        rowId={row.id}
+                        sessions={editingSessions.get(row.id) || []}
+                        currentUserId={currentUserId}
+                        className="mr-2"
+                      />
+                    )}
                     <Button
                       variant="ghost"
                       size="icon"

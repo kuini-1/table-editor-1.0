@@ -82,6 +82,7 @@ export function ItemBagListForm({
       onCancel={onCancel}
       mode={mode}
       tableId={tableId}
+      tableType="item_bag_list"
       tabs={itemBagListTabs}
       quickViewSections={itemBagListQuickViewSections}
       quickStats={itemBagListQuickStats}

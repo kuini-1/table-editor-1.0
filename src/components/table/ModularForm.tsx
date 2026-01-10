@@ -17,6 +17,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useMemo, useRef, useEffect, useState } from "react";
 import { RotateCcw } from "lucide-react";
+import { RelatedTableEditButton } from "./RelatedTableEditButton";
+import { getRelatedTableConfig } from "@/lib/relatedTableConfig";
 
 export type FormMode = 'add' | 'edit' | 'duplicate';
 
@@ -62,6 +64,7 @@ interface ModularFormProps<T extends BaseFormData> {
   onCancel: () => void;
   mode: FormMode;
   tableId: string;
+  tableType?: string; // Optional: table type for related table configuration
   title?: string;
   description?: string;
   showFooter?: boolean;
@@ -84,6 +87,7 @@ export function ModularForm<T extends BaseFormData>({
   onCancel,
   mode,
   tableId,
+  tableType,
   showFooter = true,
   submitLabel,
   cancelLabel = 'Cancel',
@@ -106,7 +110,11 @@ export function ModularForm<T extends BaseFormData>({
       } else if (column.type === 'boolean') {
         schemaObject[column.key] = z.boolean().default(false).nullable().optional();
       } else {
-        schemaObject[column.key] = z.string().nullable().optional();
+        // Allow null, undefined, or string - transform null/undefined to empty string for validation
+        schemaObject[column.key] = z.preprocess(
+          (val) => val === null || val === undefined ? '' : val,
+          z.string()
+        ).nullable().optional();
       }
     });
 
@@ -127,6 +135,19 @@ export function ModularForm<T extends BaseFormData>({
   // Store original values for reset functionality
   const originalValuesRef = useRef<Partial<FormData>>(initialData || {});
 
+  // Log form errors for debugging
+  useEffect(() => {
+    const subscription = form.watch((value, { name, type }) => {
+      if (type === 'change') {
+        const errors = form.formState.errors;
+        if (Object.keys(errors).length > 0) {
+          console.log('=== FORM ERRORS ===', errors);
+        }
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [form]);
+
   // Normalize value for comparison (treat null, undefined, and empty string as equivalent)
   const normalizeValueForComparison = (value: unknown): string | number | null => {
     if (value === null || value === undefined || value === '') {
@@ -136,9 +157,20 @@ export function ModularForm<T extends BaseFormData>({
   };
 
   const handleSubmit = (data: FormData) => {
-    onSubmit(data as T);
-    // Update original values after successful submit
-    originalValuesRef.current = { ...data };
+    console.log('=== ModularForm handleSubmit called ===', { 
+      dataKeys: Object.keys(data),
+      mode,
+      tableId 
+    });
+    try {
+      onSubmit(data as T);
+      // Update original values after successful submit
+      originalValuesRef.current = { ...data };
+      console.log('=== ModularForm onSubmit completed successfully ===');
+    } catch (error) {
+      console.error('=== ModularForm onSubmit error ===', error);
+      throw error;
+    }
   };
 
   // Render field in compact mode for quick view
@@ -185,6 +217,30 @@ export function ModularForm<T extends BaseFormData>({
             </FormLabel>
             <FormControl>
               <div className="relative group">
+                {(() => {
+                  // Check if this field has a related table configuration
+                  const relatedTableConfig = tableType ? getRelatedTableConfig(tableType, column.key) : undefined;
+                  const hasRelatedTable = !!relatedTableConfig;
+                  const hasValue = field.value !== null && field.value !== undefined && field.value !== '';
+                  
+                  // Check if reset button should be shown
+                  const originalValue = originalValuesRef.current[column.key as keyof FormData];
+                  const currentValue = field.value;
+                  const hasChanged = normalizeValueForComparison(originalValue) !== normalizeValueForComparison(currentValue);
+                  const showResetButton = hasChanged;
+                  
+                  // Calculate padding based on which buttons are actually visible
+                  let rightPadding = 'pr-8'; // Default padding
+                  if (hasRelatedTable && hasValue && showResetButton) {
+                    rightPadding = 'pr-20'; // Both buttons visible
+                  } else if (hasRelatedTable && hasValue) {
+                    rightPadding = 'pr-10'; // Only related table button
+                  } else if (showResetButton) {
+                    rightPadding = 'pr-10'; // Only reset button
+                  }
+                  
+                  return (
+                    <>
                 <Input 
                   type={column.type === 'number' ? 'number' : 'text'} 
                   name={field.name}
@@ -206,32 +262,37 @@ export function ModularForm<T extends BaseFormData>({
                       });
                     }
                   }}
-                  className="h-10 text-sm px-3 pr-8 bg-gray-50 dark:bg-gray-800/50 border-2 border-gray-200 dark:border-gray-700 rounded-lg focus:border-indigo-500 dark:focus:border-indigo-400 focus:ring-0 transition-all duration-200"
+                        className={`h-10 text-sm px-3 ${rightPadding} bg-gray-50 dark:bg-gray-800/50 border-2 border-gray-200 dark:border-gray-700 rounded-lg focus:border-indigo-500 dark:focus:border-indigo-400 focus:ring-0 transition-all duration-200`}
                 />
-                {(() => {
-                  const originalValue = originalValuesRef.current[column.key as keyof FormData];
-                  const currentValue = field.value;
-                  const hasChanged = normalizeValueForComparison(originalValue) !== normalizeValueForComparison(currentValue);
-                  
-                  if (hasChanged) {
-                    return (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          form.setValue(column.key as Path<FormData>, originalValue as FormData[Path<FormData>], {
-                            shouldDirty: true,
-                            shouldValidate: false,
-                            shouldTouch: true,
-                          });
-                        }}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-                        title="Reset to original value"
-                      >
-                        <RotateCcw className="h-3.5 w-3.5 text-gray-500 dark:text-gray-400" />
-                      </button>
-                    );
-                  }
-                  return null;
+                      
+                      {/* Related table edit button */}
+                      {hasRelatedTable && hasValue && relatedTableConfig && (
+                        <RelatedTableEditButton
+                          config={relatedTableConfig}
+                          value={field.value as string | number}
+                          relatedTableId={tableId}
+                        />
+                      )}
+                      
+                      {/* Reset button */}
+                      {showResetButton && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            form.setValue(column.key as Path<FormData>, originalValue as FormData[Path<FormData>], {
+                              shouldDirty: true,
+                              shouldValidate: false,
+                              shouldTouch: true,
+                            });
+                          }}
+                          className={`absolute ${hasRelatedTable && hasValue ? 'right-10' : 'right-2'} top-1/2 -translate-y-1/2 p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors`}
+                          title="Reset to original value"
+                        >
+                          <RotateCcw className="h-3.5 w-3.5 text-gray-500 dark:text-gray-400" />
+                        </button>
+                      )}
+                    </>
+                  );
                 })()}
               </div>
             </FormControl>
@@ -288,6 +349,30 @@ export function ModularForm<T extends BaseFormData>({
             </FormLabel>
             <FormControl>
               <div className="relative group">
+                {(() => {
+                  // Check if this field has a related table configuration
+                  const relatedTableConfig = tableType ? getRelatedTableConfig(tableType, column.key) : undefined;
+                  const hasRelatedTable = !!relatedTableConfig;
+                  const hasValue = field.value !== null && field.value !== undefined && field.value !== '';
+                  
+                  // Check if reset button should be shown
+                  const originalValue = originalValuesRef.current[column.key as keyof FormData];
+                  const currentValue = field.value;
+                  const hasChanged = normalizeValueForComparison(originalValue) !== normalizeValueForComparison(currentValue);
+                  const showResetButton = hasChanged;
+                  
+                  // Calculate padding based on which buttons are actually visible
+                  let rightPadding = 'pr-8'; // Default padding
+                  if (hasRelatedTable && hasValue && showResetButton) {
+                    rightPadding = 'pr-20'; // Both buttons visible
+                  } else if (hasRelatedTable && hasValue) {
+                    rightPadding = 'pr-10'; // Only related table button
+                  } else if (showResetButton) {
+                    rightPadding = 'pr-10'; // Only reset button
+                  }
+                  
+                  return (
+                    <>
                 <Input 
                   type={column.type === 'number' ? 'number' : 'text'} 
                   name={field.name}
@@ -309,32 +394,37 @@ export function ModularForm<T extends BaseFormData>({
                       });
                     }
                   }}
-                  className={`${heightClass} px-3 pr-8 bg-gray-50 dark:bg-gray-800/50 border-2 border-gray-200 dark:border-gray-700 rounded-lg focus:border-indigo-500 dark:focus:border-indigo-400 focus:ring-0 transition-all duration-200`}
+                        className={`${heightClass} px-3 ${rightPadding} bg-gray-50 dark:bg-gray-800/50 border-2 border-gray-200 dark:border-gray-700 rounded-lg focus:border-indigo-500 dark:focus:border-indigo-400 focus:ring-0 transition-all duration-200`}
                 />
-                {(() => {
-                  const originalValue = originalValuesRef.current[column.key as keyof FormData];
-                  const currentValue = field.value;
-                  const hasChanged = normalizeValueForComparison(originalValue) !== normalizeValueForComparison(currentValue);
-                  
-                  if (hasChanged) {
-                    return (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          form.setValue(column.key as Path<FormData>, originalValue as FormData[Path<FormData>], {
-                            shouldDirty: true,
-                            shouldValidate: false,
-                            shouldTouch: true,
-                          });
-                        }}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-                        title="Reset to original value"
-                      >
-                        <RotateCcw className="h-3.5 w-3.5 text-gray-500 dark:text-gray-400" />
-                      </button>
-                    );
-                  }
-                  return null;
+                      
+                      {/* Related table edit button */}
+                      {hasRelatedTable && hasValue && relatedTableConfig && (
+                        <RelatedTableEditButton
+                          config={relatedTableConfig}
+                          value={field.value as string | number}
+                          relatedTableId={tableId}
+                        />
+                      )}
+                      
+                      {/* Reset button */}
+                      {showResetButton && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            form.setValue(column.key as Path<FormData>, originalValue as FormData[Path<FormData>], {
+                              shouldDirty: true,
+                              shouldValidate: false,
+                              shouldTouch: true,
+                            });
+                          }}
+                          className={`absolute ${hasRelatedTable && hasValue ? 'right-10' : 'right-2'} top-1/2 -translate-y-1/2 p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors`}
+                          title="Reset to original value"
+                        >
+                          <RotateCcw className="h-3.5 w-3.5 text-gray-500 dark:text-gray-400" />
+                        </button>
+                      )}
+                    </>
+                  );
                 })()}
               </div>
             </FormControl>
@@ -500,7 +590,26 @@ export function ModularForm<T extends BaseFormData>({
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleSubmit)} className="flex flex-col h-full">
+      <form 
+        onSubmit={(e) => {
+          console.log('=== FORM ONSUBMIT EVENT FIRED ===', { mode, tableId });
+          console.log('=== FORM STATE BEFORE SUBMIT ===', {
+            isValid: form.formState.isValid,
+            errors: form.formState.errors,
+            values: form.getValues()
+          });
+          
+          // Use react-hook-form's handleSubmit with error callback
+          form.handleSubmit(
+            handleSubmit,
+            (errors) => {
+              console.error('=== REACT-HOOK-FORM VALIDATION FAILED ===', errors);
+              console.error('=== FORM ERRORS DETAILS ===', form.formState.errors);
+            }
+          )(e);
+        }} 
+        className="flex flex-col h-full"
+      >
         <FormField
           control={form.control}
           name="table_id"
@@ -510,15 +619,15 @@ export function ModularForm<T extends BaseFormData>({
         />
 
         {/* Main Content Area - Two Column Layout if quickViewSections exist */}
-        <div className="flex-1 overflow-hidden flex">
+        <div className="flex-1 min-h-0 overflow-hidden flex">
           {/* Left Column - Quick View Panel */}
           {hasQuickView && (
-            <div className="w-96 border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex flex-col">
-              <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
+            <div className="w-96 border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex flex-col min-h-0">
+              <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 flex-shrink-0">
                 <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Quick View</h3>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Frequently used fields</p>
               </div>
-              <ScrollArea className="flex-1">
+              <ScrollArea className="flex-1 min-h-0">
                 <div className="p-4 space-y-4">
                   {autoQuickViewSections.map((section, idx) => {
                     const sectionColumns = columns.filter(col => section.columns.includes(col.key));
@@ -539,15 +648,15 @@ export function ModularForm<T extends BaseFormData>({
           )}
 
           {/* Right Column - Detailed Editing with Tabs or Sections */}
-          <div className={`flex-1 flex flex-col overflow-hidden ${hasQuickView ? 'bg-gray-50 dark:bg-gray-900' : 'bg-white dark:bg-gray-900'}`}>
+          <div className={`flex-1 min-h-0 flex flex-col overflow-hidden ${hasQuickView ? 'bg-gray-50 dark:bg-gray-900' : 'bg-white dark:bg-gray-900'}`}>
             {finalFilteredTabs && finalFilteredTabs.length > 0 ? (
               <Tabs 
                 value={activeTabValue} 
                 onValueChange={setActiveTabValue}
-                className="flex flex-col flex-1 overflow-hidden"
+                className="flex flex-col flex-1 min-h-0 overflow-hidden"
               >
                 {/* Sticky tabs list */}
-                <div className={`sticky top-0 z-10 px-6 pt-4 pb-2 border-b border-gray-200 dark:border-gray-800 ${hasQuickView ? 'bg-gray-50 dark:bg-gray-900' : 'bg-white dark:bg-gray-900'}`}>
+                <div className={`sticky top-0 z-10 px-6 pt-3 pb-2 border-b border-gray-200 dark:border-gray-800 flex-shrink-0 ${hasQuickView ? 'bg-gray-50 dark:bg-gray-900' : 'bg-white dark:bg-gray-900'}`}>
                   <TabsList className={`w-full bg-gray-100 dark:bg-gray-800 p-1 h-auto ${finalFilteredTabs.length <= 3 ? 'grid grid-cols-3' : finalFilteredTabs.length <= 5 ? 'grid grid-cols-5' : 'grid grid-cols-6'}`}>
                     {finalFilteredTabs.map(tab => (
                       <TabsTrigger 
@@ -562,7 +671,7 @@ export function ModularForm<T extends BaseFormData>({
                 </div>
 
                 {/* Scrollable tab content */}
-                <ScrollArea ref={scrollAreaRef} className="flex-1">
+                <ScrollArea ref={scrollAreaRef} className="flex-1 min-h-0">
                   <div className="px-6 py-4">
                     {finalFilteredTabs.map(tab => (
                       <TabsContent key={tab.id} value={tab.id} className="space-y-4 mt-0">
@@ -573,7 +682,7 @@ export function ModularForm<T extends BaseFormData>({
                 </ScrollArea>
               </Tabs>
             ) : (
-              <ScrollArea className="flex-1">
+              <ScrollArea className="flex-1 min-h-0">
                 <div className="px-6 py-4">
                   {/* Render sections if they exist */}
                   {sections && (
@@ -612,6 +721,21 @@ export function ModularForm<T extends BaseFormData>({
               <Button
                 type="submit"
                 className="flex-1 bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 !text-white dark:!text-white"
+                onClick={(e) => {
+                  console.log('=== SUBMIT BUTTON CLICKED ===', { mode, tableId });
+                  // Check form validity
+                  const formElement = e.currentTarget.closest('form');
+                  if (formElement) {
+                    const isValid = formElement.checkValidity();
+                    console.log('=== FORM VALIDITY CHECK ===', { isValid });
+                    if (!isValid) {
+                      console.error('=== FORM VALIDATION FAILED ===');
+                      formElement.reportValidity();
+                    } else {
+                      console.log('=== FORM IS VALID, PROCEEDING WITH SUBMISSION ===');
+                    }
+                  }
+                }}
               >
                 {submitLabel 
                   ? (typeof submitLabel === 'function' ? submitLabel(mode) : submitLabel)

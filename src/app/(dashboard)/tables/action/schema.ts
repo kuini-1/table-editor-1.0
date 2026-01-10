@@ -3,10 +3,10 @@ import * as z from 'zod';
 export const actionTableSchema = z.object({
   table_id: z.string().uuid(),
   tblidx: z.coerce.number().min(0, 'Must be a positive number').max(9999999999, 'Cannot exceed 10 digits'),
-  bValidity_Able: z.boolean(),
+  bValidity_Able: z.coerce.boolean().transform(val => val ? 1 : 0),
   byAction_Type: z.coerce.number().min(0, 'Must be a positive number').max(32767, 'Cannot exceed SMALLINT max'),
   Action_Name: z.coerce.number().min(0, 'Must be a positive number'),
-  szIcon_Name: z.string().max(32, 'Cannot exceed 32 characters'),
+  szIcon_Name: z.string().max(32, 'Cannot exceed 32 characters').nullable().transform(e => e === null ? "" : e),
   Note: z.coerce.number().min(0, 'Must be a positive number'),
   chat_Command_Index: z.coerce.number().min(0, 'Must be a positive number'),
   byETC_Action_Type: z.coerce.number().min(0, 'Must be a positive number').max(32767, 'Cannot exceed SMALLINT max'),

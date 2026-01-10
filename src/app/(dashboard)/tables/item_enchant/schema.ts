@@ -6,9 +6,9 @@ export const itemEnchantSchema = z.object({
   created_at: z.string().nullable(),
   updated_at: z.string().nullable(),
   tblidx: z.number().nullable(),
-  wszname: z.string().nullable(),
+  wszname: z.string().nullable().transform(e => e === null ? "" : e),
   setblidx: z.number().nullable(),
-  bsetype: z.boolean().nullable(),
+  bsetype: z.coerce.boolean().nullable().transform(val => val ? 1 : 0),
   byrvtype: z.number().nullable(),
   byexclidx: z.number().nullable(),
   byminlevel: z.number().nullable(),
@@ -19,10 +19,10 @@ export const itemEnchantSchema = z.object({
   dwequip: z.number().nullable(),
   bygroupno: z.number().nullable(),
   wmaxvalue: z.number().nullable(),
-  bissuperior: z.boolean().nullable(),
-  bisexcellent: z.boolean().nullable(),
-  bisrare: z.boolean().nullable(),
-  bislegendary: z.boolean().nullable(),
+  bissuperior: z.coerce.boolean().nullable().transform(val => val ? 1 : 0),
+  bisexcellent: z.coerce.boolean().nullable().transform(val => val ? 1 : 0),
+  bisrare: z.coerce.boolean().nullable().transform(val => val ? 1 : 0),
+  bislegendary: z.coerce.boolean().nullable().transform(val => val ? 1 : 0),
 });
 
 export type ItemEnchantFormData = z.infer<typeof itemEnchantSchema>;

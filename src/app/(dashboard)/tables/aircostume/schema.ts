@@ -10,10 +10,10 @@ export const aircostumeTableSchema = z.object({
   wUnknown5: z.coerce.number().min(0, 'Must be a positive number').max(32767, 'Cannot exceed SMALLINT max'),
   wUnknown6: z.coerce.number().min(0, 'Must be a positive number').max(32767, 'Cannot exceed SMALLINT max'),
   wUnknown7: z.coerce.number().min(0, 'Must be a positive number').max(32767, 'Cannot exceed SMALLINT max'),
-  wszUnknown8: z.string(),
+  wszUnknown8: z.string().nullable().transform(e => e === null ? "" : e),
   byUnknown9: z.coerce.number().min(0, 'Must be a positive number').max(32767, 'Cannot exceed SMALLINT max'),
-  wszUnknown10: z.string(),
-  wszUnknown11: z.string(),
+  wszUnknown10: z.string().nullable().transform(e => e === null ? "" : e),
+  wszUnknown11: z.string().nullable().transform(e => e === null ? "" : e),
 });
 
 export type AircostumeTableFormData = z.infer<typeof aircostumeTableSchema>;

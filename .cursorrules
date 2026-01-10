@@ -41,17 +41,28 @@ Finally, you should always use the official documentation of the library you are
 
 # Scratchpad
 
-Current Task: Add Default Permissions Feature for Users
+Current Task: Add Related Table Edit Functionality
 
 Task Description:
-Allow owners to set default permissions for all tables per user in the /users page, so they don't need to manually set permissions one by one in the /tables page unless they want to override for specific tables.
+Add functionality to allow editing related table rows from within form modals. When a field contains an ID that references another table, a button can be added to open a nested modal for editing that related table row without leaving the current form.
 
 Completed:
-[X] Created database migration to add default permissions columns to sub_owners table
-[X] Updated users page UI to allow setting default permissions per user
-[X] Updated API route to use default permissions when creating new users
-[X] Added database trigger to automatically apply default permissions when new tables are created
-[X] Added UI to edit default permissions for existing users
-[X] Added option to apply default permissions to all existing tables when updating defaults
+[X] Created configuration system for related table fields (relatedTableConfig.ts)
+[X] Created utility functions to fetch and update related table rows (fetchRelatedTableRow.ts)
+[X] Created RelatedTableEditButton component to add button to input fields
+[X] Created RelatedTableEditModal component for nested editing
+[X] Integrated into ModularForm component with tableType prop
+[X] Integrated into TableForm component with tableType prop
+[X] Integrated into EditRowForm component with tableType prop
+[X] Configured Item Bag List table - added related table buttons for all 20 item fields (aitem_0 through aitem_19) that link to the item table
+[X] Updated ItemBagListForm to pass tableType prop
+[X] Updated fetchRelatedTableRow to use correct table_id for owner's table
+[X] Created tableFormComponents.tsx to map table types to their specific form components
+[X] Updated RelatedTableEditModal to use the actual table form component (ItemForm) instead of generic form
 
-Previous Task: Performance Optimization for Large Tables (70k+ rows) - COMPLETED
+Configured Tables:
+- item_bag_list: All aitem_* fields (aitem_0 through aitem_19) are configured to link to the item table, using tblidx as the lookup field
+
+Note: The RelatedTableEditModal now uses the specific form component for each table type (e.g., ItemForm for item table). Falls back to generic ModularForm if no specific form component is registered.
+
+Previous Task: Add Default Permissions Feature for Users - COMPLETED

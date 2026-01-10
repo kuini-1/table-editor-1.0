@@ -3,9 +3,9 @@ import * as z from 'zod';
 export const dynamicObjectTableSchema = z.object({
   table_id: z.string().uuid(),
   tblidx: z.coerce.number().min(0, 'Must be a positive number').max(9999999999, 'Cannot exceed 10 digits'),
-  bValidityAble: z.boolean(),
+  bValidityAble: z.coerce.boolean().transform(val => val ? 1 : 0),
   byType: z.coerce.number().min(0, 'Must be a positive number').max(32767, 'Cannot exceed SMALLINT max'),
-  szModelName: z.string().max(64, 'Cannot exceed 64 characters'),
+  szModelName: z.string().max(64, 'Cannot exceed 64 characters').nullable().transform(e => e === null ? "" : e),
   byStateType: z.coerce.number().min(0, 'Must be a positive number').max(32767, 'Cannot exceed SMALLINT max'),
   spawnAnimation: z.coerce.number().min(0, 'Must be a positive number'),
   idleAnimation: z.coerce.number().min(0, 'Must be a positive number'),

@@ -3,7 +3,7 @@ import * as z from 'zod';
 export const itemRecipeTableSchema = z.object({
   table_id: z.string().uuid(),
   tblidx: z.coerce.number().min(0, 'Must be a positive number').max(9999999999, 'Cannot exceed 10 digits'),
-  bValidityAble: z.boolean(),
+  bValidityAble: z.coerce.boolean().transform(val => val ? 1 : 0),
   dwName: z.coerce.number().min(0, 'Must be a positive number'),
   byRecipeType: z.coerce.number().min(0, 'Must be a positive number').max(32767, 'Cannot exceed SMALLINT max'),
   byNeedMixLevel: z.coerce.number().min(0, 'Must be a positive number').max(32767, 'Cannot exceed SMALLINT max'),

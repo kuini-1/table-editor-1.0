@@ -3,7 +3,7 @@ import * as z from 'zod';
 export const chatCommandTableSchema = z.object({
   table_id: z.string().uuid(),
   tblidx: z.coerce.number().min(0, 'Must be a positive number').max(9999999999, 'Cannot exceed 10 digits'),
-  bValidity_Able: z.boolean(),
+  bValidity_Able: z.coerce.boolean().transform(val => val ? 1 : 0),
   wAction_Animation_Index: z.coerce.number().min(0, 'Must be a positive number').max(32767, 'Cannot exceed SMALLINT max'),
   aChat_Command_0: z.coerce.number().min(0, 'Must be a positive number'),
   aChat_Command_1: z.coerce.number().min(0, 'Must be a positive number'),

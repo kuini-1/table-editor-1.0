@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
 import type { ColumnFilter, ColumnFilters } from '@/components/table/TableFilter';
 import { ErrorDisplay } from '@/components/ErrorDisplay';
+import { useEditingSession } from './useEditingSession';
 
 interface TableConfig {
   tableName: string;
@@ -28,6 +29,7 @@ export function useTableData<T extends { id: string }>({ config, tableId }: UseT
   const [filters, setFilters] = useState<ColumnFilters>({});
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
   const permissionCacheRef = useRef<Record<string, { result: boolean; timestamp: number }>>({});
+  const userCacheRef = useRef<{ user: { id: string } | null; timestamp: number } | null>(null);
   const [isFiltering, setIsFiltering] = useState(false);
 
   // Memoize supabase client to prevent recreation
@@ -40,7 +42,15 @@ export function useTableData<T extends { id: string }>({ config, tableId }: UseT
   const configRef = useRef(config);
   configRef.current = config;
 
+  // Track viewing session for this table
+  useEditingSession({
+    tableId,
+    sessionType: 'viewing',
+    enabled: !!tableId,
+  });
+
   const PERMISSION_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+  const USER_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes - cache user to avoid duplicate getUser() calls
   const FILTER_DEBOUNCE_MS = 400; // 400ms debounce for filter changes
 
   const checkPermission = useCallback(async (action: 'get' | 'put' | 'post' | 'delete'): Promise<boolean> => {
@@ -56,7 +66,14 @@ export function useTableData<T extends { id: string }>({ config, tableId }: UseT
     }
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      // Use cached user if available to avoid duplicate getUser() calls
+      let user = userCacheRef.current?.user || null;
+      if (!userCacheRef.current || Date.now() - userCacheRef.current.timestamp > USER_CACHE_DURATION) {
+        const { data: { user: fetchedUser } } = await supabase.auth.getUser();
+        user = fetchedUser;
+        userCacheRef.current = { user: fetchedUser, timestamp: Date.now() };
+      }
+      
       if (!user) {
         return false;
       }
@@ -75,7 +92,66 @@ export function useTableData<T extends { id: string }>({ config, tableId }: UseT
       });
 
       if (error) {
+        console.error('Error checking table permission:', {
+          tableId,
+          action: dbAction,
+          error: error.message,
+          code: error.code,
+          details: error.details,
+          hint: error.hint
+        });
         return false;
+      }
+
+      // Log the actual RPC response
+      console.log('RPC check_table_permission response:', {
+        tableId,
+        action: dbAction,
+        data,
+        dataType: typeof data,
+        dataValue: data,
+        isTrue: data === true,
+        isTruthy: !!data,
+        isStrictlyTrue: data === true,
+        isStrictlyFalse: data === false,
+        isNull: data === null,
+        isUndefined: data === undefined
+      });
+
+      // If RPC returns false but we have permission in database, log a warning
+      if (!data && userCacheRef.current?.user) {
+        // Double-check by querying directly
+        try {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) {
+            const { data: subOwner } = await supabase
+              .from('sub_owners')
+              .select('id')
+              .eq('profile_id', user.id)
+              .single();
+            
+            if (subOwner) {
+              const { data: directPerms } = await supabase
+                .from('sub_owner_permissions')
+                .select('can_get, can_put, can_post, can_delete')
+                .eq('sub_owner_id', subOwner.id)
+                .eq('table_id', tableId)
+                .single();
+              
+              if (directPerms && directPerms[`can_${action === 'get' ? 'get' : action === 'put' ? 'put' : action === 'post' ? 'post' : 'delete'}`]) {
+                console.warn('RPC function returned false but direct query shows permission exists!', {
+                  tableId,
+                  action,
+                  dbAction,
+                  directPerms,
+                  rpcResult: data
+                });
+              }
+            }
+          }
+        } catch (checkError) {
+          console.error('Error in permission double-check:', checkError);
+        }
       }
 
       const result = !!data;
@@ -108,6 +184,40 @@ export function useTableData<T extends { id: string }>({ config, tableId }: UseT
     try {
       const hasPermission = await checkPermission('get');
       if (!hasPermission) {
+        // Try to get more diagnostic info
+        try {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) {
+            // Check if user is sub_owner
+            const { data: subOwner } = await supabase
+              .from('sub_owners')
+              .select('id')
+              .eq('profile_id', user.id)
+              .single();
+            
+            if (subOwner) {
+              // Check permissions directly
+              const { data: permissions } = await supabase
+                .from('sub_owner_permissions')
+                .select('can_get, table_id')
+                .eq('sub_owner_id', subOwner.id)
+                .eq('table_id', tableId)
+                .single();
+              
+              console.error('Permission check failed. Diagnostic info:', {
+                tableId,
+                userId: user.id,
+                subOwnerId: subOwner.id,
+                permissions,
+                hasPermissionRecord: !!permissions,
+                canGet: permissions?.can_get,
+              });
+            }
+          }
+        } catch (diagError) {
+          console.error('Error getting diagnostic info:', diagError);
+        }
+        
         setError('You do not have permission to view this table');
         setLoading(false);
         setIsFiltering(false);
@@ -121,10 +231,16 @@ export function useTableData<T extends { id: string }>({ config, tableId }: UseT
       // Only use exact count when explicitly requested (e.g., for export)
       const countMode = useExactCount ? 'exact' : 'estimated';
 
+      // Determine the ID field to sort by - prefer tblidx if it exists, otherwise use id
+      // Check if table has tblidx column (common in game data tables)
+      const hasTblidxColumn = configRef.current.columns.some(col => col.key === 'tblidx');
+      const sortField = hasTblidxColumn ? 'tblidx' : 'id';
+      
       let query = supabase
         .from(configRef.current.tableName)
         .select('*', { count: countMode })
         .eq('table_id', tableId)
+        .order(sortField, { ascending: true }) // Default sort by ID ascending (small to big)
         .range((page - 1) * pageSize, (page * pageSize) - 1);
 
       // Apply filters
@@ -412,10 +528,72 @@ export function useTableData<T extends { id: string }>({ config, tableId }: UseT
     fetchData();
   };
 
+  // Track last fetch to prevent duplicate calls (including React Strict Mode double renders)
+  const fetchInProgressRef = useRef(false);
+  const lastFetchKeyRef = useRef<string | null>(null);
+  const mountedRef = useRef(false);
+
   // Fetch data when dependencies change
   useEffect(() => {
-    if (tableId) {
-      fetchData();
+    if (!tableId) return;
+    
+    // Create a unique key for this fetch
+    const fetchKey = `${tableId}-${page}-${pageSize}-${JSON.stringify(filters)}`;
+    
+    // Skip if this exact fetch is already in progress or was just completed
+    if (fetchInProgressRef.current || lastFetchKeyRef.current === fetchKey) {
+      return;
+    }
+    
+    // On first mount, wait a tiny bit to avoid React Strict Mode double calls
+    if (!mountedRef.current) {
+      mountedRef.current = true;
+      // Use a small delay to batch React Strict Mode calls
+      const timeoutId = setTimeout(() => {
+        if (lastFetchKeyRef.current !== fetchKey) {
+          lastFetchKeyRef.current = fetchKey;
+          fetchInProgressRef.current = true;
+          
+          // Debounce filter changes, but not page/pageSize changes or initial load
+          if (Object.keys(filters).length > 0) {
+            if (filterDebounceTimer.current) {
+              clearTimeout(filterDebounceTimer.current);
+            }
+            
+            filterDebounceTimer.current = setTimeout(async () => {
+              await fetchData(filters, false);
+              fetchInProgressRef.current = false;
+            }, FILTER_DEBOUNCE_MS);
+          } else {
+            // Immediate fetch for page/pageSize changes or initial load
+            fetchData().finally(() => {
+              fetchInProgressRef.current = false;
+            });
+          }
+        }
+      }, 50);
+      
+      return () => clearTimeout(timeoutId);
+    }
+    
+    lastFetchKeyRef.current = fetchKey;
+    fetchInProgressRef.current = true;
+    
+    // Debounce filter changes, but not page/pageSize changes
+    if (Object.keys(filters).length > 0) {
+      if (filterDebounceTimer.current) {
+        clearTimeout(filterDebounceTimer.current);
+      }
+      
+      filterDebounceTimer.current = setTimeout(async () => {
+        await fetchData(filters, false);
+        fetchInProgressRef.current = false;
+      }, FILTER_DEBOUNCE_MS);
+    } else {
+      // Immediate fetch for page/pageSize changes
+      fetchData().finally(() => {
+        fetchInProgressRef.current = false;
+      });
     }
   }, [tableId, page, pageSize, filters, fetchData]);
 

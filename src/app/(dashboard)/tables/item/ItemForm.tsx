@@ -310,6 +310,7 @@ export default function ItemForm({
       onCancel={() => onOpenChange(false)}
       mode={mode}
       tableId={tableId}
+      tableType="item"
       customSchema={itemTableSchema}
       defaultTab="combat"
       compactFieldHeight={false}

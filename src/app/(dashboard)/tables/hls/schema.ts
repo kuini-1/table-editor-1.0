@@ -5,9 +5,9 @@ import type { Column } from '@/components/table/ModularForm';
 export const hlsItemSchema = z.object({
   table_id: z.string().uuid(),
   tblidx: z.coerce.number().min(0, 'Must be a positive number').max(9999999999, 'Cannot exceed 10 digits').optional(),
-  wszname: z.string().optional(),
-  wszcjiproductid: z.string().optional(),
-  szicon_name: z.string().optional(),
+  wszname: z.string().nullable().transform(e => e === null ? "" : e).optional(),
+  wszcjiproductid: z.string().nullable().transform(e => e === null ? "" : e).optional(),
+  szicon_name: z.string().nullable().transform(e => e === null ? "" : e).optional(),
   whlsitemtype: z.coerce.number().min(0, 'Must be a positive number').optional(),
   byhlsdurationtype: z.coerce.number().min(0, 'Must be a positive number').optional(),
   dwhlsdurationtime: z.coerce.number().min(0, 'Must be a positive number').optional(),
