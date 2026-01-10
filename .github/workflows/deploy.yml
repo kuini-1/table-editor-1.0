@@ -43,19 +43,19 @@ jobs:
       - name: Create deployment archive
         continue-on-error: true
         run: |
+          # CRITICAL: Disable exit-on-error at the very start to prevent bash -e from exiting on tar's code 1
+          set +e
+          
           # Create a tar archive excluding node_modules and .next, but including exports folder
           # CRITICAL: The exports/ folder contains Convert.exe files required for backend conversion
           echo "Creating deployment archive (exports folder will be included)..."
           echo "DEBUG: Starting tar command..."
           echo "DEBUG: Current directory: $(pwd)"
-          echo "DEBUG: Files that might change:"
-          ls -la .git/index .git/HEAD 2>/dev/null || echo "DEBUG: No .git files to check"
+          echo "DEBUG: set +e is active, errors will not cause exit"
           
           # Create archive in /tmp first to avoid "file changed as we read it" error
-          # Use a subshell with explicit error handling to prevent bash -e from exiting
           # Note: tar may exit with code 1 if files change during archive, but archive is still valid
-          # This step uses continue-on-error to allow the workflow to continue even if tar exits with code 1
-          (tar --warning=no-file-changed \
+          tar --warning=no-file-changed \
               --exclude='node_modules' \
               --exclude='.next' \
               --exclude='.git' \
@@ -64,16 +64,26 @@ jobs:
               --exclude='*.log' \
               --exclude='.env*' \
               --exclude='deployment.tar.gz' \
-              -czf /tmp/deployment.tar.gz . 2>&1; TAR_EXIT=$?; echo "DEBUG: tar exit code: $TAR_EXIT"; exit 0) || true
+              -czf /tmp/deployment.tar.gz . 2>&1
+          TAR_EXIT=$?
           
-          echo "DEBUG: After tar command, checking if archive exists..."
-          if [ -f /tmp/deployment.tar.gz ]; then
-            echo "DEBUG: Archive file exists, size: $(ls -lh /tmp/deployment.tar.gz | awk '{print $5}')"
-            echo "✓ Archive created successfully (tar may have warned about file changes)"
-          else
-            echo "DEBUG: Archive file does NOT exist!"
-            echo "ERROR: Archive creation failed completely"
+          echo "DEBUG: tar command completed with exit code: $TAR_EXIT"
+          
+          # Re-enable exit-on-error for the verification step
+          set -e
+          
+          # Check if archive was created successfully (this is what matters, not tar's exit code)
+          echo "DEBUG: Checking if archive file exists..."
+          if [ ! -f /tmp/deployment.tar.gz ]; then
+            echo "ERROR: Archive file was not created! Deployment cannot continue."
             exit 1
+          fi
+          
+          echo "DEBUG: Archive file exists, size: $(ls -lh /tmp/deployment.tar.gz | awk '{print $5}')"
+          if [ $TAR_EXIT -ne 0 ]; then
+            echo "Warning: tar exited with code $TAR_EXIT (files may have changed during archive), but archive was created successfully."
+          else
+            echo "✓ Archive created successfully without warnings."
           fi
         
       - name: Verify and move archive
