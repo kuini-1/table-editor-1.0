@@ -41,13 +41,14 @@ jobs:
           cache: 'npm'
 
       - name: Create deployment archive
-        continue-on-error: true
+        shell: bash
         run: |
           # Create a tar archive excluding node_modules and .next, but including exports folder
           # CRITICAL: The exports/ folder contains Convert.exe files required for backend conversion
           echo "Creating deployment archive (exports folder will be included)..."
           # Create archive in /tmp first to avoid "file changed as we read it" error
-          # Note: tar may exit with code 1 if files change during archive, but archive is still valid
+          # Use explicit error handling: tar may exit with code 1 if files change, but archive is still valid
+          set +e
           tar --warning=no-file-changed \
               --exclude='node_modules' \
               --exclude='.next' \
@@ -57,14 +58,18 @@ jobs:
               --exclude='*.log' \
               --exclude='.env*' \
               --exclude='deployment.tar.gz' \
-              -czf /tmp/deployment.tar.gz .
-        
-      - name: Verify archive was created
-        run: |
-          # Check if archive was created successfully
+              -czf /tmp/deployment.tar.gz . 2>&1
+          TAR_STATUS=$?
+          set -e
+          
+          # Check if archive was created successfully (this is what matters, not the exit code)
           if [ ! -f /tmp/deployment.tar.gz ]; then
-            echo "ERROR: Archive creation failed!"
+            echo "ERROR: Archive file was not created!"
             exit 1
+          fi
+          
+          if [ $TAR_STATUS -ne 0 ]; then
+            echo "Warning: tar exited with code $TAR_STATUS (files may have changed during archive), but archive was created successfully."
           fi
           
           echo "Archive created successfully at /tmp/deployment.tar.gz"
