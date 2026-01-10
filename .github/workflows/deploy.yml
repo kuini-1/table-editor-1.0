@@ -43,11 +43,26 @@ jobs:
       - name: Create deployment archive
         continue-on-error: true
         run: |
+          echo "=========================================="
+          echo "USING PYTHON-BASED ARCHIVE CREATION v2"
+          echo "=========================================="
           echo "Creating deployment archive (exports folder will be included)..."
+          echo "DEBUG: Checking Python availability..."
+          if command -v python3 &> /dev/null; then
+            PYTHON_CMD=python3
+            echo "DEBUG: Using python3"
+          elif command -v python &> /dev/null; then
+            PYTHON_CMD=python
+            echo "DEBUG: Using python"
+          else
+            echo "ERROR: Neither python3 nor python found!"
+            exit 1
+          fi
           
           # Use Python to create the archive, which handles errors gracefully
           # Python's tarfile module doesn't exit with code 1 for this warning
-          python3 << 'PYTHON_SCRIPT'
+          echo "DEBUG: Starting Python archive creation with $PYTHON_CMD..."
+          $PYTHON_CMD << 'PYTHON_SCRIPT'
           import tarfile
           import os
           import sys
