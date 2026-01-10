@@ -46,8 +46,7 @@ jobs:
           # CRITICAL: The exports/ folder contains Convert.exe files required for backend conversion
           echo "Creating deployment archive (exports folder will be included)..."
           # Create archive in /tmp first to avoid "file changed as we read it" error
-          # Temporarily disable exit on error to handle tar's exit code 1 when files change
-          set +e
+          # Use || true to prevent failure when tar exits with code 1 (files changed during archive)
           tar --warning=no-file-changed \
               --exclude='node_modules' \
               --exclude='.next' \
@@ -57,9 +56,7 @@ jobs:
               --exclude='*.log' \
               --exclude='.env*' \
               --exclude='deployment.tar.gz' \
-              -czf /tmp/deployment.tar.gz .
-          TAR_EXIT_CODE=$?
-          set -e
+              -czf /tmp/deployment.tar.gz . || true
           
           # Check if archive was created successfully (tar may exit with 1 if files changed, but archive is still valid)
           if [ ! -f /tmp/deployment.tar.gz ]; then
@@ -67,9 +64,7 @@ jobs:
             exit 1
           fi
           
-          if [ $TAR_EXIT_CODE -ne 0 ]; then
-            echo "Warning: Some files changed during archiving (exit code: $TAR_EXIT_CODE), but archive was created successfully."
-          fi
+          echo "Archive created successfully at /tmp/deployment.tar.gz"
           
           # Move archive to current directory
           mv /tmp/deployment.tar.gz deployment.tar.gz
