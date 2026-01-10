@@ -42,8 +42,10 @@ jobs:
 
       - name: Create deployment archive
         continue-on-error: true
+        shell: bash {0}
         run: |
-          # CRITICAL: Disable exit-on-error at the very start to prevent bash -e from exiting on tar's code 1
+          # CRITICAL: Override shell to not use -e flag, preventing exit on tar's code 1
+          # Shell is overridden above to use 'bash {0}' instead of default 'bash -e {0}'
           set +e
           
           # Create a tar archive excluding node_modules and .next, but including exports folder
