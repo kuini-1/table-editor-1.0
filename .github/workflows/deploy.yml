@@ -203,13 +203,84 @@ jobs:
           
           # Extract the archive (using tar if available, or 7zip)
           Write-Host "Extracting deployment archive..."
-          if (Get-Command tar -ErrorAction SilentlyContinue) {
-            tar -xzf deployment.tar.gz
-          } elseif (Get-Command 7z -ErrorAction SilentlyContinue) {
-            7z x deployment.tar.gz -so | tar -xzf -
-          } else {
-            Write-Error "Neither tar nor 7z found. Please install one of them."
-            exit 1
+          
+          # Check for tar (might be in different locations on Windows)
+          $tarFound = $false
+          $tarPaths = @("tar", "C:\Windows\System32\tar.exe", "C:\Program Files\Git\usr\bin\tar.exe")
+          foreach ($tarPath in $tarPaths) {
+            if (Get-Command $tarPath -ErrorAction SilentlyContinue) {
+              Write-Host "Found tar at: $tarPath"
+              & $tarPath -xzf deployment.tar.gz
+              $tarFound = $true
+              break
+            }
+          }
+          
+          # If tar not found, try 7zip
+          if (-not $tarFound) {
+            Write-Host "Checking for 7-Zip..."
+            $7zipFound = $false
+            $7zipPath = $null
+            
+            # Check common 7-Zip installation paths
+            $possiblePaths = @(
+              "C:\Program Files\7-Zip\7z.exe",
+              "C:\Program Files (x86)\7-Zip\7z.exe"
+            )
+            
+            foreach ($path in $possiblePaths) {
+              Write-Host "Checking: $path"
+              if (Test-Path $path) {
+                Write-Host "Found 7-Zip at: $path"
+                $7zipPath = $path
+                $7zipFound = $true
+                break
+              }
+            }
+            
+            # If not found in common paths, try Get-Command
+            if (-not $7zipFound) {
+              Write-Host "Trying Get-Command for 7z..."
+              $cmd = Get-Command 7z -ErrorAction SilentlyContinue
+              if ($cmd) {
+                Write-Host "Found 7z command: $($cmd.Source)"
+                $7zipPath = $cmd.Source
+                $7zipFound = $true
+              }
+            }
+            
+            if ($7zipFound -and $7zipPath) {
+              Write-Host "Using 7-Zip at: $7zipPath"
+              # 7zip can extract .tar.gz in two steps
+              Write-Host "Step 1: Extracting .tar.gz to temp directory..."
+              & $7zipPath x deployment.tar.gz -o"$env:TEMP" -y
+              if ($LASTEXITCODE -ne 0) {
+                Write-Error "Failed to extract .tar.gz"
+                exit 1
+              }
+              
+              $tarFile = "$env:TEMP\deployment.tar"
+              if (Test-Path $tarFile) {
+                Write-Host "Step 2: Extracting .tar archive..."
+                & $7zipPath x $tarFile -o"." -y
+                if ($LASTEXITCODE -ne 0) {
+                  Write-Error "Failed to extract .tar"
+                  exit 1
+                }
+                Remove-Item $tarFile -Force -ErrorAction SilentlyContinue
+                Write-Host "Archive extracted successfully"
+              } else {
+                Write-Error "Could not find extracted .tar file at: $tarFile"
+                exit 1
+              }
+            } else {
+              Write-Error "7-Zip not found. Checked paths:"
+              foreach ($path in $possiblePaths) {
+                Write-Error "  - $path"
+              }
+              Write-Error "Please ensure 7-Zip is installed at C:\Program Files\7-Zip\"
+              exit 1
+            }
           }
           
           # Remove the archive after extraction
