@@ -217,6 +217,22 @@ jobs:
           # Copy archive to project folder for extraction
           Copy-Item "$DeployPath\deployment.tar.gz" -Destination "$projectPath\deployment.tar.gz" -Force
           
+          # Verify archive before extraction
+          Write-Host "Verifying archive before extraction..."
+          if (Test-Path "deployment.tar.gz") {
+            Write-Host "Archive exists, size: $((Get-Item deployment.tar.gz).Length) bytes"
+            
+            # Try to list archive contents using 7-Zip to verify it's valid
+            $7zipCheck = Get-Command "C:\Program Files\7-Zip\7z.exe" -ErrorAction SilentlyContinue
+            if ($7zipCheck) {
+              Write-Host "Listing archive contents (first 20 items):"
+              & "C:\Program Files\7-Zip\7z.exe" l deployment.tar.gz | Select-Object -First 25
+            }
+          } else {
+            Write-Error "Archive file not found in project folder!"
+            exit 1
+          }
+          
           # Extract the archive (using tar if available, or 7zip)
           Write-Host "Extracting deployment archive to: $(Get-Location)"
           
@@ -224,17 +240,38 @@ jobs:
           $tarFound = $false
           $tarPaths = @("tar", "C:\Windows\System32\tar.exe", "C:\Program Files\Git\usr\bin\tar.exe")
           foreach ($tarPath in $tarPaths) {
-            if (Get-Command $tarPath -ErrorAction SilentlyContinue) {
-              Write-Host "Found tar at: $tarPath"
+            $tarCmd = Get-Command $tarPath -ErrorAction SilentlyContinue
+            if ($tarCmd) {
+              Write-Host "Found tar at: $($tarCmd.Source)"
               Write-Host "Extracting to: $(Get-Location)"
-              & $tarPath -xzf deployment.tar.gz
+              
+              # List files before extraction
+              Write-Host "Files before extraction:"
+              Get-ChildItem | Select-Object Name | Format-Table
+              
+              # Extract with tar
+              $tarOutput = & $tarPath -xzf deployment.tar.gz 2>&1
+              Write-Host "Tar extraction output:"
+              $tarOutput | ForEach-Object { Write-Host $_ }
+              Write-Host "Tar exit code: $LASTEXITCODE"
+              
               $tarFound = $true
               
               # Verify extraction
-              Write-Host "Verifying extraction..."
-              Write-Host "Files and folders in current directory:"
+              Write-Host "Verifying extraction - files and folders in current directory:"
               Get-ChildItem | Select-Object Name, Length, PSIsContainer | Format-Table
               Write-Host "Total items: $((Get-ChildItem).Count)"
+              
+              # Check for specific expected files
+              Write-Host "Checking for expected files:"
+              $expectedFiles = @("package.json", "src", "exports", "next.config.ts", "public")
+              foreach ($file in $expectedFiles) {
+                if (Test-Path $file) {
+                  Write-Host "  [OK] Found: $file"
+                } else {
+                  Write-Host "  [MISSING] Not found: $file"
+                }
+              }
               break
             }
           }
@@ -274,24 +311,56 @@ jobs:
             
             if ($7zipFound -and $7zipPath) {
               Write-Host "Using 7-Zip at: $7zipPath"
+              Write-Host "Archive file before extraction:"
+              Get-Item deployment.tar.gz | Select-Object Name, Length
+              
               # 7zip can extract .tar.gz in two steps
               Write-Host "Step 1: Extracting .tar.gz to temp directory..."
-              & $7zipPath x deployment.tar.gz -o"$env:TEMP" -y
+              $step1Output = & $7zipPath x deployment.tar.gz -o"$env:TEMP" -y 2>&1
+              Write-Host "7-Zip Step 1 output:"
+              $step1Output | ForEach-Object { Write-Host $_ }
+              Write-Host "7-Zip Step 1 exit code: $LASTEXITCODE"
+              
               if ($LASTEXITCODE -ne 0) {
-                Write-Error "Failed to extract .tar.gz"
+                Write-Error "Failed to extract .tar.gz (exit code: $LASTEXITCODE)"
                 exit 1
               }
               
               $tarFile = "$env:TEMP\deployment.tar"
+              Write-Host "Checking for extracted .tar file at: $tarFile"
               if (Test-Path $tarFile) {
+                Write-Host "Found .tar file, size: $((Get-Item $tarFile).Length) bytes"
                 Write-Host "Step 2: Extracting .tar archive to current directory..."
                 Write-Host "Extracting to: $(Get-Location)"
-                & $7zipPath x $tarFile -o"." -y
+                
+                # List files before extraction
+                Write-Host "Files before extraction:"
+                Get-ChildItem | Select-Object Name | Format-Table
+                
+                # Use absolute path for output directory to avoid any path issues
+                $extractPath = (Get-Location).Path
+                Write-Host "Extracting to absolute path: $extractPath"
+                
+                $step2Output = & $7zipPath x $tarFile "-o$extractPath" -y 2>&1
+                Write-Host "7-Zip Step 2 output:"
+                $step2Output | ForEach-Object { Write-Host $_ }
                 $extractExitCode = $LASTEXITCODE
-                Write-Host "7-Zip exit code: $extractExitCode"
+                Write-Host "7-Zip Step 2 exit code: $extractExitCode"
+                
+                # Also try alternative extraction method if first fails
+                if ($extractExitCode -ne 0) {
+                  Write-Host "First extraction attempt failed, trying alternative method..."
+                  $step2AltOutput = & $7zipPath e $tarFile "-o$extractPath" -y 2>&1
+                  Write-Host "7-Zip alternative output:"
+                  $step2AltOutput | ForEach-Object { Write-Host $_ }
+                  $extractExitCode = $LASTEXITCODE
+                  Write-Host "7-Zip alternative exit code: $extractExitCode"
+                }
                 
                 if ($extractExitCode -ne 0) {
                   Write-Error "Failed to extract .tar (exit code: $extractExitCode)"
+                  Write-Host "Files after failed extraction:"
+                  Get-ChildItem | Select-Object Name | Format-Table
                   exit 1
                 }
                 
@@ -299,14 +368,26 @@ jobs:
                 Write-Host "Archive extracted successfully"
                 
                 # Verify extraction - list files and directories
-                Write-Host "Verifying extraction..."
-                Write-Host "Files and folders in current directory:"
+                Write-Host "Verifying extraction - files and folders in current directory:"
                 Get-ChildItem | Select-Object Name, Length, PSIsContainer | Format-Table
                 Write-Host "Total items: $((Get-ChildItem).Count)"
+                
+                # Check for specific expected files
+                Write-Host "Checking for expected files:"
+                $expectedFiles = @("package.json", "src", "exports", "next.config.ts", "public")
+                foreach ($file in $expectedFiles) {
+                  if (Test-Path $file) {
+                    Write-Host "  [OK] Found: $file"
+                  } else {
+                    Write-Host "  [MISSING] Not found: $file"
+                  }
+                }
               } else {
                 Write-Error "Could not find extracted .tar file at: $tarFile"
                 Write-Host "Files in temp directory:"
-                Get-ChildItem "$env:TEMP" -Filter "deployment*" | Select-Object Name
+                Get-ChildItem "$env:TEMP" -Filter "deployment*" | Select-Object Name, Length
+                Write-Host "All files in temp directory starting with 'deployment':"
+                Get-ChildItem "$env:TEMP" | Where-Object { $_.Name -like "deployment*" } | Select-Object Name, Length
                 exit 1
               }
             } else {
