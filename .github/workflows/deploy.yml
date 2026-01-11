@@ -183,7 +183,7 @@ jobs:
           
           # Create PowerShell deployment script using Python to ensure proper encoding
           python3 << 'PYTHON_SCRIPT'
-          script_content = '''param(
+          script_content = r'''param(
             [string]$DeployPath,
             [string]$Pm2AppName,
             [string]$NextPublicSupabaseUrl,
