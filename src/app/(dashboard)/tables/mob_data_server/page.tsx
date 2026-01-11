@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useStore } from '@/lib/store';
 import { useTableData } from '@/hooks/useTableData';
@@ -19,6 +19,11 @@ import { ErrorDisplay } from '@/components/ErrorDisplay';
 import { DataTableSkeleton } from '@/components/ui/DataTableSkeleton';
 import { MobDataServerForm } from './MobDataServerForm';
 import { columns, type MobDataServerTableRow } from './schema';
+import { EditingIndicator } from '@/components/table/EditingIndicator';
+import { EditConflictWarning } from '@/components/table/EditConflictWarning';
+import { createClient } from '@/lib/supabase/client';
+import { useEditingSession } from '@/hooks/useEditingSession';
+import { useEditingIndicators } from '@/hooks/useEditingIndicators';
 
 export default function MobDataServerTablePage() {
   const searchParams = useSearchParams();

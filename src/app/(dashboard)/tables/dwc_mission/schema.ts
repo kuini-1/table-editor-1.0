@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import * as z from 'zod';
 
 export const dwcMissionTableSchema = z.object({

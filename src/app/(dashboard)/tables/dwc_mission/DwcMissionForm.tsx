@@ -23,6 +23,7 @@ const generateRewardSections = (rewardIndex: number) => ({
     `asReward_${rewardIndex}_asRepeatReward_1_byType`,
     `asReward_${rewardIndex}_asRepeatReward_1_tblidx`,
     `asReward_${rewardIndex}_asRepeatReward_1_byValue`,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ] as any[],
 });
 

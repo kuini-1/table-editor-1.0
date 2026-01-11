@@ -31,7 +31,7 @@ export interface Column {
 }
 
 interface BaseFormData {
-  table_id: string | null | undefined;
+  table_id?: string | null | undefined;
   [key: string]: string | number | boolean | null | undefined;
 }
 
@@ -70,7 +70,7 @@ interface ModularFormProps<T extends BaseFormData> {
   showFooter?: boolean;
   submitLabel?: string | ((mode: FormMode) => string);
   cancelLabel?: string;
-  customSchema?: z.ZodSchema<T>;
+  customSchema?: z.ZodType<T, z.ZodTypeDef, unknown>;
   defaultTab?: string;
   compactFieldHeight?: boolean;
   enableQuickView?: boolean;
@@ -137,7 +137,7 @@ export function ModularForm<T extends BaseFormData>({
 
   // Log form errors for debugging
   useEffect(() => {
-    const subscription = form.watch((value, { name, type }) => {
+    const subscription = form.watch((value, { type }) => {
       if (type === 'change') {
         const errors = form.formState.errors;
         if (Object.keys(errors).length > 0) {

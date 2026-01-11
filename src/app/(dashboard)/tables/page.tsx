@@ -139,7 +139,7 @@ function getTableNameFromType(type: string): string {
 }
 
 // Component for table row menu with import/export options
-function TableRowMenu({ table, onImport, onExport }: { table: DatabaseTable; onImport: () => void; onExport: () => void }) {
+function TableRowMenu({ onImport, onExport }: { onImport: () => void; onExport: () => void }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -790,7 +790,6 @@ export default function TablesPage() {
                                 </Button>
                               )}
                               <TableRowMenu 
-                                table={table}
                                 onImport={() => setImportDialogTable({ id: table.id, name: getTableNameFromType(table.type) })}
                                 onExport={() => {
                                   const tableName = getTableNameFromType(table.type);

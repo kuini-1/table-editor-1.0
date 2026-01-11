@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 export interface QuickViewField {
   key: string;
   label: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   value: any;
   type?: 'text' | 'number' | 'boolean';
 }
@@ -34,6 +35,7 @@ interface ModernFormLayoutProps {
   quickViewSections?: QuickViewSection[];
   tabs?: FormTab[];
   defaultTab?: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   stats?: Array<{ label: string; value: any; color?: string }>;
   children?: ReactNode;
   onCancel?: () => void;
@@ -53,7 +55,6 @@ export function ModernFormLayout({
   onSubmit,
   submitLabel = "Save",
   cancelLabel = "Cancel",
-  mode = 'add',
 }: ModernFormLayoutProps) {
   const activeTab = defaultTab || (tabs.length > 0 ? tabs[0].id : undefined);
 
@@ -90,35 +91,37 @@ export function ModernFormLayout({
             </div>
             <ScrollArea className="flex-1">
               <div className="p-4 space-y-4">
-                {quickViewSections.map((section, idx) => (
-                  <Card key={idx} className="border-gray-200 dark:border-gray-700">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm font-semibold">{section.title}</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      {section.fields.map((field, fieldIdx) => (
-                        <div key={fieldIdx} className="space-y-1">
-                          <label className="text-xs font-medium text-gray-700 dark:text-gray-300">
-                            {field.label}
-                          </label>
-                          {field.type === 'boolean' ? (
-                            <div className="flex items-center h-10 px-3 bg-gray-50 dark:bg-gray-800/50 border-2 border-gray-200 dark:border-gray-700 rounded-lg">
-                              <span className="text-xs text-gray-700 dark:text-gray-300">
-                                {field.value ? 'Yes' : 'No'}
-                              </span>
-                            </div>
-                          ) : (
-                            <div className="h-10 px-3 bg-gray-50 dark:bg-gray-800/50 border-2 border-gray-200 dark:border-gray-700 rounded-lg flex items-center">
-                              <span className="text-xs text-gray-700 dark:text-gray-300">
-                                {field.value ?? '—'}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </CardContent>
-                  </Card>
-                )}
+                {quickViewSections.map((section, idx) => {
+                  return (
+                    <Card key={idx} className="border-gray-200 dark:border-gray-700">
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-sm font-semibold">{section.title}</CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        {section.fields.map((field, fieldIdx) => (
+                          <div key={fieldIdx} className="space-y-1">
+                            <label className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                              {field.label}
+                            </label>
+                            {field.type === 'boolean' ? (
+                              <div className="flex items-center h-10 px-3 bg-gray-50 dark:bg-gray-800/50 border-2 border-gray-200 dark:border-gray-700 rounded-lg">
+                                <span className="text-xs text-gray-700 dark:text-gray-300">
+                                  {field.value ? 'Yes' : 'No'}
+                                </span>
+                              </div>
+                            ) : (
+                              <div className="h-10 px-3 bg-gray-50 dark:bg-gray-800/50 border-2 border-gray-200 dark:border-gray-700 rounded-lg flex items-center">
+                                <span className="text-xs text-gray-700 dark:text-gray-300">
+                                  {field.value ?? '—'}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
               </div>
             </ScrollArea>
           </div>

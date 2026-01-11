@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Badge } from '@/components/ui/badge';
-import { User, Eye, Edit } from 'lucide-react';
+import { Eye, Edit } from 'lucide-react';
 import type { EditingSession } from '@/hooks/useEditingIndicators';
 
 interface EditingIndicatorProps {
@@ -58,7 +58,6 @@ interface RowEditingIndicatorProps {
 }
 
 export function RowEditingIndicator({ 
-  rowId, 
   sessions, 
   currentUserId,
   className 

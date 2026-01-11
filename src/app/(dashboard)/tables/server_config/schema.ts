@@ -26,6 +26,7 @@ const valueColumns = Array.from({ length: 10 }, (_, i) => ({
   key: `wstrValue_${i}` as const,
   label: `Value ${i}`,
   type: 'text' as const,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   validation: serverConfigTableSchema.shape[`wstrValue_${i}` as keyof typeof serverConfigTableSchema.shape] as any,
 }));
 

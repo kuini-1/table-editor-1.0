@@ -193,7 +193,7 @@ export default function ItemBagListPage() {
           </SheetHeader>
           
           <div className="flex-1 overflow-hidden bg-white dark:bg-gray-800">
-            {formMode === 'edit' && selectedRow && (
+            {formMode === 'edit' && selectedRow && selectedRow.id && (
               <div className="px-6 pt-4">
                 <EditConflictWarning
                   sessions={getOtherUsersEditingRow(selectedRow.id, currentUserId)}

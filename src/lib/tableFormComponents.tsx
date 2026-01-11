@@ -8,15 +8,17 @@ import type { ComponentType } from 'react';
 
 // Define a common interface for form components
 // Note: Different form components may have slightly different prop requirements
+/* eslint-disable @typescript-eslint/no-explicit-any */
 export interface TableFormComponentProps {
-  initialData?: Record<string, unknown>;
-  onSubmit: (data: Record<string, unknown>) => void;
-  onCancel?: () => void;
+  initialData?: any;
+  onSubmit: (data: any) => void;
+  onCancel: () => void;
   mode: 'add' | 'edit' | 'duplicate';
   tableId: string;
-  open?: boolean;
-  onOpenChange?: (open: boolean) => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }
+/* eslint-enable @typescript-eslint/no-explicit-any */
 
 // Lazy load form components to reduce initial bundle size
 const ItemForm = lazy(() => 

@@ -15,7 +15,6 @@ interface EditConflictWarningProps {
 export function EditConflictWarning({ 
   sessions, 
   currentUserId,
-  onProceed,
   onCancel 
 }: EditConflictWarningProps) {
   // Filter out current user's sessions

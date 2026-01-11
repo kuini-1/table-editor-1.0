@@ -103,8 +103,8 @@ export function RelatedTableEditModal({
             // Get owner_id from cached userProfile
             if (userProfile.data.role === 'owner' && userProfile.data.owners?.[0]?.id) {
               ownerId = userProfile.data.owners[0].id;
-            } else if (userProfile.data.role === 'sub_owner' && userProfile.data.sub_owners?.[0]?.owner_id) {
-              ownerId = userProfile.data.sub_owners[0].owner_id;
+            } else if (userProfile.data.role === 'sub_owner' && userProfile.data.sub_owners?.[0] && 'owner_id' in userProfile.data.sub_owners[0]) {
+              ownerId = (userProfile.data.sub_owners[0] as { owner_id: string }).owner_id;
             }
           }
           
@@ -115,8 +115,8 @@ export function RelatedTableEditModal({
             if (updatedProfile?.data) {
               if (updatedProfile.data.role === 'owner' && updatedProfile.data.owners?.[0]?.id) {
                 ownerId = updatedProfile.data.owners[0].id;
-              } else if (updatedProfile.data.role === 'sub_owner' && updatedProfile.data.sub_owners?.[0]?.owner_id) {
-                ownerId = updatedProfile.data.sub_owners[0].owner_id;
+              } else if (updatedProfile.data.role === 'sub_owner' && updatedProfile.data.sub_owners?.[0] && 'owner_id' in updatedProfile.data.sub_owners[0]) {
+                ownerId = (updatedProfile.data.sub_owners[0] as { owner_id: string }).owner_id;
               }
             }
           }
@@ -438,7 +438,9 @@ export function RelatedTableEditModal({
     try {
       // Remove table_id and id from updates (these shouldn't be changed)
       // But keep table_id in the data for validation - we just won't update it
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { id: _id, ...dataToUpdate } = data;
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { table_id: _tableId, ...updates } = dataToUpdate;
       
       console.log('Updates after filtering:', {
@@ -756,7 +758,7 @@ export function RelatedTableEditModal({
               ) : (
                 <ModularForm
                   columns={columns}
-                  initialData={rowData}
+                  initialData={rowData as Partial<{ table_id: string; [key: string]: string | number | boolean | null | undefined }>}
                   onSubmit={(data) => {
                     console.log('=== MODULAR FORM SUBMIT CALLED ===');
                     console.log('Form data:', data);

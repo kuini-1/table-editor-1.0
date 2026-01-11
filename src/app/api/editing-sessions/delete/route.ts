@@ -22,6 +22,7 @@ const supabaseAdmin = createServiceClient(
 export async function POST(request: Request) {
   try {
     // Handle both JSON and FormData (for sendBeacon)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let body: any;
     const contentType = request.headers.get('content-type') || '';
     

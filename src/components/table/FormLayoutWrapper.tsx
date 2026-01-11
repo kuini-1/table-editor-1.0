@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 export interface QuickViewField {
   key: string;
   label: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   value: any;
   type?: 'text' | 'number' | 'boolean';
 }
@@ -20,6 +21,7 @@ export interface QuickViewSection {
 
 interface FormLayoutWrapperProps {
   quickViewSections?: QuickViewSection[];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   quickStats?: Array<{ label: string; value: any; color?: string }>;
   children: ReactNode;
   onCancel?: () => void;
@@ -37,7 +39,6 @@ export function FormLayoutWrapper({
   onSubmit,
   submitLabel = "Save",
   cancelLabel = "Cancel",
-  mode = 'add',
 }: FormLayoutWrapperProps) {
   const hasQuickView = quickViewSections.length > 0;
 

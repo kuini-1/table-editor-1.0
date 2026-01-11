@@ -151,10 +151,10 @@ class ConversionQueue {
     console.log(`[Queue ${this.instanceId}] Total jobs in Map after completion: ${this.jobs.size}`);
 
     // Find and remove from active workers
-    for (const workerIndex of this.activeWorkers) {
-      // We'll need to track which worker has which job
-      // For now, we'll remove from active workers when job completes
-    }
+    // Note: We'll need to track which worker has which job
+    // For now, we'll remove from active workers when job completes
+    // The workerIndex is tracked when getNextJob is called, but we don't need it here
+    void this.activeWorkers; // Acknowledge we're aware of activeWorkers but not iterating
   }
 
   /**

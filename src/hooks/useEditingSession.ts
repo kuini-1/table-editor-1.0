@@ -351,7 +351,7 @@ export function useEditingSession({
     };
 
     // Handle page unload (navigation away, tab close, etc.)
-    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+    const handleBeforeUnload = () => {
       console.log('useEditingSession: Page unloading, deleting session via sendBeacon');
       // Use sendBeacon for reliable cleanup on page unload
       // This works even when the page is closing

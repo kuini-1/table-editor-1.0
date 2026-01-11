@@ -23,6 +23,7 @@ const generateTimeQuestDatasetSection = (datasetIndex: number) => ({
     `sTimeQuestDataset_${datasetIndex}_byWorldCount`,
     `sTimeQuestDataset_${datasetIndex}_dayRecordRewardTblidx`,
     `sTimeQuestDataset_${datasetIndex}_bestRecordRewardTblidx`,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ] as any[],
 });
 
