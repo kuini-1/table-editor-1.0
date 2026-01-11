@@ -200,9 +200,25 @@ jobs:
           
           # Navigate to deployment directory
           Set-Location -Path $DeployPath
+          Write-Host "Current directory: $(Get-Location)"
+          Write-Host "Archive file exists: $(Test-Path deployment.tar.gz)"
+          if (Test-Path deployment.tar.gz) {
+            Write-Host "Archive file size: $((Get-Item deployment.tar.gz).Length) bytes"
+          }
+          
+          # Create project subfolder (e.g., table-editor)
+          $projectFolder = "table-editor"
+          $projectPath = Join-Path $DeployPath $projectFolder
+          Write-Host "Creating project folder: $projectPath"
+          New-Item -ItemType Directory -Path $projectPath -Force | Out-Null
+          Set-Location -Path $projectPath
+          Write-Host "Changed to project directory: $(Get-Location)"
+          
+          # Copy archive to project folder for extraction
+          Copy-Item "$DeployPath\deployment.tar.gz" -Destination "$projectPath\deployment.tar.gz" -Force
           
           # Extract the archive (using tar if available, or 7zip)
-          Write-Host "Extracting deployment archive..."
+          Write-Host "Extracting deployment archive to: $(Get-Location)"
           
           # Check for tar (might be in different locations on Windows)
           $tarFound = $false
@@ -210,8 +226,15 @@ jobs:
           foreach ($tarPath in $tarPaths) {
             if (Get-Command $tarPath -ErrorAction SilentlyContinue) {
               Write-Host "Found tar at: $tarPath"
+              Write-Host "Extracting to: $(Get-Location)"
               & $tarPath -xzf deployment.tar.gz
               $tarFound = $true
+              
+              # Verify extraction
+              Write-Host "Verifying extraction..."
+              Write-Host "Files and folders in current directory:"
+              Get-ChildItem | Select-Object Name, Length, PSIsContainer | Format-Table
+              Write-Host "Total items: $((Get-ChildItem).Count)"
               break
             }
           }
@@ -261,16 +284,29 @@ jobs:
               
               $tarFile = "$env:TEMP\deployment.tar"
               if (Test-Path $tarFile) {
-                Write-Host "Step 2: Extracting .tar archive..."
+                Write-Host "Step 2: Extracting .tar archive to current directory..."
+                Write-Host "Extracting to: $(Get-Location)"
                 & $7zipPath x $tarFile -o"." -y
-                if ($LASTEXITCODE -ne 0) {
-                  Write-Error "Failed to extract .tar"
+                $extractExitCode = $LASTEXITCODE
+                Write-Host "7-Zip exit code: $extractExitCode"
+                
+                if ($extractExitCode -ne 0) {
+                  Write-Error "Failed to extract .tar (exit code: $extractExitCode)"
                   exit 1
                 }
+                
                 Remove-Item $tarFile -Force -ErrorAction SilentlyContinue
                 Write-Host "Archive extracted successfully"
+                
+                # Verify extraction - list files and directories
+                Write-Host "Verifying extraction..."
+                Write-Host "Files and folders in current directory:"
+                Get-ChildItem | Select-Object Name, Length, PSIsContainer | Format-Table
+                Write-Host "Total items: $((Get-ChildItem).Count)"
               } else {
                 Write-Error "Could not find extracted .tar file at: $tarFile"
+                Write-Host "Files in temp directory:"
+                Get-ChildItem "$env:TEMP" -Filter "deployment*" | Select-Object Name
                 exit 1
               }
             } else {
@@ -285,6 +321,20 @@ jobs:
           
           # Remove the archive after extraction
           Remove-Item -Path deployment.tar.gz -Force
+          
+          # Verify all expected files/folders are present
+          Write-Host "Verifying extracted files..."
+          $expectedItems = @("package.json", "src", "exports", "next.config.ts")
+          foreach ($item in $expectedItems) {
+            if (Test-Path $item) {
+              Write-Host "  Found: $item"
+            } else {
+              Write-Warning "  Missing: $item"
+            }
+          }
+          
+          Write-Host "Extraction complete. Files in project directory:"
+          Get-ChildItem | Select-Object Name, Length, PSIsContainer | Format-Table
           
           # Create .env.local file with all environment variables
           Write-Host "Creating .env.local file..."
