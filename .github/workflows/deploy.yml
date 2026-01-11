@@ -439,12 +439,121 @@ jobs:
           Write-Host "Building application..."
           npm run build
           
+          # Verify build was successful
+          if ($LASTEXITCODE -ne 0) {
+            Write-Error "Build failed! Exit code: $LASTEXITCODE"
+            exit 1
+          }
+          
+          # Verify .next directory exists
+          if (-not (Test-Path ".next")) {
+            Write-Error ".next directory not found after build!"
+            exit 1
+          }
+          Write-Host "Build verification: .next directory exists"
+          
+          # Verify package.json exists
+          if (-not (Test-Path "package.json")) {
+            Write-Error "package.json not found!"
+            exit 1
+          }
+          
+          # Check if port 3000 is in use (optional warning)
+          $portCheck = Get-NetTCPConnection -LocalPort 3000 -ErrorAction SilentlyContinue
+          if ($portCheck) {
+            Write-Warning "Port 3000 appears to be in use. This may cause PM2 to fail."
+            Write-Host "Port 3000 connections:"
+            $portCheck | Format-Table
+          }
+          
           # Restart PM2 process
-          Write-Host "Restarting PM2 process: $Pm2AppName"
-          pm2 reload $Pm2AppName --update-env
+          Write-Host "Checking PM2 process status..."
+          $pm2Status = pm2 describe $Pm2AppName 2>&1
+          $pm2Exists = $LASTEXITCODE -eq 0
+          
+          if ($pm2Exists) {
+            Write-Host "PM2 process exists, checking status..."
+            $pm2Info = pm2 jlist | ConvertFrom-Json
+            $appInfo = $pm2Info | Where-Object { $_.name -eq $Pm2AppName }
+            
+            if ($appInfo) {
+              $status = $appInfo.pm2_env.status
+              $restarts = $appInfo.pm2_env.restart_time
+              Write-Host "Current status: $status, Restarts: $restarts"
+              
+              if ($status -eq "online") {
+                Write-Host "Process is running, reloading..."
+                pm2 reload $Pm2AppName --update-env
+              } elseif ($status -eq "errored" -or $status -eq "stopped") {
+                Write-Host "Process is errored or stopped, deleting and recreating..."
+                pm2 delete $Pm2AppName
+                Start-Sleep -Seconds 1
+                # Will fall through to start new process below
+                $pm2Exists = $false
+              } else {
+                Write-Host "Process exists but status is '$status', restarting..."
+                pm2 restart $Pm2AppName --update-env
+              }
+            } else {
+              Write-Host "Process info not found, will start new process..."
+              $pm2Exists = $false
+            }
+          }
+          
+          if (-not $pm2Exists) {
+            Write-Host "PM2 process does not exist, starting new process..."
+            # Start PM2 process - we're already in the project directory
+            Write-Host "Current directory: $(Get-Location)"
+            
+            # Verify we're in the right directory
+            if (-not (Test-Path "package.json")) {
+              Write-Error "package.json not found in current directory: $(Get-Location)"
+              exit 1
+            }
+            
+            # Verify .next directory exists (build completed)
+            if (-not (Test-Path ".next")) {
+              Write-Error ".next directory not found. Build may have failed."
+              exit 1
+            }
+            
+            # Check if ecosystem.config.js exists, use it if available
+            if (Test-Path "ecosystem.config.js") {
+              Write-Host "Found ecosystem.config.js, using it to start PM2..."
+              pm2 start ecosystem.config.js --update-env
+            } else {
+              Write-Host "No ecosystem file found, starting PM2 directly with npm start..."
+              # PM2 start command for Next.js apps - use full path to avoid issues
+              $currentPath = (Get-Location).Path
+              pm2 start npm --name $Pm2AppName -- start --cwd "$currentPath" --update-env
+            }
+          }
+          
+          # Wait a moment for PM2 to update and attempt to start
+          Write-Host "Waiting for PM2 process to initialize..."
+          Start-Sleep -Seconds 5
           
           # Show PM2 status
+          Write-Host "PM2 Status:"
           pm2 status
+          
+          # Show PM2 logs for the app (last 50 lines) to help diagnose errors
+          Write-Host "PM2 Error Logs (last 50 lines):"
+          pm2 logs $Pm2AppName --err --lines 50 --nostream
+          
+          Write-Host "PM2 Output Logs (last 50 lines):"
+          pm2 logs $Pm2AppName --out --lines 50 --nostream
+          
+          # Check if process is still errored
+          $pm2Info = pm2 jlist | ConvertFrom-Json
+          $appInfo = $pm2Info | Where-Object { $_.name -eq $Pm2AppName }
+          if ($appInfo -and $appInfo.pm2_env.status -ne "online") {
+            Write-Warning "PM2 process is not online. Status: $($appInfo.pm2_env.status)"
+            Write-Warning "Restart count: $($appInfo.pm2_env.restart_time)"
+            Write-Warning "Please check PM2 logs for errors: pm2 logs $Pm2AppName"
+          } else {
+            Write-Host "PM2 process is running successfully"
+          }
           
           Write-Host "Deployment completed successfully"
           '''
