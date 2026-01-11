@@ -2,7 +2,7 @@ module.exports = {
   apps: [
     {
       name: 'table-editor',
-      script: 'npm',
+      script: 'node_modules/.bin/next',
       args: 'start',
       cwd: '.',
       instances: 1,
