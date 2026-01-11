@@ -247,7 +247,7 @@ export default function SystemEffectPage() {
             setFormMode('duplicate');
             setIsFormOpen(true);
           }}
-          onDelete={(row) => handleDeleteRow(row.id
+          onDelete={(row) => handleDeleteRow(row.id)}
           editingSessions={editing}
           currentUserId={currentUserId}
         />
