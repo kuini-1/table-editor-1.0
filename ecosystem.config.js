@@ -1,15 +1,10 @@
 const path = require('path');
-const fs = require('fs');
-
-// Use node to run the Next.js binary directly, avoiding .bin wrapper issues
-const nextBinPath = path.resolve(__dirname, 'node_modules', 'next', 'dist', 'bin', 'next.js');
 
 module.exports = {
   apps: [
     {
       name: 'table-editor',
-      script: 'node',
-      args: [nextBinPath, 'start'],
+      script: path.join(__dirname, 'start-server.js'),
       cwd: __dirname,
       instances: 1,
       exec_mode: 'fork',
