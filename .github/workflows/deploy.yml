@@ -181,9 +181,9 @@ jobs:
           # Install sshpass if not already installed
           sudo apt-get update && sudo apt-get install -y sshpass
           
-          # Create PowerShell deployment script with environment variables
-          cat > deploy.ps1 << 'POWERSHELL'
-          param(
+          # Create PowerShell deployment script using Python to ensure proper encoding
+          python3 << 'PYTHON_SCRIPT'
+          script_content = '''param(
             [string]$DeployPath,
             [string]$Pm2AppName,
             [string]$NextPublicSupabaseUrl,
@@ -230,7 +230,7 @@ jobs:
             "CONVERSION_RATE_LIMIT_COOLDOWN=$ConversionRateLimitCooldown"
           )
           $envLines | Out-File -FilePath ".env.local" -Encoding utf8 -Force
-          Write-Host "✓ .env.local file created with environment variables"
+          Write-Host ".env.local file created with environment variables"
           
           # Install/update dependencies
           Write-Host "Installing dependencies..."
@@ -247,8 +247,14 @@ jobs:
           # Show PM2 status
           pm2 status
           
-          Write-Host "Deployment completed successfully!"
-          POWERSHELL
+          Write-Host "Deployment completed successfully"
+          '''
+          
+          with open('deploy.ps1', 'w', encoding='utf-8', newline='\r\n') as f:
+              f.write(script_content)
+          
+          print("PowerShell script created successfully")
+          PYTHON_SCRIPT
           
           # Convert Windows path for SCP (use forward slashes)
           SCP_PATH=$(echo "$VPS_DEPLOY_PATH" | sed 's|\\|/|g')
