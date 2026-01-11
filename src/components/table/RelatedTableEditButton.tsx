@@ -82,7 +82,7 @@ export function RelatedTableEditButton({
         config={config}
         rowId={value}
         relatedTableId={relatedTableId}
-        onSave={(updatedData) => {
+        onSave={() => {
           // The modal will handle the save, we just need to close it
           setIsModalOpen(false);
         }}

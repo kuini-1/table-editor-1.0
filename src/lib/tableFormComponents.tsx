@@ -56,7 +56,7 @@ const UseItemForm = lazy(() =>
 );
 
 // Map table types to their form components
-export const TABLE_FORM_COMPONENTS: Record<string, ComponentType<any>> = {
+export const TABLE_FORM_COMPONENTS: Record<string, ComponentType<TableFormComponentProps>> = {
   'item': ItemForm,
   'set_item': SetItemForm,
   'item_option': ItemOptionForm,
@@ -74,7 +74,7 @@ export const TABLE_FORM_COMPONENTS: Record<string, ComponentType<any>> = {
  */
 export function getFormComponentForTableType(
   tableType: string
-): ComponentType<any> | null {
+): ComponentType<TableFormComponentProps> | null {
   return TABLE_FORM_COMPONENTS[tableType] || null;
 }
 

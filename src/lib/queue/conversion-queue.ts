@@ -1,7 +1,6 @@
 import type { 
   ConversionJob, 
   ConversionJobType, 
-  ConversionJobStatus,
   QueueStatus 
 } from './types';
 

@@ -216,7 +216,7 @@ export function RelatedTableEditModal({
       if (submitButton) {
         console.log('=== SUBMIT BUTTON FOUND ===');
         
-        const handleSubmitClick = (e: MouseEvent) => {
+        const handleSubmitClick = () => {
           // Only handle if this is our form
           if (!formElement.hasAttribute('data-related-table-form')) {
             return;
@@ -438,8 +438,8 @@ export function RelatedTableEditModal({
     try {
       // Remove table_id and id from updates (these shouldn't be changed)
       // But keep table_id in the data for validation - we just won't update it
-      const { id, ...dataToUpdate } = data;
-      const { table_id: _, ...updates } = dataToUpdate;
+      const { id: _id, ...dataToUpdate } = data;
+      const { table_id: _tableId, ...updates } = dataToUpdate;
       
       console.log('Updates after filtering:', {
         originalKeys: Object.keys(data),
@@ -545,47 +545,8 @@ export function RelatedTableEditModal({
         }))
     : [];
   
-  // Handle Sheet close - only close this modal, not the parent
-  // We need to be very careful here to prevent closing the parent Sheet
-  const handleSheetClose = useCallback((open: boolean) => {
-    console.log('=== SHEET ONOPENCHANGE CALLED ===', { 
-      open, 
-      saving, 
-      internalIsOpen,
-      isOpen
-    });
-    
-    // If saving, absolutely prevent any close attempts
-    if (saving) {
-      console.log('BLOCKING close - currently saving');
-      // Force the Sheet to stay open by not updating state
-      return;
-    }
-    
-    // Only allow closing if we're explicitly closing (internalIsOpen is false)
-    // This prevents accidental closes from user interactions
-    if (!open) {
-      console.log('Sheet onOpenChange called with false - checking if we should close');
-      // Only close if we've already set internalIsOpen to false (programmatic close)
-      if (!internalIsOpen) {
-        console.log('Allowing programmatic close');
-        onClose();
-      } else {
-        console.log('BLOCKING accidental close - keeping modal open');
-        // Keep it open - user must use Cancel or Save button
-      }
-    } else {
-      // Opening
-      setInternalIsOpen(true);
-    }
-  }, [saving, internalIsOpen, isOpen, onClose]);
-
-  // Create a stable no-op function for onOpenChange to prevent ItemForm from closing the modal
-  const handleFormOpenChange = useCallback(() => {
-    console.log('=== FORM ONOPENCHANGE CALLED (ignored) ===');
-    // Completely ignore any attempts by the form to close the modal
-    // We handle closing only through handleSubmit or onCancel
-  }, []);
+  // Note: handleSheetClose and handleFormOpenChange were removed as they were unused.
+  // The Sheet's onOpenChange is handled inline to prevent closing during save operations.
   
   // Wrap the form's onCancel to ensure it only closes this modal
   const handleFormCancel = useCallback(() => {
@@ -728,8 +689,8 @@ export function RelatedTableEditModal({
                     }}
                   >
                     <FormComponent
-                      initialData={rowData as any}
-                      onSubmit={async (data: any) => {
+                      initialData={rowData as Record<string, unknown>}
+                      onSubmit={async (data: Record<string, unknown>) => {
                         // Prevent any event propagation that might close parent modal
                         console.log('=== FORM COMPONENT SUBMIT CALLED ===');
                         console.log('Form data keys:', Object.keys(data));
