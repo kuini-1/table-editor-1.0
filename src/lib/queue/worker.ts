@@ -112,6 +112,7 @@ async function processImportJob(job: ConversionJob, workerIndex: number): Promis
 
     // Get actual column names from database schema
     // First try to get columns from a sample row (simplest approach)
+    // We query without table_id filter to get any row from the table, just for schema inference
     let dbColumns: string[] = [];
     try {
       const { data: sampleData } = await supabase
@@ -122,6 +123,9 @@ async function processImportJob(job: ConversionJob, workerIndex: number): Promis
       if (sampleData && sampleData.length > 0) {
         dbColumns = Object.keys(sampleData[0]);
       } else {
+        // Even if no rows exist, try to get column info by attempting a select with specific columns
+        // or by checking if we can get metadata from an empty result
+        // For now, we'll use the fallback lowercase mapping
         // If no data exists, try to query information_schema (might not work with Supabase client)
         try {
           // Try direct query to information_schema first
@@ -186,11 +190,13 @@ async function processImportJob(job: ConversionJob, workerIndex: number): Promis
         
         console.log(`[Worker ${workerIndex}] Column mapping for ${tableName}:`, Array.from(columnMap.entries()));
       } else {
-        // If we couldn't get DB columns, create a map that tries both exact and lowercase matches
+        // If we couldn't get DB columns, we'll try lowercase mapping
+        // But we'll also log a warning and let the insert attempt reveal the actual column names
         csvColumns.forEach((csvCol) => {
-          columnMap.set(csvCol, csvCol);
+          // Try lowercase version (PostgreSQL/Supabase typically stores unquoted identifiers in lowercase)
+          columnMap.set(csvCol, csvCol.toLowerCase());
         });
-        console.warn(`[Worker ${workerIndex}] Could not determine DB columns for ${tableName}, using CSV column names as-is`);
+        console.warn(`[Worker ${workerIndex}] Could not determine DB columns for ${tableName}, using lowercase mapping. CSV columns:`, csvColumns.slice(0, 5).join(', '));
       }
     }
 
@@ -210,6 +216,9 @@ async function processImportJob(job: ConversionJob, workerIndex: number): Promis
       for (const csvKey in record) {
         // Map CSV column name to database column name (case-insensitive)
         const dbKey = columnMap.get(csvKey) || csvKey;
+        if (csvKey !== dbKey) {
+          console.log(`[Worker ${workerIndex}] Mapping "${csvKey}" -> "${dbKey}" for ${tableName}`);
+        }
         let value = record[csvKey];
         
         // Convert string numbers to actual numbers
@@ -234,12 +243,76 @@ async function processImportJob(job: ConversionJob, workerIndex: number): Promis
       };
     });
 
+    // Log first record's column names for debugging
+    if (recordsToInsert.length > 0) {
+      const firstRecordKeys = Object.keys(recordsToInsert[0]);
+      console.log(`[Worker ${workerIndex}] Inserting ${recordsToInsert.length} records into ${tableName} with columns:`, firstRecordKeys.slice(0, 10).join(', '), firstRecordKeys.length > 10 ? '...' : '');
+    }
+
     // Insert new data
-    const { error: insertError } = await supabase
+    let insertError = null;
+    
+    // Try insert with current mapping
+    const { error: firstInsertError } = await supabase
       .from(tableName)
       .insert(recordsToInsert);
+    
+    insertError = firstInsertError;
+    
+    // If insert failed with column error and we used lowercase mapping (no schema detected),
+    // try again with original case column names
+    if (insertError && dbColumns.length === 0 && insertError.message?.includes('column')) {
+      console.log(`[Worker ${workerIndex}] Insert failed with column error, retrying with original case column names`);
+      const originalCaseRecords = (records as Record<string, unknown>[]).map((record: Record<string, unknown>) => {
+        const processedRecord: Record<string, unknown> = {};
+        for (const csvKey in record) {
+          // Use original CSV column name (no mapping)
+          let value = record[csvKey];
+          
+          // Convert string numbers to actual numbers
+          if (typeof value === 'string') {
+            const trimmedValue = value.trim();
+            if (trimmedValue !== '') {
+              const num = Number(trimmedValue);
+              if (!isNaN(num) && isFinite(num)) {
+                value = num;
+              }
+            } else {
+              value = null;
+            }
+          }
+          
+          processedRecord[csvKey] = value;
+        }
+        return {
+          ...processedRecord,
+          table_id: job.tableId,
+        };
+      });
+      
+      const { error: retryError } = await supabase
+        .from(tableName)
+        .insert(originalCaseRecords);
+      
+      if (!retryError) {
+        // Success with original case!
+        console.log(`[Worker ${workerIndex}] Insert succeeded with original case column names`);
+        insertError = null;
+      } else {
+        // Still failed, use the original error
+        console.error(`[Worker ${workerIndex}] Retry with original case also failed:`, retryError.message);
+      }
+    }
 
     if (insertError) {
+      console.error(`[Worker ${workerIndex}] Insert error details:`, {
+        message: insertError.message,
+        code: insertError.code,
+        details: insertError.details,
+        hint: insertError.hint,
+        tableName,
+        sampleColumns: recordsToInsert.length > 0 ? Object.keys(recordsToInsert[0]).slice(0, 5) : []
+      });
       throw new Error(`Failed to insert new data: ${insertError.message}`);
     }
 
