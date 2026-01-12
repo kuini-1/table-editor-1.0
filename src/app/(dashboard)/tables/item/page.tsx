@@ -265,7 +265,7 @@ export default function ItemTablePage() {
             setIsDeleteDialogOpen(false);
           }
         }}
-        itemName={selectedRow?.name || "this item"}
+        itemName={selectedRow?.wszNameText || "this item"}
       />
 
       <ImportDialog

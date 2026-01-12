@@ -248,7 +248,7 @@ export default function MerchantPage() {
             setIsDeleteDialogOpen(false);
           }
         }}
-        itemName={selectedRow?.wsznametext || "this merchant"}
+        itemName={selectedRow?.wszNameText || "this merchant"}
       />
 
       <ImportDialog

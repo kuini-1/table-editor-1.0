@@ -24,7 +24,7 @@ import type { FormMode } from '@/components/table/ModularForm';
 import { ErrorDisplay } from '@/components/ErrorDisplay';
 import { DataTableSkeleton } from '@/components/ui/DataTableSkeleton';
 import { createClient } from '@/lib/supabase/client';
-import { hlsItemSchema } from './schema';
+import { hlsItemSchema, columns as schemaColumns } from "./schema";
 import { HlsItemForm } from './HlsItemForm';
 import { Button } from "@/components/ui/button";
 
@@ -34,38 +34,8 @@ interface HlsItemRow extends HlsItemFormData {
   id: string;
 }
 
-const columns = [
-  { key: 'tblidx', label: 'TBLIDX', type: 'number' as const, validation: hlsItemSchema.shape.tblidx },
-  { key: 'wszname', label: 'Name', type: 'text' as const, validation: hlsItemSchema.shape.wszname },
-  { key: 'wszcjiproductid', label: 'Product ID', type: 'text' as const, validation: hlsItemSchema.shape.wszcjiproductid },
-  { key: 'szicon_name', label: 'Icon Name', type: 'text' as const, validation: hlsItemSchema.shape.szicon_name },
-  { key: 'whlsitemtype', label: 'Item Type', type: 'number' as const, validation: hlsItemSchema.shape.whlsitemtype },
-  { key: 'byhlsdurationtype', label: 'Duration Type', type: 'number' as const, validation: hlsItemSchema.shape.byhlsdurationtype },
-  { key: 'dwhlsdurationtime', label: 'Duration Time', type: 'number' as const, validation: hlsItemSchema.shape.dwhlsdurationtime },
-  { key: 'idxnametext', label: 'Name Text Index', type: 'number' as const, validation: hlsItemSchema.shape.idxnametext },
-  { key: 'idxnotetext', label: 'Note Text Index', type: 'number' as const, validation: hlsItemSchema.shape.idxnotetext },
-  { key: 'itemtblidx', label: 'Item IDX', type: 'number' as const, validation: hlsItemSchema.shape.itemtblidx },
-  { key: 'bonsale', label: 'On Sale', type: 'boolean' as const, validation: hlsItemSchema.shape.bonsale },
-  { key: 'byselltype', label: 'Sell Type', type: 'number' as const, validation: hlsItemSchema.shape.byselltype },
-  { key: 'dwcash', label: 'Cash', type: 'number' as const, validation: hlsItemSchema.shape.dwcash },
-  { key: 'bydiscount', label: 'Discount', type: 'number' as const, validation: hlsItemSchema.shape.bydiscount },
-  { key: 'bystackcount', label: 'Stack Count', type: 'number' as const, validation: hlsItemSchema.shape.bystackcount },
-  { key: 'wdisplaybitflag', label: 'Display Bit Flag', type: 'number' as const, validation: hlsItemSchema.shape.wdisplaybitflag },
-  { key: 'byquicklink', label: 'Quick Link', type: 'number' as const, validation: hlsItemSchema.shape.byquicklink },
-  { key: 'dwpriority', label: 'Priority', type: 'number' as const, validation: hlsItemSchema.shape.dwpriority },
-  { key: 'bydisplayconsumetype', label: 'Display Consume Type', type: 'number' as const, validation: hlsItemSchema.shape.bydisplayconsumetype },
-  { key: 'byyadrattype', label: 'Yadrat Type', type: 'number' as const, validation: hlsItemSchema.shape.byyadrattype },
-  { key: 'itemtblidx_0', label: 'Item IDX 0', type: 'number' as const, validation: hlsItemSchema.shape.itemtblidx_0 },
-  { key: 'bystackcount_0', label: 'Stack Count 0', type: 'number' as const, validation: hlsItemSchema.shape.bystackcount_0 },
-  { key: 'itemtblidx_1', label: 'Item IDX 1', type: 'number' as const, validation: hlsItemSchema.shape.itemtblidx_1 },
-  { key: 'bystackcount_1', label: 'Stack Count 1', type: 'number' as const, validation: hlsItemSchema.shape.bystackcount_1 },
-  { key: 'itemtblidx_2', label: 'Item IDX 2', type: 'number' as const, validation: hlsItemSchema.shape.itemtblidx_2 },
-  { key: 'bystackcount_2', label: 'Stack Count 2', type: 'number' as const, validation: hlsItemSchema.shape.bystackcount_2 },
-  { key: 'itemtblidx_3', label: 'Item IDX 3', type: 'number' as const, validation: hlsItemSchema.shape.itemtblidx_3 },
-  { key: 'bystackcount_3', label: 'Stack Count 3', type: 'number' as const, validation: hlsItemSchema.shape.bystackcount_3 },
-  { key: 'itemtblidx_4', label: 'Item IDX 4', type: 'number' as const, validation: hlsItemSchema.shape.itemtblidx_4 },
-  { key: 'bystackcount_4', label: 'Stack Count 4', type: 'number' as const, validation: hlsItemSchema.shape.bystackcount_4 },
-];
+  // Use columns from schema with correct casing
+  const columns = schemaColumns;
 
 export default function HlsItemPage() {
   const searchParams = useSearchParams();

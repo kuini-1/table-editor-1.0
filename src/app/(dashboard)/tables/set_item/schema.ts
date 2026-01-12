@@ -6,22 +6,29 @@ export const setItemSchema = z.object({
   created_at: z.string().optional(),
   updated_at: z.string().optional(),
   tblidx: z.number().optional(),
-  bvalidity_able: z.coerce.boolean().optional().transform(val => val ? 1 : 0),
-  semisetoption: z.number().optional(),
-  fullsetoption: z.number().optional(),
-  aitemtblidx_0: z.number().optional(),
-  aitemtblidx_1: z.number().optional(),
-  aitemtblidx_2: z.number().optional(),
+  bValidity_Able: z.coerce.boolean().nullable().transform(val => val ? 1 : 0),
+  semiSetOption: z.coerce.number().nullable(),
+  fullSetOption: z.coerce.number().nullable(),
+  aItemTblidx_0: z.coerce.number().nullable(),
+  aItemTblidx_1: z.coerce.number().nullable(),
+  aItemTblidx_2: z.coerce.number().nullable(),
+  aItemTblidx_3: z.coerce.number().nullable(),
+  aItemTblidx_4: z.coerce.number().nullable(),
+  aItemTblidx_5: z.coerce.number().nullable(),
+  aItemTblidx_6: z.coerce.number().nullable(),
+  aItemTblidx_7: z.coerce.number().nullable(),
+  aItemTblidx_8: z.coerce.number().nullable(),
+  aItemTblidx_9: z.coerce.number().nullable(),
 });
 
 export type SetItemFormData = z.infer<typeof setItemSchema>;
 
 export const columns = [
   { key: 'tblidx', label: 'ID', type: 'number' as const, validation: setItemSchema.shape.tblidx },
-  { key: 'bvalidity_able', label: 'Validity', type: 'boolean' as const, validation: setItemSchema.shape.bvalidity_able },
-  { key: 'semisetoption', label: 'Semi Set Option', type: 'number' as const, validation: setItemSchema.shape.semisetoption },
-  { key: 'fullsetoption', label: 'Full Set Option', type: 'number' as const, validation: setItemSchema.shape.fullsetoption },
-  { key: 'aitemtblidx_0', label: 'Item 1 ID', type: 'number' as const, validation: setItemSchema.shape.aitemtblidx_0 },
-  { key: 'aitemtblidx_1', label: 'Item 2 ID', type: 'number' as const, validation: setItemSchema.shape.aitemtblidx_1 },
-  { key: 'aitemtblidx_2', label: 'Item 3 ID', type: 'number' as const, validation: setItemSchema.shape.aitemtblidx_2 },
-]; 
+  { key: 'bValidity_Able', label: 'Validity', type: 'boolean' as const, validation: setItemSchema.shape.bValidity_Able },
+  { key: 'semiSetOption', label: 'Semi Set Option', type: 'number' as const, validation: setItemSchema.shape.semiSetOption },
+  { key: 'fullSetOption', label: 'Full Set Option', type: 'number' as const, validation: setItemSchema.shape.fullSetOption },
+  ...Array.from({ length: 10 }, (_, i) => [
+    { key: `aItemTblidx_${i}`, label: `Item ${i + 1} ID`, type: 'number' as const, validation: setItemSchema.shape[`aItemTblidx_${i}` as keyof typeof setItemSchema.shape] }
+  ]).flat(),
+];

@@ -20,7 +20,7 @@ import { EditConflictWarning } from '@/components/table/EditConflictWarning';
 import { EditingIndicator } from '@/components/table/EditingIndicator';
 import { useStore } from "@/lib/store";
 import { createClient } from '@/lib/supabase/client';
-import { mobSchema } from "./schema";
+import { mobSchema, columns as schemaColumns } from "./schema";
 import { MobForm } from "./MobForm";
 import { ErrorDisplay } from '@/components/ErrorDisplay';
 import { DataTableSkeleton } from '@/components/ui/DataTableSkeleton';
@@ -106,69 +106,8 @@ export default function MobPage() {
     enabled: !!tableId,
   });
 
-  // Define columns for the data table
-  const columns = [
-    {
-      key: "tblidx",
-      label: "ID",
-      type: "number" as const,
-      validation: mobSchema.shape.tblidx,
-    },
-    {
-      key: "name",
-      label: "Name",
-      type: "text" as const,
-      validation: mobSchema.shape.name,
-    },
-    {
-      key: "wsznametext",
-      label: "Display Name",
-      type: "text" as const,
-      validation: mobSchema.shape.wsznametext,
-    },
-    {
-      key: "bylevel",
-      label: "Level",
-      type: "number" as const,
-      validation: mobSchema.shape.bylevel,
-    },
-    {
-      key: "bygrade",
-      label: "Grade",
-      type: "number" as const,
-      validation: mobSchema.shape.bygrade,
-    },
-    {
-      key: "dwbasic_lp",
-      label: "LP",
-      type: "number" as const,
-      validation: mobSchema.shape.dwbasic_lp,
-    },
-    {
-      key: "wbasic_physical_offence",
-      label: "Physical Offense",
-      type: "number" as const,
-      validation: mobSchema.shape.wbasic_physical_offence,
-    },
-    {
-      key: "wbasic_energy_offence",
-      label: "Energy Offense",
-      type: "number" as const,
-      validation: mobSchema.shape.wbasic_energy_offence,
-    },
-    {
-      key: "bvalidity_able",
-      label: "Valid",
-      type: "boolean" as const,
-      validation: mobSchema.shape.bvalidity_able,
-    },
-    {
-      key: "dwexp",
-      label: "EXP",
-      type: "number" as const,
-      validation: mobSchema.shape.dwexp,
-    },
-  ];
+  // Use columns from schema with correct casing
+  const columns = schemaColumns;
 
   // Use the custom hook to fetch and manage data
   const {
@@ -353,7 +292,7 @@ export default function MobPage() {
             setIsDeleteDialogOpen(false);
           }
         }}
-        itemName={selectedRow?.name || "this mob"}
+        itemName={selectedRow?.wszNameText || "this mob"}
       />
     </div>
   );

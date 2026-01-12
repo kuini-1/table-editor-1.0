@@ -20,7 +20,7 @@ import { EditConflictWarning } from '@/components/table/EditConflictWarning';
 import { EditingIndicator } from '@/components/table/EditingIndicator';
 import { useStore } from "@/lib/store";
 import { createClient } from '@/lib/supabase/client';
-import { itemOptionSchema } from "./schema";
+import { itemOptionSchema, columns as schemaColumns } from "./schema";
 import { ItemOptionForm } from "./ItemOptionForm";
 import { ErrorDisplay } from '@/components/ErrorDisplay';
 import { DataTableSkeleton } from '@/components/ui/DataTableSkeleton';
@@ -106,69 +106,8 @@ export default function ItemOptionPage() {
     enabled: !!tableId,
   });
 
-  // Define columns for the data table
-  const columns = [
-    {
-      key: "tblidx",
-      label: "ID",
-      type: "number" as const,
-      validation: itemOptionSchema.shape.tblidx,
-    },
-    {
-      key: "wszoption_name",
-      label: "Option Name",
-      type: "text" as const,
-      validation: itemOptionSchema.shape.wszoption_name,
-    },
-    {
-      key: "byoption_rank",
-      label: "Rank",
-      type: "number" as const,
-      validation: itemOptionSchema.shape.byoption_rank,
-    },
-    {
-      key: "byitem_group",
-      label: "Item Group",
-      type: "number" as const,
-      validation: itemOptionSchema.shape.byitem_group,
-    },
-    {
-      key: "bvalidity_able",
-      label: "Validity",
-      type: "number" as const,
-      validation: itemOptionSchema.shape.bvalidity_able,
-    },
-    {
-      key: "dwcost",
-      label: "Cost",
-      type: "number" as const,
-      validation: itemOptionSchema.shape.dwcost,
-    },
-    {
-      key: "bylevel",
-      label: "Level",
-      type: "number" as const,
-      validation: itemOptionSchema.shape.bylevel,
-    },
-    {
-      key: "system_effect_0",
-      label: "Effect 1",
-      type: "text" as const,
-      validation: itemOptionSchema.shape.system_effect_0,
-    },
-    {
-      key: "bappliedinpercent_0",
-      label: "% Effect 1",
-      type: "boolean" as const,
-      validation: itemOptionSchema.shape.bappliedinpercent_0,
-    },
-    {
-      key: "nvalue_0",
-      label: "Value 1",
-      type: "number" as const,
-      validation: itemOptionSchema.shape.nvalue_0,
-    },
-  ];
+  // Use columns from schema with correct casing
+  const columns = schemaColumns;
 
   // Use the custom hook to fetch and manage data
   const {
@@ -353,7 +292,7 @@ export default function ItemOptionPage() {
             setIsDeleteDialogOpen(false);
           }
         }}
-        itemName={selectedRow?.wszoption_name || "this item option"}
+        itemName={selectedRow?.wszOption_Name || "this item option"}
       />
     </div>
   );

@@ -4,8 +4,8 @@ import * as z from 'zod';
 const createItemBagFields = (indices: number[]) => {
   const fields: Record<string, z.ZodType<number | null>> = {};
   indices.forEach((index) => {
-    fields[`aitembag_${index}`] = z.number().nullable();
-    fields[`adwprob_${index}`] = z.number().nullable();
+    fields[`aItemBag_${index}`] = z.coerce.number().nullable();
+    fields[`adwProb_${index}`] = z.coerce.number().nullable();
   });
   return fields;
 };
@@ -16,22 +16,22 @@ export const itemGroupListSchema = z.object({
   created_at: z.string().nullable(),
   updated_at: z.string().nullable(),
   tblidx: z.number().nullable(),
-  wszname: z.string().nullable(),
-  bylevel: z.number().nullable(),
-  bytry_count: z.number().nullable(),
-  mob_index: z.number().nullable(),
-  dwmob_type: z.number().nullable(),
-  dwworld_rule_type: z.number().nullable(),
-  dwinterval: z.number().nullable(),
-  dwsuperior: z.number().nullable(),
-  dwexcellent: z.number().nullable(),
-  dwrare: z.number().nullable(),
-  dwlegendary: z.number().nullable(),
-  dwno_drop: z.number().nullable(),
-  dwzenny: z.number().nullable(),
-  dwitembagcount: z.number().nullable(),
-  dwtotalprob: z.number().nullable(),
-  ...createItemBagFields([...Array(20).keys()]), // Creates fields for aitembag_0 to aitembag_19 and adwprob_0 to adwprob_19
+  wszName: z.string().nullable().transform(e => e === null ? "" : e),
+  byLevel: z.coerce.number().nullable(),
+  byTry_Count: z.coerce.number().nullable(),
+  mob_Index: z.coerce.number().nullable(),
+  dwMob_Type: z.coerce.number().nullable(),
+  dwWorld_Rule_Type: z.coerce.number().nullable(),
+  dwInterval: z.coerce.number().nullable(),
+  dwSuperior: z.coerce.number().nullable(),
+  dwExcellent: z.coerce.number().nullable(),
+  dwRare: z.coerce.number().nullable(),
+  dwLegendary: z.coerce.number().nullable(),
+  dwNo_Drop: z.coerce.number().nullable(),
+  dwZenny: z.coerce.number().nullable(),
+  dwItemBagCount: z.coerce.number().nullable(),
+  dwTotalProb: z.coerce.number().nullable(),
+  ...createItemBagFields([...Array(10).keys()]), // Creates fields for aItemBag_0 to aItemBag_9 and adwProb_0 to adwProb_9
 });
 
 export type ItemGroupListFormData = z.infer<typeof itemGroupListSchema>;
@@ -42,36 +42,36 @@ type SchemaShape = z.infer<typeof itemGroupListSchema>;
 const createItemBagColumns = (indices: number[]) => {
   return indices.flatMap((index) => [
     { 
-      key: `aitembag_${index}` as keyof SchemaShape, 
+      key: `aItemBag_${index}` as keyof SchemaShape, 
       label: `Item Bag ${index}`, 
       type: 'number' as const, 
-      validation: z.number().nullable()
+      validation: z.coerce.number().nullable()
     },
     { 
-      key: `adwprob_${index}` as keyof SchemaShape, 
+      key: `adwProb_${index}` as keyof SchemaShape, 
       label: `Probability ${index}`, 
       type: 'number' as const, 
-      validation: z.number().nullable()
+      validation: z.coerce.number().nullable()
     },
   ]);
 };
 
 export const columns = [
   { key: 'tblidx', label: 'TBLIDX', type: 'number' as const, validation: itemGroupListSchema.shape.tblidx },
-  { key: 'wszname', label: 'Name', type: 'text' as const, validation: itemGroupListSchema.shape.wszname },
-  { key: 'bylevel', label: 'Level', type: 'number' as const, validation: itemGroupListSchema.shape.bylevel },
-  { key: 'bytry_count', label: 'Try Count', type: 'number' as const, validation: itemGroupListSchema.shape.bytry_count },
-  { key: 'mob_index', label: 'Mob Index', type: 'number' as const, validation: itemGroupListSchema.shape.mob_index },
-  { key: 'dwmob_type', label: 'Mob Type', type: 'number' as const, validation: itemGroupListSchema.shape.dwmob_type },
-  { key: 'dwworld_rule_type', label: 'World Rule Type', type: 'number' as const, validation: itemGroupListSchema.shape.dwworld_rule_type },
-  { key: 'dwinterval', label: 'Interval', type: 'number' as const, validation: itemGroupListSchema.shape.dwinterval },
-  { key: 'dwsuperior', label: 'Superior', type: 'number' as const, validation: itemGroupListSchema.shape.dwsuperior },
-  { key: 'dwexcellent', label: 'Excellent', type: 'number' as const, validation: itemGroupListSchema.shape.dwexcellent },
-  { key: 'dwrare', label: 'Rare', type: 'number' as const, validation: itemGroupListSchema.shape.dwrare },
-  { key: 'dwlegendary', label: 'Legendary', type: 'number' as const, validation: itemGroupListSchema.shape.dwlegendary },
-  { key: 'dwno_drop', label: 'No Drop', type: 'number' as const, validation: itemGroupListSchema.shape.dwno_drop },
-  { key: 'dwzenny', label: 'Zenny', type: 'number' as const, validation: itemGroupListSchema.shape.dwzenny },
-  { key: 'dwitembagcount', label: 'Item Bag Count', type: 'number' as const, validation: itemGroupListSchema.shape.dwitembagcount },
-  { key: 'dwtotalprob', label: 'Total Probability', type: 'number' as const, validation: itemGroupListSchema.shape.dwtotalprob },
-  ...createItemBagColumns([...Array(20).keys()]),
-]; 
+  { key: 'wszName', label: 'Name', type: 'text' as const, validation: itemGroupListSchema.shape.wszName },
+  { key: 'byLevel', label: 'Level', type: 'number' as const, validation: itemGroupListSchema.shape.byLevel },
+  { key: 'byTry_Count', label: 'Try Count', type: 'number' as const, validation: itemGroupListSchema.shape.byTry_Count },
+  { key: 'mob_Index', label: 'Mob Index', type: 'number' as const, validation: itemGroupListSchema.shape.mob_Index },
+  { key: 'dwMob_Type', label: 'Mob Type', type: 'number' as const, validation: itemGroupListSchema.shape.dwMob_Type },
+  { key: 'dwWorld_Rule_Type', label: 'World Rule Type', type: 'number' as const, validation: itemGroupListSchema.shape.dwWorld_Rule_Type },
+  { key: 'dwInterval', label: 'Interval', type: 'number' as const, validation: itemGroupListSchema.shape.dwInterval },
+  { key: 'dwSuperior', label: 'Superior', type: 'number' as const, validation: itemGroupListSchema.shape.dwSuperior },
+  { key: 'dwExcellent', label: 'Excellent', type: 'number' as const, validation: itemGroupListSchema.shape.dwExcellent },
+  { key: 'dwRare', label: 'Rare', type: 'number' as const, validation: itemGroupListSchema.shape.dwRare },
+  { key: 'dwLegendary', label: 'Legendary', type: 'number' as const, validation: itemGroupListSchema.shape.dwLegendary },
+  { key: 'dwNo_Drop', label: 'No Drop', type: 'number' as const, validation: itemGroupListSchema.shape.dwNo_Drop },
+  { key: 'dwZenny', label: 'Zenny', type: 'number' as const, validation: itemGroupListSchema.shape.dwZenny },
+  { key: 'dwItemBagCount', label: 'Item Bag Count', type: 'number' as const, validation: itemGroupListSchema.shape.dwItemBagCount },
+  { key: 'dwTotalProb', label: 'Total Probability', type: 'number' as const, validation: itemGroupListSchema.shape.dwTotalProb },
+  ...createItemBagColumns([...Array(10).keys()]),
+];

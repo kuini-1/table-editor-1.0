@@ -28,21 +28,15 @@ export interface ItemMixMachineTableRow extends ItemMixMachineTableFormData {
   id: string;
 }
 
-const recipeTblidxColumns = Array.from({ length: 10 }, (_, i) => ({
-  key: `aBuiltInRecipeTblidx_${i}` as const,
-  label: `Built In Recipe Table ID ${i}`,
-  type: 'number' as const,
-  validation: itemMixMachineTableSchema.shape[`aBuiltInRecipeTblidx_${i}` as keyof typeof itemMixMachineTableSchema.shape] as any,
-}));
-
 export const columns = [
-  { key: 'tblidx', label: 'Table ID', type: 'number' as const, validation: itemMixMachineTableSchema.shape.tblidx },
-  { key: 'bValidityAble', label: 'Validity Able', type: 'boolean' as const, validation: itemMixMachineTableSchema.shape.bValidityAble },
+  { key: 'tblidx', label: 'ID', type: 'number' as const, validation: itemMixMachineTableSchema.shape.tblidx },
+  { key: 'bValidityAble', label: 'Validity', type: 'boolean' as const, validation: itemMixMachineTableSchema.shape.bValidityAble },
   { key: 'name', label: 'Name', type: 'number' as const, validation: itemMixMachineTableSchema.shape.name },
   { key: 'byMachineType', label: 'Machine Type', type: 'number' as const, validation: itemMixMachineTableSchema.shape.byMachineType },
   { key: 'wFunctionBitFlag', label: 'Function Bit Flag', type: 'number' as const, validation: itemMixMachineTableSchema.shape.wFunctionBitFlag },
   { key: 'byMixZennyDiscountRate', label: 'Mix Zenny Discount Rate', type: 'number' as const, validation: itemMixMachineTableSchema.shape.byMixZennyDiscountRate },
-  { key: 'dynamicObjectTblidx', label: 'Dynamic Object Table ID', type: 'number' as const, validation: itemMixMachineTableSchema.shape.dynamicObjectTblidx },
-  ...recipeTblidxColumns,
+  { key: 'dynamicObjectTblidx', label: 'Dynamic Object ID', type: 'number' as const, validation: itemMixMachineTableSchema.shape.dynamicObjectTblidx },
+  ...Array.from({ length: 10 }, (_, i) => [
+    { key: `aBuiltInRecipeTblidx_${i}`, label: `Built-in Recipe ${i}`, type: 'number' as const, validation: itemMixMachineTableSchema.shape[`aBuiltInRecipeTblidx_${i}` as keyof typeof itemMixMachineTableSchema.shape] }
+  ]).flat(),
 ];
-

@@ -20,7 +20,7 @@ import { EditConflictWarning } from '@/components/table/EditConflictWarning';
 import { EditingIndicator } from '@/components/table/EditingIndicator';
 import { useStore } from "@/lib/store";
 import { createClient } from '@/lib/supabase/client';
-import { skillSchema } from "./schema";
+import { skillSchema, columns as schemaColumns } from "./schema";
 import SkillForm from "./SkillForm";
 import { ErrorDisplay } from '@/components/ErrorDisplay';
 import { DataTableSkeleton } from '@/components/ui/DataTableSkeleton';
@@ -107,68 +107,8 @@ export default function SkillPage() {
   });
 
   // Define columns for the data table
-  const columns = [
-    {
-      key: "tblidx",
-      label: "ID",
-      type: "number" as const,
-      validation: skillSchema.shape.tblidx,
-    },
-    {
-      key: "skill_name",
-      label: "Skill Name",
-      type: "text" as const,
-      validation: skillSchema.shape.skill_name,
-    },
-    {
-      key: "wsznametext",
-      label: "Display Name",
-      type: "text" as const,
-      validation: skillSchema.shape.wsznametext,
-    },
-    {
-      key: "byskill_class",
-      label: "Skill Class",
-      type: "number" as const,
-      validation: skillSchema.shape.byskill_class,
-    },
-    {
-      key: "byskill_type",
-      label: "Skill Type",
-      type: "number" as const,
-      validation: skillSchema.shape.byskill_type,
-    },
-    {
-      key: "byskill_active_type",
-      label: "Active Type",
-      type: "number" as const,
-      validation: skillSchema.shape.byskill_active_type,
-    },
-    {
-      key: "byskill_grade",
-      label: "Grade",
-      type: "number" as const,
-      validation: skillSchema.shape.byskill_grade,
-    },
-    {
-      key: "byrequire_train_level",
-      label: "Required Level",
-      type: "number" as const,
-      validation: skillSchema.shape.byrequire_train_level,
-    },
-    {
-      key: "bvalidity_able",
-      label: "Validity",
-      type: "number" as const,
-      validation: skillSchema.shape.bvalidity_able,
-    },
-    {
-      key: "szicon_name",
-      label: "Icon",
-      type: "text" as const,
-      validation: skillSchema.shape.szicon_name,
-    },
-  ];
+    // Use columns from schema with correct casing
+  const columns = schemaColumns;
 
   // Use the custom hook to fetch and manage data
   const {
@@ -353,7 +293,7 @@ export default function SkillPage() {
             setIsDeleteDialogOpen(false);
           }
         }}
-        itemName={selectedRow?.skill_name || "this skill"}
+        itemName={selectedRow?.wszNameText || "this skill"}
       />
     </div>
   );

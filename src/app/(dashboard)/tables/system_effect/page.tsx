@@ -20,7 +20,7 @@ import { EditConflictWarning } from '@/components/table/EditConflictWarning';
 import { EditingIndicator } from '@/components/table/EditingIndicator';
 import { useStore } from "@/lib/store";
 import { createClient } from '@/lib/supabase/client';
-import { systemEffectSchema } from "./schema";
+import { systemEffectSchema, columns as schemaColumns } from "./schema";
 import SystemEffectForm from "./SystemEffectForm";
 import { ErrorDisplay } from '@/components/ErrorDisplay';
 import { DataTableSkeleton } from '@/components/ui/DataTableSkeleton';
@@ -99,62 +99,8 @@ export default function SystemEffectPage() {
   });
 
   // Define columns for the data table
-  const columns = [
-    {
-      key: "tblidx",
-      label: "ID",
-      type: "number" as const,
-      validation: systemEffectSchema.shape.tblidx,
-    },
-    {
-      key: "wszname",
-      label: "Name",
-      type: "text" as const,
-      validation: systemEffectSchema.shape.wszname,
-    },
-    {
-      key: "byeffect_type",
-      label: "Effect Type",
-      type: "number" as const,
-      validation: systemEffectSchema.shape.byeffect_type,
-    },
-    {
-      key: "byactive_effect_type",
-      label: "Active Effect Type",
-      type: "number" as const,
-      validation: systemEffectSchema.shape.byactive_effect_type,
-    },
-    {
-      key: "effect_info_text",
-      label: "Effect Info",
-      type: "text" as const,
-      validation: systemEffectSchema.shape.effect_info_text,
-    },
-    {
-      key: "keep_effect_name",
-      label: "Keep Effect Name",
-      type: "text" as const,
-      validation: systemEffectSchema.shape.keep_effect_name,
-    },
-    {
-      key: "bytarget_effect_position",
-      label: "Target Effect Position",
-      type: "number" as const,
-      validation: systemEffectSchema.shape.bytarget_effect_position,
-    },
-    {
-      key: "szsuccess_effect_name",
-      label: "Success Effect Name",
-      type: "text" as const,
-      validation: systemEffectSchema.shape.szsuccess_effect_name,
-    },
-    {
-      key: "bysuccess_projectile_type",
-      label: "Success Projectile Type",
-      type: "number" as const,
-      validation: systemEffectSchema.shape.bysuccess_projectile_type,
-    },
-  ];
+    // Use columns from schema with correct casing
+  const columns = schemaColumns;
 
   const {
     data,
@@ -324,7 +270,7 @@ export default function SystemEffectPage() {
             setIsDeleteDialogOpen(false);
           }
         }}
-        itemName={selectedRow?.wszname || "this system effect"}
+        itemName={selectedRow?.wszName || "this system effect"}
       />
 
       <ImportDialog

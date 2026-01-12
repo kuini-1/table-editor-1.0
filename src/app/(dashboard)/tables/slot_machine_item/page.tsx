@@ -20,7 +20,7 @@ import { EditConflictWarning } from '@/components/table/EditConflictWarning';
 import { EditingIndicator } from '@/components/table/EditingIndicator';
 import { useStore } from "@/lib/store";
 import { createClient } from '@/lib/supabase/client';
-import { slotMachineItemSchema } from "./schema";
+import { slotMachineItemSchema, columns as schemaColumns } from "./schema";
 import SlotMachineItemForm from "./SlotMachineItemForm";
 import { ErrorDisplay } from '@/components/ErrorDisplay';
 import { DataTableSkeleton } from '@/components/ui/DataTableSkeleton';
@@ -99,50 +99,8 @@ export default function SlotMachineItemPage() {
   });
 
   // Define columns for the data table
-  const columns = [
-    {
-      key: "tblidx",
-      label: "ID",
-      type: "number" as const,
-      validation: slotMachineItemSchema.shape.tblidx,
-    },
-    {
-      key: "wsznametext",
-      label: "Name",
-      type: "text" as const,
-      validation: slotMachineItemSchema.shape.wsznametext,
-    },
-    {
-      key: "bactive",
-      label: "Active",
-      type: "boolean" as const,
-      validation: slotMachineItemSchema.shape.bactive,
-    },
-    {
-      key: "slotmachinetblidx",
-      label: "Slot Machine ID",
-      type: "number" as const,
-      validation: slotMachineItemSchema.shape.slotmachinetblidx,
-    },
-    {
-      key: "cashitemtblidx",
-      label: "Cash Item ID",
-      type: "number" as const,
-      validation: slotMachineItemSchema.shape.cashitemtblidx,
-    },
-    {
-      key: "bystackcount",
-      label: "Stack Count",
-      type: "number" as const,
-      validation: slotMachineItemSchema.shape.bystackcount,
-    },
-    {
-      key: "bypercent",
-      label: "Percent",
-      type: "number" as const,
-      validation: slotMachineItemSchema.shape.bypercent,
-    },
-  ];
+    // Use columns from schema with correct casing
+  const columns = schemaColumns;
 
   const {
     data,
@@ -315,7 +273,7 @@ export default function SlotMachineItemPage() {
             setIsDeleteDialogOpen(false);
           }
         }}
-        itemName={selectedRow?.wsznametext || "this slot machine item"}
+        itemName={selectedRow?.wszNameText || "this slot machine item"}
       />
 
       <ImportDialog

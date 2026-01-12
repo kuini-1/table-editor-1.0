@@ -279,7 +279,7 @@ export default function WorldPage() {
             setSelectedRow(null);
           }
         }}
-        itemName={selectedRow?.szname || "this world"}
+        itemName={selectedRow?.szName || "this world"}
       />
 
       <ImportDialog

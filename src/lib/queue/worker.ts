@@ -150,13 +150,128 @@ async function processImportJob(job: ConversionJob, workerIndex: number): Promis
       };
     });
 
-    // Insert new data
-    const { error: insertError } = await supabase
-      .from(tableName)
-      .insert(recordsToInsert);
+    // Insert new data in batches to better identify problematic records
+    const batchSize = 100;
+    let insertedCount = 0;
+    
+    for (let i = 0; i < recordsToInsert.length; i += batchSize) {
+      const batch = recordsToInsert.slice(i, i + batchSize);
+      const batchNumber = Math.floor(i / batchSize) + 1;
+      const totalBatches = Math.ceil(recordsToInsert.length / batchSize);
+      
+      const { error: insertError } = await supabase
+        .from(tableName)
+        .insert(batch);
 
-    if (insertError) {
-      throw new Error(`Failed to insert new data: ${insertError.message}`);
+      if (insertError) {
+        // Parse error to extract column information
+        const errorMessage = insertError.message || 'Unknown error';
+        // Supabase errors may have additional properties
+        const errorWithDetails = insertError as { details?: string; hint?: string; code?: string };
+        const errorDetails = errorWithDetails.details || '';
+        const errorHint = errorWithDetails.hint || '';
+        const errorCode = errorWithDetails.code || '';
+        
+        let columnName = 'unknown';
+        let problematicValue: unknown = null;
+        let rowIndex = i;
+        
+        // Try to extract column name from error message or details
+        // PostgreSQL errors often include column info like: "column \"columnName\" ..."
+        const fullErrorText = `${errorMessage} ${errorDetails} ${errorHint}`;
+        const columnMatch = fullErrorText.match(/column\s+["']([^"']+)["']/i);
+        if (columnMatch) {
+          columnName = columnMatch[1];
+        }
+        
+        // Try to extract value from error message
+        // Errors like: "value \"4294967295\" is out of range" or "value 4294967295 is out of range"
+        const valueMatch = fullErrorText.match(/value\s+["']?([0-9]+)["']?\s+is\s+out\s+of\s+range/i);
+        if (valueMatch) {
+          problematicValue = valueMatch[1];
+        }
+        
+        // Try to find which record in the batch has the problematic value
+        if (columnName !== 'unknown') {
+          for (let j = 0; j < batch.length; j++) {
+            const record = batch[j] as Record<string, unknown>;
+            if (columnName in record) {
+              const recordValue = record[columnName];
+              // Check if this value matches the problematic value or is out of range
+              if (problematicValue && String(recordValue) === String(problematicValue)) {
+                rowIndex = i + j;
+                problematicValue = recordValue;
+                break;
+              } else if (typeof recordValue === 'number') {
+                // Check for integer overflow
+                if (recordValue > 2147483647 || recordValue < -2147483648) {
+                  rowIndex = i + j;
+                  problematicValue = recordValue;
+                  break;
+                }
+                // Check for smallint overflow
+                if (recordValue > 32767 || recordValue < -32768) {
+                  rowIndex = i + j;
+                  problematicValue = recordValue;
+                  break;
+                }
+              }
+            }
+          }
+        } else {
+          // If we can't find the column, check all records for out-of-range values
+          for (let j = 0; j < batch.length; j++) {
+            const record = batch[j] as Record<string, unknown>;
+            for (const key in record) {
+              const value = record[key];
+              if (typeof value === 'number') {
+                // Check for integer overflow
+                if (value > 2147483647 || value < -2147483648) {
+                  rowIndex = i + j;
+                  columnName = key;
+                  problematicValue = value;
+                  break;
+                }
+                // Check for smallint overflow
+                if (value > 32767 || value < -32768) {
+                  rowIndex = i + j;
+                  columnName = key;
+                  problematicValue = value;
+                  break;
+                }
+              }
+            }
+            if (columnName !== 'unknown') break;
+          }
+        }
+        
+        // Build detailed error message
+        const errorParts = [
+          `Failed to insert new data at row ${rowIndex + 1} (batch ${batchNumber}/${totalBatches}):`,
+          `Column: "${columnName}"`,
+          `Value: ${problematicValue !== null ? JSON.stringify(problematicValue) : 'N/A'}`,
+          `Error Code: ${errorCode || 'N/A'}`,
+          `Error: ${errorMessage}`,
+        ];
+        
+        if (errorDetails) {
+          errorParts.push(`Details: ${errorDetails}`);
+        }
+        if (errorHint) {
+          errorParts.push(`Hint: ${errorHint}`);
+        }
+        
+        // Include the problematic record for debugging
+        const problematicRecord = batch[rowIndex - i] || batch[0] || {};
+        errorParts.push(`\nProblematic record:\n${JSON.stringify(problematicRecord, null, 2)}`);
+        
+        const detailedError = errorParts.join('\n');
+        
+        throw new Error(detailedError);
+      }
+      
+      insertedCount += batch.length;
+      console.log(`[Worker ${workerIndex}] Inserted batch ${batchNumber}/${totalBatches} (${insertedCount}/${recordsToInsert.length} records)`);
     }
 
     console.log(`[Worker ${workerIndex}] Import completed successfully`);

@@ -26,6 +26,18 @@ export const portalTableSchema = z.object({
   adwPointZenny_2: z.coerce.number().min(0, 'Must be a positive number'),
   aPoint_3: z.coerce.number().min(0, 'Must be a positive number'),
   adwPointZenny_3: z.coerce.number().min(0, 'Must be a positive number'),
+  aPoint_4: z.coerce.number().min(0, 'Must be a positive number'),
+  adwPointZenny_4: z.coerce.number().min(0, 'Must be a positive number'),
+  aPoint_5: z.coerce.number().min(0, 'Must be a positive number'),
+  adwPointZenny_5: z.coerce.number().min(0, 'Must be a positive number'),
+  aPoint_6: z.coerce.number().min(0, 'Must be a positive number'),
+  adwPointZenny_6: z.coerce.number().min(0, 'Must be a positive number'),
+  aPoint_7: z.coerce.number().min(0, 'Must be a positive number'),
+  adwPointZenny_7: z.coerce.number().min(0, 'Must be a positive number'),
+  aPoint_8: z.coerce.number().min(0, 'Must be a positive number'),
+  adwPointZenny_8: z.coerce.number().min(0, 'Must be a positive number'),
+  aPoint_9: z.coerce.number().min(0, 'Must be a positive number'),
+  adwPointZenny_9: z.coerce.number().min(0, 'Must be a positive number'),
 });
 
 export type PortalTableFormData = z.infer<typeof portalTableSchema>;
@@ -34,7 +46,7 @@ export interface PortalTableRow extends PortalTableFormData {
   id: string;
 }
 
-const pointColumns = Array.from({ length: 4 }, (_, i) => [
+const pointColumns = Array.from({ length: 10 }, (_, i) => [
   { key: `aPoint_${i}` as const, label: `Point ${i}`, type: 'number' as const, validation: portalTableSchema.shape[`aPoint_${i}` as keyof typeof portalTableSchema.shape] as any },
   { key: `adwPointZenny_${i}` as const, label: `Point ${i} Zenny`, type: 'number' as const, validation: portalTableSchema.shape[`adwPointZenny_${i}` as keyof typeof portalTableSchema.shape] as any },
 ]).flat();
@@ -57,4 +69,3 @@ export const columns = [
   { key: 'vMap_z', label: 'Map Z', type: 'number' as const, validation: portalTableSchema.shape.vMap_z },
   ...pointColumns,
 ];
-

@@ -20,7 +20,7 @@ import { EditConflictWarning } from '@/components/table/EditConflictWarning';
 import { EditingIndicator } from '@/components/table/EditingIndicator';
 import { useStore } from "@/lib/store";
 import { createClient } from '@/lib/supabase/client';
-import { useItemSchema } from "./schema";
+import { useItemSchema, columns as schemaColumns } from "./schema";
 import UseItemForm from "./UseItemForm";
 import { ErrorDisplay } from '@/components/ErrorDisplay';
 import { DataTableSkeleton } from '@/components/ui/DataTableSkeleton';
@@ -107,56 +107,8 @@ export default function UseItemPage() {
   });
 
   // Define columns for the data table
-  const columns = [
-    {
-      key: "tblidx",
-      label: "ID",
-      type: "number" as const,
-      validation: useItemSchema.shape.tblidx,
-    },
-    {
-      key: "byuse_item_active_type",
-      label: "Active Type",
-      type: "number" as const,
-      validation: useItemSchema.shape.byuse_item_active_type,
-    },
-    {
-      key: "bybuff_group",
-      label: "Buff Group",
-      type: "number" as const,
-      validation: useItemSchema.shape.bybuff_group,
-    },
-    {
-      key: "bybuffkeeptype",
-      label: "Buff Keep Type",
-      type: "number" as const,
-      validation: useItemSchema.shape.bybuffkeeptype,
-    },
-    {
-      key: "use_info_text",
-      label: "Info Text",
-      type: "text" as const,
-      validation: useItemSchema.shape.use_info_text,
-    },
-    {
-      key: "dwcool_time",
-      label: "Cool Time",
-      type: "number" as const,
-      validation: useItemSchema.shape.dwcool_time,
-    },
-    {
-      key: "dwkeep_time",
-      label: "Keep Time",
-      type: "number" as const,
-      validation: useItemSchema.shape.dwkeep_time,
-    },
-    {
-      key: "byuse_range_max",
-      label: "Use Range Max",
-      type: "number" as const,
-      validation: useItemSchema.shape.byuse_range_max,
-    },
-  ];
+    // Use columns from schema with correct casing
+  const columns = schemaColumns;
 
   const {
     data,

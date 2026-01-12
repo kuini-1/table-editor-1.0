@@ -46,4 +46,3 @@ export const columns = [
   { key: 'nextMascotTblidx', label: 'Next Mascot Table ID', type: 'number' as const, validation: mascotStatusTableSchema.shape.nextMascotTblidx },
   { key: 'sealItemIndex', label: 'Seal Item Index', type: 'number' as const, validation: mascotStatusTableSchema.shape.sealItemIndex },
 ];
-

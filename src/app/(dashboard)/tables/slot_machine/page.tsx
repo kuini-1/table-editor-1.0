@@ -21,7 +21,7 @@ import {
 import { ErrorDisplay } from '@/components/ErrorDisplay';
 import { DataTableSkeleton } from '@/components/ui/DataTableSkeleton';
 import { createClient } from '@/lib/supabase/client';
-import { slotMachineSchema } from './schema';
+import { slotMachineSchema, columns as schemaColumns } from "./schema";
 import { SlotMachineForm } from './SlotMachineForm';
 import type { FormMode } from '@/components/table/ModularForm';
 import { z } from 'zod';
@@ -32,16 +32,8 @@ interface SlotMachineRow extends SlotMachineFormData {
   id: string;
 }
 
-const columns = [
-  { key: 'tblidx', label: 'ID', type: 'number' as const, validation: slotMachineSchema.shape.tblidx },
-  { key: 'dwname', label: 'Name', type: 'text' as const, validation: slotMachineSchema.shape.dwname },
-  { key: 'wsznametext', label: 'Display Name', type: 'text' as const, validation: slotMachineSchema.shape.wsznametext },
-  { key: 'szfile_name', label: 'File Name', type: 'text' as const, validation: slotMachineSchema.shape.szfile_name },
-  { key: 'bycoin', label: 'Coin', type: 'number' as const, validation: slotMachineSchema.shape.bycoin },
-  { key: 'bonoff', label: 'On/Off', type: 'number' as const, validation: slotMachineSchema.shape.bonoff },
-  { key: 'bytype', label: 'Type', type: 'number' as const, validation: slotMachineSchema.shape.bytype },
-  { key: 'wfirstwincoin', label: 'First Win Coin', type: 'number' as const, validation: slotMachineSchema.shape.wfirstwincoin },
-];
+  // Use columns from schema with correct casing
+  const columns = schemaColumns;
 
 const formTheme = {
   title: {
@@ -278,7 +270,7 @@ export default function SlotMachinePage() {
             setIsDeleteDialogOpen(false);
           }
         }}
-        itemName={selectedRow?.dwname || "this slot machine"}
+        itemName={selectedRow?.wszNameText || "this slot machine"}
       />
 
       <ImportDialog

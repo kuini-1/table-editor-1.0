@@ -25,6 +25,46 @@ export const newbieTableSchema = z.object({
   byQPosition1: z.coerce.number().min(0, 'Must be a positive number').max(32767, 'Cannot exceed SMALLINT max'),
   byQStackQuantity1: z.coerce.number().min(0, 'Must be a positive number').max(32767, 'Cannot exceed SMALLINT max'),
   wMixLevelData: z.coerce.number().min(0, 'Must be a positive number').max(32767, 'Cannot exceed SMALLINT max'),
+  aitem_Tblidx_0: z.coerce.number().min(0, 'Must be a positive number'),
+  abyPos_0: z.coerce.number().min(0, 'Must be a positive number').max(32767, 'Cannot exceed SMALLINT max'),
+  abyStack_Quantity_0: z.coerce.number().min(0, 'Must be a positive number').max(32767, 'Cannot exceed SMALLINT max'),
+  aitem_Tblidx_1: z.coerce.number().min(0, 'Must be a positive number'),
+  abyPos_1: z.coerce.number().min(0, 'Must be a positive number').max(32767, 'Cannot exceed SMALLINT max'),
+  abyStack_Quantity_1: z.coerce.number().min(0, 'Must be a positive number').max(32767, 'Cannot exceed SMALLINT max'),
+  aitem_Tblidx_2: z.coerce.number().min(0, 'Must be a positive number'),
+  abyPos_2: z.coerce.number().min(0, 'Must be a positive number').max(32767, 'Cannot exceed SMALLINT max'),
+  abyStack_Quantity_2: z.coerce.number().min(0, 'Must be a positive number').max(32767, 'Cannot exceed SMALLINT max'),
+  aitem_Tblidx_3: z.coerce.number().min(0, 'Must be a positive number'),
+  abyPos_3: z.coerce.number().min(0, 'Must be a positive number').max(32767, 'Cannot exceed SMALLINT max'),
+  abyStack_Quantity_3: z.coerce.number().min(0, 'Must be a positive number').max(32767, 'Cannot exceed SMALLINT max'),
+  aitem_Tblidx_4: z.coerce.number().min(0, 'Must be a positive number'),
+  abyPos_4: z.coerce.number().min(0, 'Must be a positive number').max(32767, 'Cannot exceed SMALLINT max'),
+  abyStack_Quantity_4: z.coerce.number().min(0, 'Must be a positive number').max(32767, 'Cannot exceed SMALLINT max'),
+  aitem_Tblidx_5: z.coerce.number().min(0, 'Must be a positive number'),
+  abyPos_5: z.coerce.number().min(0, 'Must be a positive number').max(32767, 'Cannot exceed SMALLINT max'),
+  abyStack_Quantity_5: z.coerce.number().min(0, 'Must be a positive number').max(32767, 'Cannot exceed SMALLINT max'),
+  aitem_Tblidx_6: z.coerce.number().min(0, 'Must be a positive number'),
+  abyPos_6: z.coerce.number().min(0, 'Must be a positive number').max(32767, 'Cannot exceed SMALLINT max'),
+  abyStack_Quantity_6: z.coerce.number().min(0, 'Must be a positive number').max(32767, 'Cannot exceed SMALLINT max'),
+  aitem_Tblidx_7: z.coerce.number().min(0, 'Must be a positive number'),
+  abyPos_7: z.coerce.number().min(0, 'Must be a positive number').max(32767, 'Cannot exceed SMALLINT max'),
+  abyStack_Quantity_7: z.coerce.number().min(0, 'Must be a positive number').max(32767, 'Cannot exceed SMALLINT max'),
+  aitem_Tblidx_8: z.coerce.number().min(0, 'Must be a positive number'),
+  abyPos_8: z.coerce.number().min(0, 'Must be a positive number').max(32767, 'Cannot exceed SMALLINT max'),
+  abyStack_Quantity_8: z.coerce.number().min(0, 'Must be a positive number').max(32767, 'Cannot exceed SMALLINT max'),
+  aitem_Tblidx_9: z.coerce.number().min(0, 'Must be a positive number'),
+  abyPos_9: z.coerce.number().min(0, 'Must be a positive number').max(32767, 'Cannot exceed SMALLINT max'),
+  abyStack_Quantity_9: z.coerce.number().min(0, 'Must be a positive number').max(32767, 'Cannot exceed SMALLINT max'),
+  aSkillTblidx_0: z.coerce.number().min(0, 'Must be a positive number'),
+  aSkillTblidx_1: z.coerce.number().min(0, 'Must be a positive number'),
+  aSkillTblidx_2: z.coerce.number().min(0, 'Must be a positive number'),
+  aSkillTblidx_3: z.coerce.number().min(0, 'Must be a positive number'),
+  aSkillTblidx_4: z.coerce.number().min(0, 'Must be a positive number'),
+  aSkillTblidx_5: z.coerce.number().min(0, 'Must be a positive number'),
+  aSkillTblidx_6: z.coerce.number().min(0, 'Must be a positive number'),
+  aSkillTblidx_7: z.coerce.number().min(0, 'Must be a positive number'),
+  aSkillTblidx_8: z.coerce.number().min(0, 'Must be a positive number'),
+  aSkillTblidx_9: z.coerce.number().min(0, 'Must be a positive number'),
   asQuickData_0_bySlotType: z.coerce.number().min(0, 'Must be a positive number').max(32767, 'Cannot exceed SMALLINT max'),
   asQuickData_0_byQuickSlot: z.coerce.number().min(0, 'Must be a positive number').max(32767, 'Cannot exceed SMALLINT max'),
   asQuickData_0_tblidx: z.coerce.number().min(0, 'Must be a positive number'),
@@ -66,6 +106,19 @@ export interface NewbieTableRow extends NewbieTableFormData {
   id: string;
 }
 
+const itemColumns = Array.from({ length: 10 }, (_, i) => [
+  { key: `aitem_Tblidx_${i}` as const, label: `Item ${i} Table ID`, type: 'number' as const, validation: newbieTableSchema.shape[`aitem_Tblidx_${i}` as keyof typeof newbieTableSchema.shape] as any },
+  { key: `abyPos_${i}` as const, label: `Item ${i} Position`, type: 'number' as const, validation: newbieTableSchema.shape[`abyPos_${i}` as keyof typeof newbieTableSchema.shape] as any },
+  { key: `abyStack_Quantity_${i}` as const, label: `Item ${i} Stack Quantity`, type: 'number' as const, validation: newbieTableSchema.shape[`abyStack_Quantity_${i}` as keyof typeof newbieTableSchema.shape] as any },
+]).flat();
+
+const skillColumns = Array.from({ length: 10 }, (_, i) => ({
+  key: `aSkillTblidx_${i}` as const,
+  label: `Skill ${i} Table ID`,
+  type: 'number' as const,
+  validation: newbieTableSchema.shape[`aSkillTblidx_${i}` as keyof typeof newbieTableSchema.shape] as any,
+}));
+
 const quickDataColumns = Array.from({ length: 10 }, (_, i) => [
   { key: `asQuickData_${i}_bySlotType` as const, label: `Quick Data ${i} Slot Type`, type: 'number' as const, validation: newbieTableSchema.shape[`asQuickData_${i}_bySlotType` as keyof typeof newbieTableSchema.shape] as any },
   { key: `asQuickData_${i}_byQuickSlot` as const, label: `Quick Data ${i} Quick Slot`, type: 'number' as const, validation: newbieTableSchema.shape[`asQuickData_${i}_byQuickSlot` as keyof typeof newbieTableSchema.shape] as any },
@@ -102,7 +155,8 @@ export const columns = [
   { key: 'byQPosition1', label: 'Item Position 1', type: 'number' as const, validation: newbieTableSchema.shape.byQPosition1 },
   { key: 'byQStackQuantity1', label: 'Item Stack Quantity 1', type: 'number' as const, validation: newbieTableSchema.shape.byQStackQuantity1 },
   { key: 'wMixLevelData', label: 'Mix Level Data', type: 'number' as const, validation: newbieTableSchema.shape.wMixLevelData },
+  ...itemColumns,
+  ...skillColumns,
   ...quickDataColumns,
   ...portalIdColumns,
 ];
-
