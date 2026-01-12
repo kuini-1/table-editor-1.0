@@ -740,9 +740,12 @@ export function SettingsPage() {
                           <h4 className="font-semibold mb-3 text-gray-900 dark:text-white">Bandwidth Usage</h4>
                           {(() => {
                             const used = profile?.current_month_bandwidth_used || 0;
-                            const limit = profile?.monthly_bandwidth_limit || (50 * 1024 * 1024); // Default to 50MB
-                            const usagePercent = limit > 0 ? (used / limit) * 100 : 0;
                             const isTrial = subscription.status === 'trialing';
+                            // If in trial, always use 50MB limit regardless of what's in the database
+                            const limit = isTrial 
+                              ? (50 * 1024 * 1024) // 50MB for trial
+                              : (profile?.monthly_bandwidth_limit || (50 * 1024 * 1024)); // Default to 50MB
+                            const usagePercent = limit > 0 ? (used / limit) * 100 : 0;
                             const isNearLimit = usagePercent >= 80;
                             
                             // Format based on size - use MB for small limits, GB for larger

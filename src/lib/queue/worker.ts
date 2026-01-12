@@ -110,6 +110,90 @@ async function processImportJob(job: ConversionJob, workerIndex: number): Promis
       throw new Error(`CSV parsing error: ${errors[0].message}`);
     }
 
+    // Get actual column names from database schema
+    // First try to get columns from a sample row (simplest approach)
+    let dbColumns: string[] = [];
+    try {
+      const { data: sampleData } = await supabase
+        .from(tableName)
+        .select('*')
+        .limit(1);
+      
+      if (sampleData && sampleData.length > 0) {
+        dbColumns = Object.keys(sampleData[0]);
+      } else {
+        // If no data exists, try to query information_schema (might not work with Supabase client)
+        try {
+          // Try direct query to information_schema first
+          const { data, error } = await supabase
+            .from('information_schema.columns')
+            .select('column_name')
+            .eq('table_schema', 'public')
+            .eq('table_name', tableName);
+          
+          if (data && Array.isArray(data)) {
+            dbColumns = data.map((row: { column_name: string }) => row.column_name);
+          } else if (error) {
+            console.warn(`[Worker ${workerIndex}] Could not query information_schema for ${tableName}:`, error);
+            // If information_schema query fails, try RPC (if it exists)
+            try {
+              const { data: rpcData, error: rpcError } = await supabase.rpc('exec_sql', {
+                query: `SELECT column_name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = '${tableName}' ORDER BY ordinal_position`
+              });
+              
+              if (rpcData && Array.isArray(rpcData)) {
+                dbColumns = rpcData;
+              } else if (rpcError) {
+                console.warn(`[Worker ${workerIndex}] Could not query schema via RPC for ${tableName}:`, rpcError);
+              }
+            } catch (rpcErr) {
+              console.warn(`[Worker ${workerIndex}] RPC call failed for ${tableName}:`, rpcErr);
+            }
+          }
+        } catch (err) {
+          console.warn(`[Worker ${workerIndex}] Could not fetch schema for ${tableName}:`, err);
+        }
+      }
+    } catch (err) {
+      console.warn(`[Worker ${workerIndex}] Could not fetch sample data from ${tableName}:`, err);
+    }
+
+    // Create a case-insensitive mapping from CSV column names to database column names
+    const columnMap = new Map<string, string>();
+    if (records.length > 0) {
+      const csvColumns = Object.keys(records[0] as Record<string, unknown>);
+      
+      if (dbColumns.length > 0) {
+        // Create case-insensitive mapping from database columns
+        const dbColumnMap = new Map<string, string>();
+        dbColumns.forEach((col) => {
+          dbColumnMap.set(col.toLowerCase(), col);
+        });
+        
+        csvColumns.forEach((csvCol) => {
+          const dbCol = dbColumnMap.get(csvCol.toLowerCase());
+          if (dbCol) {
+            columnMap.set(csvCol, dbCol);
+            if (csvCol !== dbCol) {
+              console.log(`[Worker ${workerIndex}] Mapped CSV column "${csvCol}" to DB column "${dbCol}"`);
+            }
+          } else {
+            // If not found, try exact match (preserve original case)
+            columnMap.set(csvCol, csvCol);
+            console.warn(`[Worker ${workerIndex}] CSV column "${csvCol}" not found in DB schema, using as-is`);
+          }
+        });
+        
+        console.log(`[Worker ${workerIndex}] Column mapping for ${tableName}:`, Array.from(columnMap.entries()));
+      } else {
+        // If we couldn't get DB columns, create a map that tries both exact and lowercase matches
+        csvColumns.forEach((csvCol) => {
+          columnMap.set(csvCol, csvCol);
+        });
+        console.warn(`[Worker ${workerIndex}] Could not determine DB columns for ${tableName}, using CSV column names as-is`);
+      }
+    }
+
     // Delete existing data
     const { error: deleteError } = await supabase
       .from(tableName)
@@ -120,13 +204,13 @@ async function processImportJob(job: ConversionJob, workerIndex: number): Promis
       throw new Error(`Failed to clear existing data: ${deleteError.message}`);
     }
 
-    // Prepare records for insertion
-    // Note: Column names are preserved as-is from CSV to match database schema (case-sensitive)
+    // Prepare records for insertion with case-insensitive column mapping
     const recordsToInsert = (records as Record<string, unknown>[]).map((record: Record<string, unknown>) => {
       const processedRecord: Record<string, unknown> = {};
-      for (const key in record) {
-        // Preserve original column name (database columns are case-sensitive)
-        let value = record[key];
+      for (const csvKey in record) {
+        // Map CSV column name to database column name (case-insensitive)
+        const dbKey = columnMap.get(csvKey) || csvKey;
+        let value = record[csvKey];
         
         // Convert string numbers to actual numbers
         if (typeof value === 'string') {
@@ -141,7 +225,7 @@ async function processImportJob(job: ConversionJob, workerIndex: number): Promis
           }
         }
         
-        processedRecord[key] = value;
+        processedRecord[dbKey] = value;
       }
 
       return {

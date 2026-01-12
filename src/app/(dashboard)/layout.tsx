@@ -9,6 +9,7 @@ import { useTheme } from 'next-themes';
 import { createClient } from '@/lib/supabase/client';
 import { getUserRole } from '@/lib/get-user-role';
 import { useStore } from '@/lib/store';
+import { getBandwidthInfo } from '@/lib/bandwidth-tracker';
 
 interface NavItem {
   name: string;
@@ -99,6 +100,8 @@ export default function DashboardLayout({
   const { userProfile, fetchUserProfile } = useStore();
   const [userRole, setUserRole] = useState<string | null>(null);
   const hasFetchedRoleRef = useRef(false);
+  const [bandwidthInfo, setBandwidthInfo] = useState<{ used: number; limit: number } | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
 
   // Handle hydration mismatch
   useEffect(() => {
@@ -145,6 +148,35 @@ export default function DashboardLayout({
 
     fetchUserRole();
   }, [userProfile, fetchUserProfile]);
+
+  // Fetch user ID and bandwidth info
+  useEffect(() => {
+    const fetchUserAndBandwidth = async () => {
+      try {
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (user) {
+          setUserId(user.id);
+          const info = await getBandwidthInfo(user.id);
+          setBandwidthInfo(info);
+        }
+      } catch (error) {
+        console.error('Error fetching bandwidth info:', error);
+      }
+    };
+
+    fetchUserAndBandwidth();
+    
+    // Refresh bandwidth info every 30 seconds
+    const interval = setInterval(() => {
+      if (userId) {
+        getBandwidthInfo(userId).then(setBandwidthInfo).catch(console.error);
+      }
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, [userId]);
 
   // Filter navigation items based on user role
   const filteredNavigation = navigation.filter(item => 
@@ -278,6 +310,113 @@ export default function DashboardLayout({
             );
           })}
         </nav>
+
+        {/* Bandwidth Donut Chart */}
+        {bandwidthInfo && (() => {
+          const percentage = bandwidthInfo.limit > 0 
+            ? Math.min((bandwidthInfo.used / bandwidthInfo.limit) * 100, 100) 
+            : 0;
+          const circumference = 2 * Math.PI * 15.915; // r = 15.915
+          const strokeDasharray = `${(percentage / 100) * circumference} ${circumference}`;
+          const isNearLimit = percentage >= 80;
+          const isWarning = percentage >= 50;
+          const shouldShowUpgradeWarning = percentage >= 75;
+          
+          const handleClick = () => {
+            if (shouldShowUpgradeWarning) {
+              router.push('/settings/subscription');
+            }
+          };
+          
+          return (
+            <div className={`flex-shrink-0 border-t border-gray-200 dark:border-gray-700 ${isExpanded ? 'px-4 py-4' : 'px-2 py-4'}`}>
+              <div className="flex flex-col items-center">
+                <div 
+                  className={`relative ${isExpanded ? 'w-24 h-24' : 'w-12 h-12'} ${
+                    shouldShowUpgradeWarning 
+                      ? 'cursor-pointer hover:scale-105 transition-transform duration-200' 
+                      : ''
+                  }`}
+                  onClick={handleClick}
+                  title={shouldShowUpgradeWarning ? 'Bandwidth almost full! Click to upgrade' : undefined}
+                >
+                  <svg className={`${isExpanded ? 'w-24 h-24' : 'w-12 h-12'} transform -rotate-90`} viewBox="0 0 36 36">
+                    {/* Background circle */}
+                    <circle
+                      cx="18"
+                      cy="18"
+                      r="15.915"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      className="text-gray-200 dark:text-gray-700"
+                    />
+                    {/* Progress circle */}
+                    <circle
+                      cx="18"
+                      cy="18"
+                      r="15.915"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeDasharray={strokeDasharray}
+                      strokeDashoffset="0"
+                      strokeLinecap="round"
+                      className={`transition-all duration-500 ${
+                        isNearLimit
+                          ? 'text-orange-500 dark:text-orange-400'
+                          : isWarning
+                          ? 'text-yellow-500 dark:text-yellow-400'
+                          : 'text-indigo-500 dark:text-indigo-400'
+                      }`}
+                    />
+                  </svg>
+                  {/* Percentage text in center */}
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <span className={`font-semibold text-gray-900 dark:text-white ${isExpanded ? 'text-sm' : 'text-xs'}`}>
+                      {Math.round(percentage)}%
+                    </span>
+                  </div>
+                  {/* Warning indicator badge */}
+                  {shouldShowUpgradeWarning && (
+                    <div className="absolute -top-1 -right-1">
+                      <div className="bg-orange-500 dark:bg-orange-400 rounded-full p-1 animate-pulse">
+                        <svg 
+                          className="w-3 h-3 text-white" 
+                          fill="none" 
+                          viewBox="0 0 24 24" 
+                          strokeWidth={2.5} 
+                          stroke="currentColor"
+                        >
+                          <path 
+                            strokeLinecap="round" 
+                            strokeLinejoin="round" 
+                            d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" 
+                          />
+                        </svg>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                {isExpanded && (
+                  <>
+                    <p className="mt-2 text-xs text-center text-gray-600 dark:text-gray-400">
+                      Bandwidth
+                    </p>
+                    {shouldShowUpgradeWarning && (
+                      <Link 
+                        href="/settings/subscription"
+                        className="mt-2 text-xs text-center text-orange-600 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300 underline font-medium"
+                      >
+                        Upgrade Plan
+                      </Link>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+          );
+        })()}
 
         <div className="flex-shrink-0 px-2 py-4 border-t border-gray-200 dark:border-gray-700 space-y-1">
           <button
