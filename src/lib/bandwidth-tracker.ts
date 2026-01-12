@@ -6,6 +6,30 @@ export const BANDWIDTH_LIMITS = {
   DEFAULT: 50 * 1024 * 1024, // 50MB (default for users without subscription)
 } as const;
 
+/**
+ * Get Supabase service client for server-side operations
+ * Only works on server, returns null on client
+ */
+async function getServiceClient() {
+  if (typeof window !== 'undefined') {
+    return null; // Client-side, can't use service client
+  }
+
+  try {
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    
+    if (!supabaseUrl || !serviceRoleKey) {
+      return null;
+    }
+
+    return createClient(supabaseUrl, serviceRoleKey);
+  } catch {
+    return null;
+  }
+}
+
 // Cache for bandwidth info (5-minute TTL)
 interface BandwidthCache {
   used: number;
@@ -28,7 +52,7 @@ const fetchPromises = new Map<string, Promise<{ used: number; limit: number }>>(
 
 /**
  * Get current bandwidth usage and limit for a user
- * Uses API endpoint to work in both client and server contexts
+ * Uses direct database access on server, API endpoint on client
  * Throttled to prevent excessive API calls
  */
 export async function getBandwidthInfo(userId: string): Promise<{
@@ -50,7 +74,37 @@ export async function getBandwidthInfo(userId: string): Promise<{
   // Create new fetch promise
   const fetchPromise = (async () => {
     try {
-      // Use API endpoint to get bandwidth info
+      // On server, use direct database access
+      const serviceClient = await getServiceClient();
+      if (serviceClient) {
+        const { data: profile, error } = await serviceClient
+          .from('profiles')
+          .select('current_month_bandwidth_used, monthly_bandwidth_limit, subscription_status')
+          .eq('id', userId)
+          .single();
+
+        if (error || !profile) {
+          throw new Error('Failed to fetch bandwidth info from database');
+        }
+
+        // Calculate limit based on subscription status
+        let limit = profile.monthly_bandwidth_limit || BANDWIDTH_LIMITS.DEFAULT;
+        if (profile.subscription_status === 'trialing') {
+          limit = BANDWIDTH_LIMITS.TRIAL;
+        }
+
+        const used = profile.current_month_bandwidth_used || 0;
+
+        // Update cache
+        bandwidthCache.set(userId, { used, limit, timestamp: Date.now() });
+
+        // Remove from pending fetches
+        fetchPromises.delete(userId);
+
+        return { used, limit };
+      }
+
+      // On client, use API endpoint
       const baseUrl = getApiBaseUrl();
       const url = `${baseUrl}/api/bandwidth`;
       
@@ -139,7 +193,8 @@ function getApiBaseUrl(): string {
 }
 
 /**
- * Flush pending bandwidth updates to the API
+ * Flush pending bandwidth updates
+ * Uses direct database access on server, API endpoint on client
  */
 async function flushBandwidthUpdates(): Promise<void> {
   if (pendingUpdates.size === 0) {
@@ -154,6 +209,50 @@ async function flushBandwidthUpdates(): Promise<void> {
     if (totalBytes <= 0) continue;
 
     try {
+      // On server, use direct database access
+      const serviceClient = await getServiceClient();
+      if (serviceClient) {
+        // Try to use RPC function first
+        const { error: rpcError } = await serviceClient.rpc('increment_bandwidth_usage', {
+          p_user_id: userId,
+          p_bytes: totalBytes,
+        });
+
+        if (rpcError) {
+          // Fallback to manual update
+          const { data: profile, error: profileError } = await serviceClient
+            .from('profiles')
+            .select('current_month_bandwidth_used')
+            .eq('id', userId)
+            .single();
+
+          if (profileError) {
+            console.error('Error fetching profile for bandwidth update:', profileError);
+            continue;
+          }
+
+          if (profile) {
+            const currentUsed = profile.current_month_bandwidth_used || 0;
+            const { error: updateError } = await serviceClient
+              .from('profiles')
+              .update({
+                current_month_bandwidth_used: currentUsed + totalBytes,
+              })
+              .eq('id', userId);
+
+            if (updateError) {
+              console.error('Error updating bandwidth:', updateError);
+              continue;
+            }
+          }
+        }
+
+        // Invalidate cache
+        bandwidthCache.delete(userId);
+        continue;
+      }
+
+      // On client, use API endpoint
       const baseUrl = getApiBaseUrl();
       const url = `${baseUrl}/api/bandwidth`;
       
