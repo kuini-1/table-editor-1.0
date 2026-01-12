@@ -225,35 +225,72 @@ async function processImportJob(job: ConversionJob, workerIndex: number): Promis
       const csvColumns = Object.keys(records[0] as Record<string, unknown>);
       
       if (dbColumns.length > 0) {
-        // Create case-insensitive mapping from database columns
+        // Create multiple case-insensitive mappings from database columns
+        // Map: lowercase -> actual DB column name
         const dbColumnMap = new Map<string, string>();
         dbColumns.forEach((col) => {
           dbColumnMap.set(col.toLowerCase(), col);
+          // Also map the exact case
+          dbColumnMap.set(col, col);
         });
         
+        // Map CSV columns to DB columns
         csvColumns.forEach((csvCol) => {
-          const dbCol = dbColumnMap.get(csvCol.toLowerCase());
-          if (dbCol) {
-            columnMap.set(csvCol, dbCol);
-            if (csvCol !== dbCol) {
-              console.log(`[Worker ${workerIndex}] Mapped CSV column "${csvCol}" to DB column "${dbCol}"`);
+          // Try exact match first
+          if (dbColumnMap.has(csvCol)) {
+            columnMap.set(csvCol, dbColumnMap.get(csvCol)!);
+            if (csvCol !== dbColumnMap.get(csvCol)) {
+              console.log(`[Worker ${workerIndex}] Mapped CSV column "${csvCol}" to DB column "${dbColumnMap.get(csvCol)}" (exact match)`);
             }
           } else {
-            // If not found, try exact match (preserve original case)
-            columnMap.set(csvCol, csvCol);
-            console.warn(`[Worker ${workerIndex}] CSV column "${csvCol}" not found in DB schema, using as-is`);
+            // Try case-insensitive match
+            const dbCol = dbColumnMap.get(csvCol.toLowerCase());
+            if (dbCol) {
+              columnMap.set(csvCol, dbCol);
+              console.log(`[Worker ${workerIndex}] Mapped CSV column "${csvCol}" to DB column "${dbCol}" (case-insensitive)`);
+            } else {
+              // If not found, try to find a partial match (e.g., "bOnSale" -> "bonsale")
+              // Check if any DB column matches when both are lowercased
+              const csvLower = csvCol.toLowerCase();
+              let foundMatch = false;
+              for (const dbCol of dbColumns) {
+                if (dbCol.toLowerCase() === csvLower) {
+                  columnMap.set(csvCol, dbCol);
+                  console.log(`[Worker ${workerIndex}] Mapped CSV column "${csvCol}" to DB column "${dbCol}" (partial match)`);
+                  foundMatch = true;
+                  break;
+                }
+              }
+              
+              if (!foundMatch) {
+                // Last resort: use CSV column as-is
+                columnMap.set(csvCol, csvCol);
+                console.warn(`[Worker ${workerIndex}] CSV column "${csvCol}" not found in DB schema (${dbColumns.length} columns available), using as-is`);
+              }
+            }
           }
         });
         
-        console.log(`[Worker ${workerIndex}] Column mapping for ${tableName}:`, Array.from(columnMap.entries()));
+        // Log all mappings for debugging
+        console.log(`[Worker ${workerIndex}] Column mapping for ${tableName}:`);
+        columnMap.forEach((dbCol, csvCol) => {
+          if (csvCol !== dbCol) {
+            console.log(`  "${csvCol}" -> "${dbCol}"`);
+          }
+        });
+        
+        // Check for unmapped CSV columns
+        const unmapped = csvColumns.filter(csvCol => !columnMap.has(csvCol));
+        if (unmapped.length > 0) {
+          console.warn(`[Worker ${workerIndex}] Unmapped CSV columns: ${unmapped.join(', ')}`);
+        }
       } else {
         // If we couldn't get DB columns, we'll try lowercase mapping
-        // But we'll also log a warning and let the insert attempt reveal the actual column names
         csvColumns.forEach((csvCol) => {
           // Try lowercase version (PostgreSQL/Supabase typically stores unquoted identifiers in lowercase)
           columnMap.set(csvCol, csvCol.toLowerCase());
         });
-        console.warn(`[Worker ${workerIndex}] Could not determine DB columns for ${tableName}, using lowercase mapping. CSV columns:`, csvColumns.slice(0, 5).join(', '));
+        console.warn(`[Worker ${workerIndex}] Could not determine DB columns for ${tableName}, using lowercase mapping. CSV columns:`, csvColumns.slice(0, 10).join(', '));
       }
     }
 
@@ -267,15 +304,41 @@ async function processImportJob(job: ConversionJob, workerIndex: number): Promis
       throw new Error(`Failed to clear existing data: ${deleteError.message}`);
     }
 
+    // Create a set of valid DB column names for validation (case-insensitive)
+    const validDbColumnsLower = new Map<string, string>();
+    if (dbColumns.length > 0) {
+      dbColumns.forEach(col => {
+        validDbColumnsLower.set(col.toLowerCase(), col);
+      });
+    }
+    
     // Prepare records for insertion with case-insensitive column mapping
     const recordsToInsert = (records as Record<string, unknown>[]).map((record: Record<string, unknown>) => {
       const processedRecord: Record<string, unknown> = {};
       for (const csvKey in record) {
         // Map CSV column name to database column name (case-insensitive)
-        const dbKey = columnMap.get(csvKey) || csvKey;
-        if (csvKey !== dbKey) {
-          console.log(`[Worker ${workerIndex}] Mapping "${csvKey}" -> "${dbKey}" for ${tableName}`);
+        const dbKey = columnMap.get(csvKey);
+        
+        if (!dbKey) {
+          console.warn(`[Worker ${workerIndex}] CSV column "${csvKey}" has no mapping, skipping`);
+          continue;
         }
+        
+        // Determine the final database column name
+        let finalDbKey = dbKey;
+        
+        // If we have schema info, validate and get the correct case
+        if (validDbColumnsLower.size > 0) {
+          // Check exact match first
+          if (validDbColumnsLower.has(dbKey.toLowerCase())) {
+            finalDbKey = validDbColumnsLower.get(dbKey.toLowerCase())!;
+          } else {
+            console.warn(`[Worker ${workerIndex}] CSV column "${csvKey}" mapped to "${dbKey}" but column doesn't exist in schema, skipping`);
+            continue;
+          }
+        }
+        
+        // Process the value
         let value = record[csvKey];
         
         // Convert string numbers to actual numbers
@@ -291,7 +354,8 @@ async function processImportJob(job: ConversionJob, workerIndex: number): Promis
           }
         }
         
-        processedRecord[dbKey] = value;
+        // Set the value with the correct database column name
+        processedRecord[finalDbKey] = value;
       }
 
       return {
