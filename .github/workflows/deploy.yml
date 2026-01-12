@@ -14,6 +14,7 @@ name: Deploy to Windows VPS
 #   STRIPE_SECRET_KEY: Stripe secret key
 #   NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: Stripe publishable key
 #   STRIPE_WEBHOOK_SECRET: Stripe webhook secret
+#   NEXT_PUBLIC_APP_URL: Application base URL (e.g., https://editor.dbod.cc)
 #   CONVERSION_WORKER_POOL_SIZE: Conversion worker pool size
 #   CONVERSION_QUEUE_MAX_SIZE: Conversion queue max size
 #   CONVERSION_RATE_LIMIT_COOLDOWN: Conversion rate limit cooldown
@@ -174,6 +175,7 @@ jobs:
           STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
           NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}
           STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
+          NEXT_PUBLIC_APP_URL: ${{ secrets.NEXT_PUBLIC_APP_URL }}
           CONVERSION_WORKER_POOL_SIZE: ${{ secrets.CONVERSION_WORKER_POOL_SIZE }}
           CONVERSION_QUEUE_MAX_SIZE: ${{ secrets.CONVERSION_QUEUE_MAX_SIZE }}
           CONVERSION_RATE_LIMIT_COOLDOWN: ${{ secrets.CONVERSION_RATE_LIMIT_COOLDOWN }}
@@ -193,6 +195,7 @@ jobs:
             [string]$StripeSecretKey,
             [string]$NextPublicStripePublishableKey,
             [string]$StripeWebhookSecret,
+            [string]$NextPublicAppUrl,
             [string]$ConversionWorkerPoolSize,
             [string]$ConversionQueueMaxSize,
             [string]$ConversionRateLimitCooldown
@@ -424,6 +427,7 @@ jobs:
             "STRIPE_SECRET_KEY=$StripeSecretKey",
             "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=$NextPublicStripePublishableKey",
             "STRIPE_WEBHOOK_SECRET=$StripeWebhookSecret",
+            "NEXT_PUBLIC_APP_URL=$NextPublicAppUrl",
             "CONVERSION_WORKER_POOL_SIZE=$ConversionWorkerPoolSize",
             "CONVERSION_QUEUE_MAX_SIZE=$ConversionQueueMaxSize",
             "CONVERSION_RATE_LIMIT_COOLDOWN=$ConversionRateLimitCooldown"
@@ -589,6 +593,7 @@ jobs:
               "StripeSecretKey": os.environ.get("STRIPE_SECRET_KEY", ""),
               "NextPublicStripePublishableKey": os.environ.get("NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY", ""),
               "StripeWebhookSecret": os.environ.get("STRIPE_WEBHOOK_SECRET", ""),
+              "NextPublicAppUrl": os.environ.get("NEXT_PUBLIC_APP_URL", ""),
               "ConversionWorkerPoolSize": os.environ.get("CONVERSION_WORKER_POOL_SIZE", ""),
               "ConversionQueueMaxSize": os.environ.get("CONVERSION_QUEUE_MAX_SIZE", ""),
               "ConversionRateLimitCooldown": os.environ.get("CONVERSION_RATE_LIMIT_COOLDOWN", "")
@@ -614,7 +619,7 @@ jobs:
           sshpass -p "$VPS_PASSWORD" ssh -o StrictHostKeyChecking=no \
             -o UserKnownHostsFile=/dev/null \
             "${VPS_USER}@${VPS_HOST}" \
-            "powershell -ExecutionPolicy Bypass -Command \"\$encoded = Get-Content '${VPS_DEPLOY_PATH}\\env_vars.b64' -Raw; \$json = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String(\$encoded.Trim())); \$envVars = \$json | ConvertFrom-Json; & '${VPS_DEPLOY_PATH}\\deploy.ps1' -DeployPath \$envVars.DeployPath -Pm2AppName \$envVars.Pm2AppName -NextPublicSupabaseUrl \$envVars.NextPublicSupabaseUrl -NextPublicSupabaseAnonKey \$envVars.NextPublicSupabaseAnonKey -NextPublicGoogleClientId \$envVars.NextPublicGoogleClientId -SupabaseServiceRoleKey \$envVars.SupabaseServiceRoleKey -StripeSecretKey \$envVars.StripeSecretKey -NextPublicStripePublishableKey \$envVars.NextPublicStripePublishableKey -StripeWebhookSecret \$envVars.StripeWebhookSecret -ConversionWorkerPoolSize \$envVars.ConversionWorkerPoolSize -ConversionQueueMaxSize \$envVars.ConversionQueueMaxSize -ConversionRateLimitCooldown \$envVars.ConversionRateLimitCooldown\""
+            "powershell -ExecutionPolicy Bypass -Command \"\$encoded = Get-Content '${VPS_DEPLOY_PATH}\\env_vars.b64' -Raw; \$json = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String(\$encoded.Trim())); \$envVars = \$json | ConvertFrom-Json; & '${VPS_DEPLOY_PATH}\\deploy.ps1' -DeployPath \$envVars.DeployPath -Pm2AppName \$envVars.Pm2AppName -NextPublicSupabaseUrl \$envVars.NextPublicSupabaseUrl -NextPublicSupabaseAnonKey \$envVars.NextPublicSupabaseAnonKey -NextPublicGoogleClientId \$envVars.NextPublicGoogleClientId -SupabaseServiceRoleKey \$envVars.SupabaseServiceRoleKey -StripeSecretKey \$envVars.StripeSecretKey -NextPublicStripePublishableKey \$envVars.NextPublicStripePublishableKey -StripeWebhookSecret \$envVars.StripeWebhookSecret -NextPublicAppUrl \$envVars.NextPublicAppUrl -ConversionWorkerPoolSize \$envVars.ConversionWorkerPoolSize -ConversionQueueMaxSize \$envVars.ConversionQueueMaxSize -ConversionRateLimitCooldown \$envVars.ConversionRateLimitCooldown\""
           
           # Clean up base64 file from VPS
           sshpass -p "$VPS_PASSWORD" ssh -o StrictHostKeyChecking=no \

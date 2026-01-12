@@ -51,7 +51,10 @@ export async function getBandwidthInfo(userId: string): Promise<{
   const fetchPromise = (async () => {
     try {
       // Use API endpoint to get bandwidth info
-      const response = await fetch('/api/bandwidth');
+      const baseUrl = getApiBaseUrl();
+      const url = `${baseUrl}/api/bandwidth`;
+      
+      const response = await fetch(url);
       if (!response.ok) {
         throw new Error('Failed to fetch bandwidth info');
       }
@@ -112,6 +115,30 @@ export async function checkBandwidthLimit(
 }
 
 /**
+ * Get the base URL for API calls
+ * Works in both browser and server environments
+ */
+function getApiBaseUrl(): string {
+  // In browser, use relative URL
+  if (typeof window !== 'undefined') {
+    return '';
+  }
+  
+  // On server, try to get from environment variables
+  if (process.env.NEXT_PUBLIC_APP_URL) {
+    return process.env.NEXT_PUBLIC_APP_URL;
+  }
+  
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`;
+  }
+  
+  // Fallback to localhost (for local development)
+  const port = process.env.PORT || '3000';
+  return `http://localhost:${port}`;
+}
+
+/**
  * Flush pending bandwidth updates to the API
  */
 async function flushBandwidthUpdates(): Promise<void> {
@@ -127,7 +154,10 @@ async function flushBandwidthUpdates(): Promise<void> {
     if (totalBytes <= 0) continue;
 
     try {
-      const response = await fetch('/api/bandwidth', {
+      const baseUrl = getApiBaseUrl();
+      const url = `${baseUrl}/api/bandwidth`;
+      
+      const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
