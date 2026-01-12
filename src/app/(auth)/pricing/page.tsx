@@ -70,7 +70,7 @@ export default function PricingPage() {
                     </span>
               </div>
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
-                Start your 14-day free trial. No credit card required.
+                Start your 3-day free trial. No credit card required.
                 </p>
             </div>
 

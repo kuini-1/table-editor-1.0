@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { CookieOptions } from "@supabase/ssr";
+import { hasActiveSubscriptionSync } from "@/lib/subscription-check";
 
 export async function updateSession(request: NextRequest) {
   // Create a response with the request headers
@@ -56,11 +57,18 @@ export async function updateSession(request: NextRequest) {
     return supabaseResponse;
   }
 
-  // If we have a user, check if their profile still exists
+  // For protected routes, check authentication first
+  if ((!user || userError) && !isPublicRoute) {
+    const redirectUrl = new URL('/login', request.url);
+    redirectUrl.searchParams.set('next', request.nextUrl.pathname);
+    return NextResponse.redirect(redirectUrl);
+  }
+
+  // If we have a user, check if their profile still exists and has active subscription/trial
   if (user && !userError) {
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('id')
+      .select('id, stripe_subscription_id, subscription_status')
       .eq('id', user.id)
       .single();
 
@@ -74,23 +82,46 @@ export async function updateSession(request: NextRequest) {
       });
       return NextResponse.redirect(new URL('/login', request.url));
     }
-  }
 
-  // For protected routes, check authentication
-  if ((!user || userError) && !isPublicRoute) {
-    const redirectUrl = new URL('/login', request.url);
-    redirectUrl.searchParams.set('next', request.nextUrl.pathname);
-    return NextResponse.redirect(redirectUrl);
-  }
+    // Check subscription/trial access for protected routes (excluding settings where they can manage subscription)
+    const protectedRoutes = ['/tables', '/users'];
+    const isProtectedRoute = protectedRoutes.some(route => 
+      request.nextUrl.pathname.startsWith(route)
+    );
 
-  // If authenticated user tries to access login/register pages, redirect to dashboard
-  if (user && !userError && (request.nextUrl.pathname.startsWith('/login') || request.nextUrl.pathname.startsWith('/register'))) {
-    return NextResponse.redirect(new URL('/tables', request.url));
-  }
+    if (isProtectedRoute) {
+      const hasAccess = hasActiveSubscriptionSync(profile);
 
-  // If authenticated user is on home page, redirect to tables
-  if (user && !userError && (request.nextUrl.pathname === '/' || request.nextUrl.pathname === '')) {
-    return NextResponse.redirect(new URL('/tables', request.url));
+      if (!hasAccess) {
+        // Redirect to subscription settings page
+        return NextResponse.redirect(new URL('/settings/subscription', request.url));
+      }
+    }
+
+    // If authenticated user tries to access login/register pages, check subscription first
+    if (request.nextUrl.pathname.startsWith('/login') || request.nextUrl.pathname.startsWith('/register')) {
+      if (hasActiveSubscriptionSync(profile)) {
+        return NextResponse.redirect(new URL('/tables', request.url));
+      } else {
+        // No subscription, redirect to subscription settings
+        return NextResponse.redirect(new URL('/settings/subscription', request.url));
+      }
+    }
+
+    // If authenticated user is on home page, check subscription first
+    if (request.nextUrl.pathname === '/' || request.nextUrl.pathname === '') {
+      if (hasActiveSubscriptionSync(profile)) {
+        return NextResponse.redirect(new URL('/tables', request.url));
+      } else {
+        // No subscription, redirect to subscription settings
+        return NextResponse.redirect(new URL('/settings/subscription', request.url));
+      }
+    }
+    
+    // Redirect /settings to /settings/profile
+    if (request.nextUrl.pathname === '/settings') {
+      return NextResponse.redirect(new URL('/settings/profile', request.url));
+    }
   }
 
   return supabaseResponse;

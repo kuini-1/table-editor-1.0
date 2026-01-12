@@ -142,6 +142,21 @@ export async function GET(req: Request) {
       }, { status: 500 });
     }
 
+    // Check bandwidth limit before export (5MB per export)
+    try {
+      const { checkBandwidthLimit } = await import('@/lib/bandwidth-tracker');
+      const { allowed, error: limitError } = await checkBandwidthLimit(user.id, 5 * 1024 * 1024); // 5MB
+      if (!allowed) {
+        return NextResponse.json({
+          error: 'Bandwidth limit exceeded',
+          details: limitError || 'You have exceeded your monthly bandwidth limit. Please upgrade your plan to continue exporting.'
+        }, { status: 429 });
+      }
+    } catch (error) {
+      console.error('Error checking bandwidth limit:', error);
+      // Continue with export if check fails (don't block user)
+    }
+
     // Get CSV data
     const { data: csvData, error: csvError } = await supabase
       .from(table)
@@ -162,6 +177,15 @@ export async function GET(req: Request) {
         error: 'No data found',
         details: 'The query returned no results'
       }, { status: 404 });
+    }
+
+    // Track bandwidth usage for export (5MB per export)
+    try {
+      const { trackBandwidthUsage } = await import('@/lib/bandwidth-tracker');
+      await trackBandwidthUsage(user.id, 5 * 1024 * 1024); // 5MB
+    } catch (error) {
+      console.error('Error tracking bandwidth for export:', error);
+      // Don't fail the export if bandwidth tracking fails
     }
 
     // Write CSV file

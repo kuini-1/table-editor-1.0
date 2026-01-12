@@ -12,5 +12,6 @@ export const config = {
     '/users/:path*',
     '/login',
     '/register',
+    '/', // Include root path
   ],
 }; 

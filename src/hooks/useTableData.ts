@@ -168,7 +168,25 @@ export function useTableData<T extends { id: string }>({ config, tableId }: UseT
   }, [tableId, supabase]);
 
   const handleError = (err: object | unknown) => {
-    const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred';
+    let errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred';
+    
+    // Check if it's a bandwidth limit error
+    if (err && typeof err === 'object' && 'error' in err) {
+      const supabaseError = err as { error?: { code?: string; message?: string } };
+      if (supabaseError.error?.code === 'BANDWIDTH_LIMIT_EXCEEDED') {
+        errorMessage = supabaseError.error.message || 'Bandwidth limit exceeded. Please upgrade your plan to continue.';
+        setError(errorMessage);
+        toast.error(errorMessage, {
+          duration: 5000,
+          action: {
+            label: 'Upgrade',
+            onClick: () => window.location.href = '/settings?section=subscription'
+          }
+        });
+        return;
+      }
+    }
+    
     setError(errorMessage);
     toast.error(errorMessage);
   };
@@ -309,7 +327,18 @@ export function useTableData<T extends { id: string }>({ config, tableId }: UseT
 
       const { data: rows, error: fetchError, count } = await query;
 
-      if (fetchError) throw fetchError;
+      if (fetchError) {
+        // Check if it's a bandwidth limit error
+        if (fetchError.code === 'BANDWIDTH_LIMIT_EXCEEDED') {
+          const errorMsg = fetchError.message || 'Bandwidth limit exceeded. Please upgrade your plan to continue.';
+          setError(errorMsg);
+          toast.error(errorMsg);
+          setLoading(false);
+          setIsFiltering(false);
+          return;
+        }
+        throw fetchError;
+      }
 
       setData(rows as T[]);
       setTotalRows(count || 0);

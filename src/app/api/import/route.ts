@@ -90,6 +90,21 @@ export async function POST(req: Request) {
       }, { status: 400 });
     }
 
+    // Check bandwidth limit before import (5MB per import)
+    try {
+      const { checkBandwidthLimit } = await import('@/lib/bandwidth-tracker');
+      const { allowed, error: limitError } = await checkBandwidthLimit(user.id, 5 * 1024 * 1024); // 5MB
+      if (!allowed) {
+        return NextResponse.json({
+          error: 'Bandwidth limit exceeded',
+          details: limitError || 'You have exceeded your monthly bandwidth limit. Please upgrade your plan to continue importing.'
+        }, { status: 429 });
+      }
+    } catch (error) {
+      console.error('Error checking bandwidth limit:', error);
+      // Continue with import if check fails (don't block user)
+    }
+
     // Check rate limiting
     if (conversionQueue.isRateLimited(user.id, tableName, 'import')) {
       console.log('Rate limited:', { userId: user.id, tableName, type: 'import' });
@@ -157,6 +172,15 @@ export async function POST(req: Request) {
         userDir
       );
       console.log('Job added to queue:', job.id);
+
+      // Track bandwidth usage for import (5MB per import)
+      try {
+        const { trackBandwidthUsage } = await import('@/lib/bandwidth-tracker');
+        await trackBandwidthUsage(user.id, 5 * 1024 * 1024); // 5MB
+      } catch (error) {
+        console.error('Error tracking bandwidth for import:', error);
+        // Don't fail the import if bandwidth tracking fails
+      }
     } catch (queueError: object | unknown) {
       console.error('Failed to add job to queue:', queueError);
       // Clean up files

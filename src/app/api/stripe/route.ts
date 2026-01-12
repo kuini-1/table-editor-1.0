@@ -48,10 +48,71 @@ export async function GET() {
       subscription_status: profile.subscription_status
     });
 
-    // If no subscription info exists, return null subscription
+    // If no subscription ID in profile, check Stripe for active subscriptions
     if (!profile.stripe_subscription_id) {
-      console.log('No subscription ID found for user:', user.id);
-      return NextResponse.json({ subscription: null });
+      // If we have a customer ID, check Stripe for subscriptions
+      if (profile.stripe_customer_id) {
+        console.log('No subscription ID in profile, checking Stripe for customer:', profile.stripe_customer_id);
+        try {
+          // List all subscriptions for this customer
+          const subscriptions = await stripe.subscriptions.list({
+            customer: profile.stripe_customer_id,
+            status: 'all', // Get all subscriptions to find active/trialing ones
+            limit: 10
+          });
+
+          // Find the most recent active or trialing subscription
+          const activeSubscription = subscriptions.data.find(
+            sub => ['active', 'trialing', 'past_due'].includes(sub.status)
+          );
+
+          if (activeSubscription) {
+            console.log('Found active subscription in Stripe:', {
+              id: activeSubscription.id,
+              status: activeSubscription.status
+            });
+
+            // Update profile with the subscription ID and status
+            await supabase
+              .from('profiles')
+              .update({
+                stripe_subscription_id: activeSubscription.id,
+                subscription_status: activeSubscription.status
+              })
+              .eq('id', user.id);
+
+            // Get the price details
+            const price = await stripe.prices.retrieve(activeSubscription.items.data[0].price.id);
+            const subscriptionItem = activeSubscription.items.data[0];
+
+            return NextResponse.json({
+              subscription: {
+                id: activeSubscription.id,
+                status: activeSubscription.status,
+                current_period_end: activeSubscription.current_period_end,
+                cancel_at_period_end: activeSubscription.cancel_at_period_end,
+                plan: {
+                  id: price.id,
+                  name: price.nickname || 'Default Plan',
+                  amount: price.unit_amount || 0,
+                  interval: price.recurring?.interval || 'month'
+                },
+                items: subscriptionItem,
+              },
+            });
+          } else {
+            console.log('No active subscription found in Stripe for customer:', profile.stripe_customer_id);
+            return NextResponse.json({ subscription: null });
+          }
+        } catch (error) {
+          console.error('Error checking Stripe for subscriptions:', error);
+          // Continue to return null if we can't check Stripe
+          return NextResponse.json({ subscription: null });
+        }
+      } else {
+        console.log('No subscription ID or customer ID found for user:', user.id);
+        return NextResponse.json({ subscription: null });
+      }
     }
 
     try {
@@ -69,6 +130,17 @@ export async function GET() {
 
       // Get the price details
       const price = await stripe.prices.retrieve(subscription.items.data[0].price.id);
+      const subscriptionItem = subscription.items.data[0];
+
+      // Update subscription status in profile if it's different (keeps it in sync)
+      if (subscription.status !== profile.subscription_status) {
+        await supabase
+          .from('profiles')
+          .update({
+            subscription_status: subscription.status
+          })
+          .eq('id', user.id);
+      }
 
       return NextResponse.json({
         subscription: {
@@ -82,6 +154,7 @@ export async function GET() {
             amount: price.unit_amount || 0,
             interval: price.recurring?.interval || 'month'
           },
+          items: subscriptionItem,
         },
       });
     } catch (error: unknown) {
@@ -164,7 +237,7 @@ export async function POST(request: Request) {
           .eq('id', user.id);
       }
 
-      // Create checkout session
+      // Create checkout session with 3-day trial period
       const session = await stripe.checkout.sessions.create({
         customer: customerId,
         line_items: [
@@ -181,6 +254,7 @@ export async function POST(request: Request) {
           price_id: priceId
         },
         subscription_data: {
+          trial_period_days: 3,
           metadata: {
             user_id: user.id,
             price_id: priceId
