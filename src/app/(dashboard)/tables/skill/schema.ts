@@ -138,12 +138,12 @@ export const columns = [
   { key: 'byApply_Range', label: 'Apply Range', type: 'number' as const, validation: skillSchema.shape.byApply_Range },
   { key: 'byUse_Range_Min', label: 'Min Range', type: 'number' as const, validation: skillSchema.shape.byUse_Range_Min },
   { key: 'byUse_Range_Max', label: 'Max Range', type: 'number' as const, validation: skillSchema.shape.byUse_Range_Max },
-  ...Array.from({ length: 10 }, (i) => [
+  ...Array.from({ length: 10 }, (_, i) => [
     { key: `skill_Effect_${i}`, label: `Effect ${i + 1}`, type: 'number' as const, validation: skillSchema.shape[`skill_Effect_${i}` as keyof typeof skillSchema.shape] },
     { key: `bySkill_Effect_Type_${i}`, label: `Effect ${i + 1} Type`, type: 'number' as const, validation: skillSchema.shape[`bySkill_Effect_Type_${i}` as keyof typeof skillSchema.shape] },
     { key: `aSkill_Effect_Value_${i}`, label: `Effect ${i + 1} Value`, type: 'number' as const, validation: skillSchema.shape[`aSkill_Effect_Value_${i}` as keyof typeof skillSchema.shape] }
   ]).flat(),
-  ...Array.from({ length: 5 }, (i) => [
+  ...Array.from({ length: 5 }, (_, i) => [
     { key: `abyRpEffect_${i}`, label: `RP Effect ${i + 1}`, type: 'number' as const, validation: skillSchema.shape[`abyRpEffect_${i}` as keyof typeof skillSchema.shape] },
     { key: `afRpEffectValue_${i}`, label: `RP Effect ${i + 1} Value`, type: 'number' as const, validation: skillSchema.shape[`afRpEffectValue_${i}` as keyof typeof skillSchema.shape] }
   ]).flat(),

@@ -250,7 +250,7 @@ export const columns = [
   { key: 'fSettingPhyOffenceRate', label: 'Setting Physical Offence Rate', type: 'number' as const, validation: mobSchema.shape.fSettingPhyOffenceRate },
   { key: 'fSettingEngOffenceRate', label: 'Setting Energy Offence Rate', type: 'number' as const, validation: mobSchema.shape.fSettingEngOffenceRate },
   { key: 'fSettingRate_Defence_Role', label: 'Setting Rate Defence Role', type: 'number' as const, validation: mobSchema.shape.fSettingRate_Defence_Role },
-  ...Array.from({ length: 10 }, (i) => [
+  ...Array.from({ length: 10 }, (_, i) => [
     { key: `wUse_Skill_Time_${i}`, label: `Skill ${i} Time`, type: 'number' as const, validation: mobSchema.shape[`wUse_Skill_Time_${i}` as keyof typeof mobSchema.shape] },
     { key: `use_Skill_Tblidx_${i}`, label: `Skill ${i} Index`, type: 'number' as const, validation: mobSchema.shape[`use_Skill_Tblidx_${i}` as keyof typeof mobSchema.shape] },
     { key: `byUse_Skill_Basis_${i}`, label: `Skill ${i} Basis`, type: 'number' as const, validation: mobSchema.shape[`byUse_Skill_Basis_${i}` as keyof typeof mobSchema.shape] },
