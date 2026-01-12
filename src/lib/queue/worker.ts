@@ -6,6 +6,7 @@ import { conversionQueue } from './conversion-queue';
 import type { ConversionJob } from './types';
 import { createClient as createServiceClient } from '@supabase/supabase-js';
 import Papa from 'papaparse';
+import { TYPE_TO_FOLDER_MAP } from '@/lib/tableTypeMapping';
 
 const execAsync = promisify(exec);
 
@@ -49,6 +50,89 @@ function getSupabaseClient() {
   }
 
   return createServiceClient(supabaseUrl, serviceRoleKey);
+}
+
+/**
+ * Extract table type from table name (e.g., 'table_hls_item_data' -> 'hls_item')
+ */
+function getTableTypeFromName(tableName: string): string | null {
+  // Remove 'table_' prefix and '_data' suffix
+  const match = tableName.match(/^table_(.+?)_data$/);
+  if (match) {
+    return match[1];
+  }
+  // Try without _data suffix
+  const match2 = tableName.match(/^table_(.+)$/);
+  if (match2) {
+    return match2[1];
+  }
+  return null;
+}
+
+/**
+ * Get column names from schema file for a given table name
+ */
+async function getSchemaColumns(tableName: string): Promise<string[]> {
+  try {
+    const tableType = getTableTypeFromName(tableName);
+    if (!tableType) {
+      return [];
+    }
+
+    // Map table type to folder name
+    const folderName = TYPE_TO_FOLDER_MAP[tableType] || tableType;
+    
+    // Try to dynamically import the schema
+    // Schema files export a schema object with keys matching column names
+    try {
+      const schemaModule = await import(`@/app/(dashboard)/tables/${folderName}/schema`);
+      
+      // Look for schema exports (usually named like {tableType}Schema, {tableType}TableSchema, etc.)
+      const schemaKeys = Object.keys(schemaModule);
+      const schemaKey = schemaKeys.find(key => 
+        key.toLowerCase().includes('schema') && 
+        !key.toLowerCase().includes('form') &&
+        !key.toLowerCase().includes('type') &&
+        !key.toLowerCase().includes('row')
+      );
+      
+      if (schemaKey && schemaModule[schemaKey]) {
+        const schema = schemaModule[schemaKey];
+        // Zod schemas have a 'shape' property with the field definitions
+        if (schema.shape) {
+          const columns = Object.keys(schema.shape).filter(key => key !== 'table_id');
+          return columns;
+        }
+        // If it's already an object with keys
+        if (typeof schema === 'object' && !schema.shape) {
+          return Object.keys(schema).filter(key => key !== 'table_id');
+        }
+      }
+      
+      // If no schema found, try common naming patterns
+      const commonPatterns = [
+        `${folderName}Schema`,
+        `${folderName}TableSchema`,
+        `${tableType}Schema`,
+        `${tableType}TableSchema`,
+        'schema'
+      ];
+      
+      for (const pattern of commonPatterns) {
+        if (schemaModule[pattern]?.shape) {
+          return Object.keys(schemaModule[pattern].shape).filter(key => key !== 'table_id');
+        }
+      }
+    } catch {
+      // Silently fail - we'll fall back to database query
+      return [];
+    }
+  } catch {
+    // Silently fail - we'll fall back to database query
+    return [];
+  }
+  
+  return [];
 }
 
 /**
@@ -110,56 +194,29 @@ async function processImportJob(job: ConversionJob, workerIndex: number): Promis
       throw new Error(`CSV parsing error: ${errors[0].message}`);
     }
 
-    // Get actual column names from database schema
-    // First try to get columns from a sample row (simplest approach)
-    // We query without table_id filter to get any row from the table, just for schema inference
+    // Get actual column names from schema file (preferred) or database
     let dbColumns: string[] = [];
-    try {
-      const { data: sampleData } = await supabase
-        .from(tableName)
-        .select('*')
-        .limit(1);
-      
-      if (sampleData && sampleData.length > 0) {
-        dbColumns = Object.keys(sampleData[0]);
-      } else {
-        // Even if no rows exist, try to get column info by attempting a select with specific columns
-        // or by checking if we can get metadata from an empty result
-        // For now, we'll use the fallback lowercase mapping
-        // If no data exists, try to query information_schema (might not work with Supabase client)
-        try {
-          // Try direct query to information_schema first
-          const { data, error } = await supabase
-            .from('information_schema.columns')
-            .select('column_name')
-            .eq('table_schema', 'public')
-            .eq('table_name', tableName);
-          
-          if (data && Array.isArray(data)) {
-            dbColumns = data.map((row: { column_name: string }) => row.column_name);
-          } else if (error) {
-            console.warn(`[Worker ${workerIndex}] Could not query information_schema for ${tableName}:`, error);
-            // If information_schema query fails, try RPC (if it exists)
-            try {
-              const { data: rpcData, error: rpcError } = await supabase.rpc('exec_sql', {
-                query: `SELECT column_name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = '${tableName}' ORDER BY ordinal_position`
-              });
-              
-              if (rpcData && Array.isArray(rpcData)) {
-                dbColumns = rpcData;
-              } else if (rpcError) {
-                console.warn(`[Worker ${workerIndex}] Could not query schema via RPC for ${tableName}:`, rpcError);
-              }
-            } catch (rpcErr) {
-              console.warn(`[Worker ${workerIndex}] RPC call failed for ${tableName}:`, rpcErr);
-            }
-          }
-        } catch (err) {
-          console.warn(`[Worker ${workerIndex}] Could not fetch schema for ${tableName}:`, err);
+    
+    // First, try to get columns from the schema file
+    dbColumns = await getSchemaColumns(tableName);
+    
+    if (dbColumns.length > 0) {
+      console.log(`[Worker ${workerIndex}] Got ${dbColumns.length} columns from schema file for ${tableName}`);
+    } else {
+      // Fallback: try to get columns from a sample row
+      try {
+        const { data: sampleData } = await supabase
+          .from(tableName)
+          .select('*')
+          .limit(1);
+        
+        if (sampleData && sampleData.length > 0) {
+          dbColumns = Object.keys(sampleData[0]);
+          console.log(`[Worker ${workerIndex}] Got ${dbColumns.length} columns from sample data for ${tableName}`);
         }
+      } catch (err) {
+        console.warn(`[Worker ${workerIndex}] Could not fetch sample data from ${tableName}:`, err);
       }
-    } catch (err) {
-      console.warn(`[Worker ${workerIndex}] Could not fetch sample data from ${tableName}:`, err);
     }
 
     // Create a case-insensitive mapping from CSV column names to database column names
