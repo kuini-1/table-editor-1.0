@@ -128,17 +128,35 @@ async function processImportJob(job: ConversionJob, workerIndex: number): Promis
         // Preserve original column name (database columns are case-sensitive)
         let value = record[key];
         
-        // Convert string numbers to actual numbers
+        // Handle string values
         if (typeof value === 'string') {
           const trimmedValue = value.trim();
           if (trimmedValue !== '') {
             const num = Number(trimmedValue);
             if (!isNaN(num) && isFinite(num)) {
-              value = num;
+              // If the number exceeds INTEGER max (2147483647), keep it as a string
+              // This ensures PostgreSQL treats it as BIGINT instead of INTEGER
+              // PostgreSQL INTEGER max: 2147483647, BIGINT can handle much larger values
+              if (num > 2147483647 || num < -2147483648) {
+                // Keep as string for BIGINT columns
+                value = trimmedValue;
+              } else {
+                // Safe to convert to number for INTEGER/SMALLINT columns
+                value = num;
+              }
             }
           } else {
             value = null; // Empty strings become null
           }
+        } else if (typeof value === 'number') {
+          // PapaParse with dynamicTyping: true converts numeric strings to numbers
+          // If the number exceeds INTEGER max, convert it back to string for BIGINT columns
+          // PostgreSQL INTEGER max: 2147483647, BIGINT can handle much larger values
+          if (value > 2147483647 || value < -2147483648) {
+            // Convert to string for BIGINT columns to prevent PostgreSQL from casting as INTEGER
+            value = String(value);
+          }
+          // Otherwise keep as number for INTEGER/SMALLINT columns
         }
         
         processedRecord[key] = value;
