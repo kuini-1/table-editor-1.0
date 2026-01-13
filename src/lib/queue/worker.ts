@@ -100,10 +100,12 @@ async function processImportJob(job: ConversionJob, workerIndex: number): Promis
 
     // Read and parse CSV
     const csvContent = fs.readFileSync(csvPath, 'utf8');
+    // Disable dynamicTyping to preserve all values as strings initially
+    // This allows us to properly handle BIGINT values that exceed INTEGER max
     const { data: records, errors } = Papa.parse(csvContent, {
       header: true,
       skipEmptyLines: true,
-      dynamicTyping: true,
+      dynamicTyping: false, // Keep as strings, we'll convert manually
     });
 
     if (errors.length > 0) {
@@ -128,7 +130,7 @@ async function processImportJob(job: ConversionJob, workerIndex: number): Promis
         // Preserve original column name (database columns are case-sensitive)
         let value = record[key];
         
-        // Handle string values
+        // Handle string values (all values come as strings when dynamicTyping is false)
         if (typeof value === 'string') {
           const trimmedValue = value.trim();
           if (trimmedValue !== '') {
@@ -144,12 +146,15 @@ async function processImportJob(job: ConversionJob, workerIndex: number): Promis
                 // Safe to convert to number for INTEGER/SMALLINT columns
                 value = num;
               }
+            } else {
+              // Not a valid number, keep as string (might be text or other data)
+              value = trimmedValue;
             }
           } else {
             value = null; // Empty strings become null
           }
         } else if (typeof value === 'number') {
-          // PapaParse with dynamicTyping: true converts numeric strings to numbers
+          // Handle numbers (fallback in case dynamicTyping was enabled)
           // If the number exceeds INTEGER max, convert it back to string for BIGINT columns
           // PostgreSQL INTEGER max: 2147483647, BIGINT can handle much larger values
           if (value > 2147483647 || value < -2147483648) {
