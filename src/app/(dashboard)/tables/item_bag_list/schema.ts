@@ -30,6 +30,26 @@ const baseItemBagListSchema = z.object({
   adwProb_8: z.coerce.number().nullable(),
   aItem_9: z.coerce.number().nullable(),
   adwProb_9: z.coerce.number().nullable(),
+  aItem_10: z.coerce.number().nullable(),
+  adwProb_10: z.coerce.number().nullable(),
+  aItem_11: z.coerce.number().nullable(),
+  adwProb_11: z.coerce.number().nullable(),
+  aItem_12: z.coerce.number().nullable(),
+  adwProb_12: z.coerce.number().nullable(),
+  aItem_13: z.coerce.number().nullable(),
+  adwProb_13: z.coerce.number().nullable(),
+  aItem_14: z.coerce.number().nullable(),
+  adwProb_14: z.coerce.number().nullable(),
+  aItem_15: z.coerce.number().nullable(),
+  adwProb_15: z.coerce.number().nullable(),
+  aItem_16: z.coerce.number().nullable(),
+  adwProb_16: z.coerce.number().nullable(),
+  aItem_17: z.coerce.number().nullable(),
+  adwProb_17: z.coerce.number().nullable(),
+  aItem_18: z.coerce.number().nullable(),
+  adwProb_18: z.coerce.number().nullable(),
+  aItem_19: z.coerce.number().nullable(),
+  adwProb_19: z.coerce.number().nullable(),
 });
 
 export const itemBagListSchema = baseItemBagListSchema.extend({
@@ -50,7 +70,7 @@ export const columns = [
   { key: 'bEnchant_Able', label: 'Enchant Able', type: 'boolean' as const },
   { key: 'dwItemCount', label: 'Item Count', type: 'number' as const },
   { key: 'dwTotalProb', label: 'Total Probability', type: 'number' as const },
-  ...Array.from({ length: 10 }, (_, i) => [
+  ...Array.from({ length: 20 }, (_, i) => [
     { key: `aItem_${i}`, label: `Item ${i}`, type: 'number' as const },
     { key: `adwProb_${i}`, label: `Probability ${i}`, type: 'number' as const },
   ]).flat(),

@@ -12,6 +12,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, User, Mail, Lock, CreditCard } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { getBandwidthInfo } from "@/lib/bandwidth-tracker";
 
 interface UserProfile {
   id: string;
@@ -171,6 +172,7 @@ export function SettingsPage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [subscriptionPlans, setSubscriptionPlans] = useState<SubscriptionPlan[]>([]);
+  const [bandwidthInfo, setBandwidthInfo] = useState<{ used: number; limit: number } | null>(null);
   const [loadingPrices, setLoadingPrices] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPlanSelector, setShowPlanSelector] = useState(false);
@@ -239,6 +241,20 @@ export function SettingsPage() {
     fetchProfile();
   }, [fetchProfile]);
 
+  // Fetch bandwidth info when on subscription section
+  useEffect(() => {
+    const fetchBandwidth = async () => {
+      if (activeSection === 'subscription' && profile?.id) {
+        try {
+          const info = await getBandwidthInfo(profile.id);
+          setBandwidthInfo(info);
+        } catch (err) {
+          console.error('Error fetching bandwidth info:', err);
+        }
+      }
+    };
+    fetchBandwidth();
+  }, [activeSection, profile?.id]);
 
   useEffect(() => {
     if (activeSection === 'subscription') {
@@ -739,13 +755,21 @@ export function SettingsPage() {
                         <div className="rounded-lg border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 p-4">
                           <h4 className="font-semibold mb-3 text-gray-900 dark:text-white">Bandwidth Usage</h4>
                           {(() => {
-                            const used = profile?.current_month_bandwidth_used || 0;
-                            const isTrial = subscription.status === 'trialing';
-                            // If in trial, always use 50MB limit regardless of what's in the database
-                            const limit = isTrial 
-                              ? (50 * 1024 * 1024) // 50MB for trial
-                              : (profile?.monthly_bandwidth_limit || (50 * 1024 * 1024)); // Default to 50MB
-                            const usagePercent = limit > 0 ? (used / limit) * 100 : 0;
+                            // Always use bandwidthInfo from getBandwidthInfo() to match sidebar calculation
+                            // Don't show if bandwidthInfo hasn't loaded yet to avoid showing incorrect values
+                            if (!bandwidthInfo) {
+                              return (
+                                <div className="flex items-center justify-center py-4">
+                                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+                                </div>
+                              );
+                            }
+                            
+                            const used = bandwidthInfo.used;
+                            const limit = bandwidthInfo.limit;
+                            const usagePercent = limit > 0 ? Math.min((used / limit) * 100, 100) : 0;
+                            // Use profile.subscription_status to match the API endpoint logic
+                            const isTrial = profile?.subscription_status === 'trialing';
                             const isNearLimit = usagePercent >= 80;
                             
                             // Format based on size - use MB for small limits, GB for larger
@@ -802,7 +826,7 @@ export function SettingsPage() {
                                   ></div>
                                 </div>
                                 <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
-                                  {usagePercent.toFixed(1)}% used
+                                  {Math.round(usagePercent)}% used
                                 </p>
                               </div>
                             );

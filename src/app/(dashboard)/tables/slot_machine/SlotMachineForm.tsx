@@ -12,30 +12,32 @@ const slotMachineTabs = [
         id: "basic-info",
         title: "Basic Information",
         description: "Enter basic slot machine information",
-        columns: ["szfile_name", "wfirstwincoin"]
+        columns: ["wsznametext", "bactive"]
       }
     ]
   },
   {
-    id: "items",
-    label: "Items",
-    sections: Array.from({ length: 10 }, (_, i) => ({
-      id: `item-${i}`,
-      title: `Item ${i}`,
-      description: `Configure item ${i}`,
-      columns: [
-        `aitemtblidx_${i}`,
-        `bystack_${i}`,
-        `wquantity_${i}`
-      ]
-    }))
+    id: "details",
+    label: "Item Details",
+    sections: [
+      {
+        id: "item-details",
+        title: "Item Details",
+        description: "Configure slot machine item details",
+        columns: ["slotmachinetblidx", "cashitemtblidx", "bystackcount", "bypercent"]
+      }
+    ]
   }
 ];
 
 const slotMachineQuickViewSections = [
   {
     title: "Basic Information",
-    columns: ["tblidx", "dwname", "wsznametext", "bycoin", "bonoff", "bytype"]
+    columns: ["tblidx", "wsznametext", "bactive"]
+  },
+  {
+    title: "Item Details",
+    columns: ["slotmachinetblidx", "cashitemtblidx", "bystackcount", "bypercent"]
   }
 ];
 
@@ -48,18 +50,18 @@ const slotMachineQuickStats = [
   },
   { 
     label: 'Name', 
-    column: 'dwname',
+    column: 'wsznametext',
     formatValue: (value: unknown) => String(value ?? '—')
   },
   { 
-    label: 'Coin', 
-    column: 'bycoin',
+    label: 'Slot Machine ID', 
+    column: 'slotmachinetblidx',
     formatValue: (value: unknown) => String(value ?? '—'),
     color: 'blue'
   },
   { 
-    label: 'First Win Coin', 
-    column: 'wfirstwincoin',
+    label: 'Percent', 
+    column: 'bypercent',
     formatValue: (value: unknown) => String(value ?? '—'),
     color: 'purple'
   },
