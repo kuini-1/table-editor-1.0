@@ -8,8 +8,8 @@ import { createClient } from "@/lib/supabase/client";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState('rokuaso@gmail.com');
-  const [password, setPassword] = useState('xwqtyu12');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const { theme, setTheme } = useTheme();
   const supabase = createClient();
