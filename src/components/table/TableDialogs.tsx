@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { ModularForm, Column as ModularFormColumn } from "./ModularForm";
 import { cn } from "@/lib/utils";
-import { Upload, File as FileIcon, X } from "lucide-react";
+import { Upload, File as FileIcon, X, Download } from "lucide-react";
 import { toast } from "sonner";
 
 export interface Column {
@@ -402,6 +402,7 @@ export function ExportDialog({
   const [queuePosition, setQueuePosition] = useState<number>(0);
   const [estimatedWaitTime, setEstimatedWaitTime] = useState<number>(0);
   const [status, setStatus] = useState<'pending' | 'processing' | 'completed' | 'failed' | null>(null);
+  const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
 
   // Reset state when dialog opens/closes
   useEffect(() => {
@@ -411,6 +412,7 @@ export function ExportDialog({
       setQueuePosition(0);
       setEstimatedWaitTime(0);
       setStatus(null);
+      setDownloadUrl(null);
     }
   }, [isOpen]);
 
@@ -431,13 +433,11 @@ export function ExportDialog({
         setStatus(data.status);
 
         if (data.status === 'completed' && data.downloadUrl) {
-          // Use File System Access API to let user choose save location
-          await saveFileToUserChosenLocation(data.downloadUrl, `${tableName}.rdf`);
-
+          // Store download URL and show download button
+          // This ensures the file picker is triggered by a fresh user gesture
+          setDownloadUrl(data.downloadUrl);
           setIsLoading(false);
-          toast.success('Data exported successfully');
-          onSuccess?.();
-          onClose();
+          setStatus('completed');
         } else if (data.status === 'failed') {
           setIsLoading(false);
           setError(data.error || 'Export failed');
@@ -456,17 +456,26 @@ export function ExportDialog({
 
   // Helper function to save file using File System Access API or fallback
   const saveFileToUserChosenLocation = async (url: string, filename: string) => {
-    try {
-      // Check if File System Access API is available (Chrome, Edge, etc.)
-      if ('showSaveFilePicker' in window) {
-        // Fetch the file
+    // Check if File System Access API is available and we're in a secure context
+    const isSecureContext = window.isSecureContext;
+    const hasFileSystemAccess = 'showSaveFilePicker' in window;
+    
+    console.log('File save context:', { isSecureContext, hasFileSystemAccess, userAgent: navigator.userAgent });
+
+    // Try to use File System Access API if available and in secure context
+    if (hasFileSystemAccess && isSecureContext) {
+      try {
+        // Fetch the file first
+        console.log('Fetching file from:', url);
         const response = await fetch(url);
         if (!response.ok) {
-          throw new Error('Failed to fetch file');
+          throw new Error(`Failed to fetch file: ${response.status} ${response.statusText}`);
         }
         const blob = await response.blob();
+        console.log('File fetched successfully, size:', blob.size);
 
-        // Show save file picker
+        // Show save file picker - this allows user to choose folder and filename
+        console.log('Showing save file picker...');
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const fileHandle = await (window as any).showSaveFilePicker({
           suggestedName: filename,
@@ -474,35 +483,64 @@ export function ExportDialog({
             description: 'RDF Files',
             accept: {
               'application/octet-stream': ['.rdf'],
+              'application/x-rdf': ['.rdf'],
             },
           }],
         });
 
-        // Write the file
+        console.log('File handle obtained, writing file...');
+        // Write the file to the user-selected location
         const writable = await fileHandle.createWritable();
         await writable.write(blob);
         await writable.close();
-      } else {
-        // Fallback for browsers that don't support File System Access API
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-      }
-    } catch (error: unknown) {
-      // If user cancels the file picker, don't show an error
-      if (error && typeof error === 'object' && 'name' in error && error.name === 'AbortError') {
+        console.log('File saved successfully to user-selected location');
         return;
+      } catch (error: unknown) {
+        // If user cancels the file picker, don't show an error
+        if (error && typeof error === 'object' && 'name' in error && error.name === 'AbortError') {
+          console.log('User cancelled file save dialog');
+          return;
+        }
+        // Log the error for debugging
+        console.error('File System Access API failed, falling back to download:', error);
+        // Fall through to fallback
       }
-      // Fallback to traditional download if File System Access API fails
+    } else {
+      // Log why we're not using File System Access API
+      if (!isSecureContext) {
+        console.warn('File System Access API requires HTTPS. Using fallback download method.');
+      } else if (!hasFileSystemAccess) {
+        console.warn('File System Access API not supported in this browser. Using fallback download method.');
+        // Show a helpful message for Safari/Firefox users
+        const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+        const isFirefox = /firefox/i.test(navigator.userAgent);
+        if (isSafari || isFirefox) {
+          toast.info(
+            isSafari 
+              ? 'For folder selection, please use Chrome or Edge on Mac'
+              : 'For folder selection, please use Chrome or Edge'
+          );
+        }
+      }
+    }
+
+    // Fallback: Use traditional download (browser's default download location)
+    // Note: This doesn't allow folder selection, but works in all browsers
+    console.log('Using fallback download method');
+    try {
       const a = document.createElement('a');
       a.href = url;
       a.download = filename;
+      a.style.display = 'none';
       document.body.appendChild(a);
       a.click();
-      document.body.removeChild(a);
+      // Clean up after a short delay
+      setTimeout(() => {
+        document.body.removeChild(a);
+      }, 100);
+    } catch (fallbackError) {
+      console.error('Fallback download also failed:', fallbackError);
+      toast.error('Failed to download file. Please try right-clicking the link and selecting "Save As".');
     }
   };
 
@@ -529,11 +567,9 @@ export function ExportDialog({
 
       // Check if job was completed immediately (unlikely but possible)
       if (data.status === 'completed' && data.downloadUrl) {
-        await saveFileToUserChosenLocation(data.downloadUrl, `${tableName}.rdf`);
+        setDownloadUrl(data.downloadUrl);
         setIsLoading(false);
-        toast.success('Data exported successfully');
-        onSuccess?.();
-        onClose();
+        setStatus('completed');
       } else {
         // Job is queued or processing
         setJobId(data.jobId);
@@ -559,7 +595,14 @@ export function ExportDialog({
         <DialogHeader>
           <DialogTitle>Export Table</DialogTitle>
           <DialogDescription className="text-muted-foreground">
-            Export your table data to an RDF file. You&apos;ll be able to choose where to save it on your computer.
+            Export your table data to an RDF file.
+            {typeof window !== 'undefined' && 'showSaveFilePicker' in window && window.isSecureContext ? (
+              <span className="block mt-1 text-xs">You&apos;ll be able to choose where to save it on your computer.</span>
+            ) : (
+              <span className="block mt-1 text-xs text-amber-600 dark:text-amber-400">
+                For folder selection, use Chrome or Edge browser. Other browsers will save to your default download folder.
+              </span>
+            )}
           </DialogDescription>
         </DialogHeader>
 
@@ -593,16 +636,33 @@ export function ExportDialog({
         </div>
 
         <DialogFooter className="gap-2 sm:gap-0">
-          <Button variant="outline" onClick={onClose} disabled={isLoading}>
-            Cancel
+          <Button variant="outline" onClick={onClose} disabled={isLoading && !downloadUrl}>
+            {downloadUrl ? "Close" : "Cancel"}
           </Button>
-          <Button 
-            onClick={handleExport}
-            className="bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 !text-white dark:!text-white"
-            disabled={isLoading || !!error}
-          >
-            {isLoading ? "Exporting..." : "Export"}
-          </Button>
+          {downloadUrl ? (
+            <Button 
+              onClick={async () => {
+                if (downloadUrl) {
+                  await saveFileToUserChosenLocation(downloadUrl, `${tableName}.rdf`);
+                  toast.success('File saved successfully');
+                  onSuccess?.();
+                  onClose();
+                }
+              }}
+              className="bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600 !text-white dark:!text-white"
+            >
+              <Download className="mr-2 h-4 w-4" />
+              Choose Save Location
+            </Button>
+          ) : (
+            <Button 
+              onClick={handleExport}
+              className="bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 !text-white dark:!text-white"
+              disabled={isLoading || !!error}
+            >
+              {isLoading ? "Exporting..." : "Export"}
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
