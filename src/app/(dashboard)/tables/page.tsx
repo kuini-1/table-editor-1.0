@@ -11,8 +11,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ImportDialog } from '@/components/table/TableDialogs';
-import { toast } from 'sonner';
+import { ImportDialog, ExportDialog } from '@/components/table/TableDialogs';
 import { useStore } from '@/lib/store';
 import { TableListSkeleton } from '@/components/ui/TableListSkeleton';
 import { getFolderNameForType } from '@/lib/tableTypeMapping';
@@ -186,6 +185,7 @@ export default function TablesPage() {
   const [hasMoreLogs, setHasMoreLogs] = useState(true);
   const activityLogRef = useRef<HTMLDivElement>(null);
   const [importDialogTable, setImportDialogTable] = useState<{ id: string; name: string } | null>(null);
+  const [exportDialogTable, setExportDialogTable] = useState<{ id: string; name: string } | null>(null);
 
   const {
     userProfile,
@@ -791,77 +791,7 @@ export default function TablesPage() {
                               )}
                               <TableRowMenu 
                                 onImport={() => setImportDialogTable({ id: table.id, name: getTableNameFromType(table.type) })}
-                                onExport={() => {
-                                  const tableName = getTableNameFromType(table.type);
-                                  const exportHandler = async () => {
-                                    try {
-                                      const response = await fetch(`/api/export?table=${tableName}&table_id=${table.id}`);
-                                      
-                                      if (!response.ok) {
-                                        const errorData = await response.json();
-                                        const errorMessage = errorData.details || errorData.error || 'Export failed';
-                                        throw new Error(errorMessage);
-                                      }
-
-                                      const data = await response.json();
-
-                                      // Check if job was completed immediately
-                                      if (data.status === 'completed' && data.downloadUrl) {
-                                        const a = document.createElement('a');
-                                        a.href = data.downloadUrl;
-                                        a.download = `${tableName}.rdf`;
-                                        document.body.appendChild(a);
-                                        a.click();
-                                        document.body.removeChild(a);
-                                        toast.success('Data exported successfully');
-                                      } else {
-                                        // Job is queued or processing - poll for status
-                                        const pollStatus = async (jobId: string) => {
-                                          const interval = setInterval(async () => {
-                                            try {
-                                              const statusResponse = await fetch(`/api/conversion/status?jobId=${jobId}`);
-                                              if (!statusResponse.ok) {
-                                                throw new Error('Failed to get job status');
-                                              }
-
-                                              const statusData = await statusResponse.json();
-
-                                              if (statusData.status === 'completed' && statusData.downloadUrl) {
-                                                const a = document.createElement('a');
-                                                a.href = statusData.downloadUrl;
-                                                a.download = `${tableName}.rdf`;
-                                                document.body.appendChild(a);
-                                                a.click();
-                                                document.body.removeChild(a);
-                                                toast.success('Data exported successfully');
-                                                clearInterval(interval);
-                                              } else if (statusData.status === 'failed') {
-                                                toast.error(statusData.error || 'Export failed');
-                                                clearInterval(interval);
-                                              }
-                                            } catch (err) {
-                                              console.error('Error polling status:', err);
-                                              clearInterval(interval);
-                                            }
-                                          }, 1500);
-                                        };
-                                        if (data.jobId) {
-                                          if (data.position > 0) {
-                                            toast.info(`Export queued. Position: ${data.position}`);
-                                          } else {
-                                            toast.info('Export processing...');
-                                          }
-                                          pollStatus(data.jobId);
-                                        }
-                                      }
-                                    } catch (error: object | unknown) {
-                                      const errorMessage = error instanceof Error ? error.message : 'Failed to export data';
-                                      toast.error(errorMessage);
-                                      console.error('Export error:', error);
-                                    }
-                                  };
-                                  exportHandler();
-                                }}
+                                onExport={() => setExportDialogTable({ id: table.id, name: getTableNameFromType(table.type) })}
                               />
                             </div>
                           </td>
@@ -1070,6 +1000,16 @@ export default function TablesPage() {
               }}
               tableId={importDialogTable.id}
               tableName={importDialogTable.name}
+            />
+          )}
+
+          {/* Export Dialog */}
+          {exportDialogTable && (
+            <ExportDialog
+              isOpen={!!exportDialogTable}
+              onClose={() => setExportDialogTable(null)}
+              tableId={exportDialogTable.id}
+              tableName={exportDialogTable.name}
             />
           )}
         </div>

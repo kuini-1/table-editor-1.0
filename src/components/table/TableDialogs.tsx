@@ -382,16 +382,41 @@ export function FormDialog<T extends BaseFormData>({
 }
 
 export interface ExportDialogProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSuccess?: () => void;
   tableId: string;
   tableName: string;
 }
 
-export function useExport({ tableId, tableName }: ExportDialogProps) {
+export function ExportDialog({ 
+  isOpen, 
+  onClose, 
+  onSuccess,
+  tableId,
+  tableName 
+}: ExportDialogProps) {
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [jobId, setJobId] = useState<string | null>(null);
+  const [queuePosition, setQueuePosition] = useState<number>(0);
+  const [estimatedWaitTime, setEstimatedWaitTime] = useState<number>(0);
+  const [status, setStatus] = useState<'pending' | 'processing' | 'completed' | 'failed' | null>(null);
 
-  // Poll job status for export
+  // Reset state when dialog opens/closes
   useEffect(() => {
-    if (!jobId) return;
+    if (!isOpen) {
+      setError(null);
+      setJobId(null);
+      setQueuePosition(0);
+      setEstimatedWaitTime(0);
+      setStatus(null);
+    }
+  }, [isOpen]);
+
+  // Poll job status
+  useEffect(() => {
+    if (!jobId || !isOpen) return;
 
     const pollStatus = async () => {
       try {
@@ -401,23 +426,23 @@ export function useExport({ tableId, tableName }: ExportDialogProps) {
         }
 
         const data = await response.json();
+        setQueuePosition(data.position || 0);
+        setEstimatedWaitTime(data.estimatedWaitTime || 0);
+        setStatus(data.status);
 
         if (data.status === 'completed' && data.downloadUrl) {
-          // Download the file
-          const a = document.createElement('a');
-          a.href = data.downloadUrl;
-          a.download = `${tableName}.rdf`;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
+          // Use File System Access API to let user choose save location
+          await saveFileToUserChosenLocation(data.downloadUrl, `${tableName}.rdf`);
 
+          setIsLoading(false);
           toast.success('Data exported successfully');
-          setJobId(null);
+          onSuccess?.();
+          onClose();
         } else if (data.status === 'failed') {
+          setIsLoading(false);
+          setError(data.error || 'Export failed');
           toast.error(data.error || 'Export failed');
-          setJobId(null);
         }
-        // If pending or processing, continue polling
       } catch (err) {
         console.error('Error polling status:', err);
       }
@@ -427,11 +452,72 @@ export function useExport({ tableId, tableName }: ExportDialogProps) {
     pollStatus(); // Initial poll
 
     return () => clearInterval(interval);
-  }, [jobId, tableName]);
+  }, [jobId, isOpen, tableName, onSuccess, onClose]);
+
+  // Helper function to save file using File System Access API or fallback
+  const saveFileToUserChosenLocation = async (url: string, filename: string) => {
+    try {
+      // Check if File System Access API is available (Chrome, Edge, etc.)
+      if ('showSaveFilePicker' in window) {
+        // Fetch the file
+        const response = await fetch(url);
+        if (!response.ok) {
+          throw new Error('Failed to fetch file');
+        }
+        const blob = await response.blob();
+
+        // Show save file picker
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const fileHandle = await (window as any).showSaveFilePicker({
+          suggestedName: filename,
+          types: [{
+            description: 'RDF Files',
+            accept: {
+              'application/octet-stream': ['.rdf'],
+            },
+          }],
+        });
+
+        // Write the file
+        const writable = await fileHandle.createWritable();
+        await writable.write(blob);
+        await writable.close();
+      } else {
+        // Fallback for browsers that don't support File System Access API
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      }
+    } catch (error: unknown) {
+      // If user cancels the file picker, don't show an error
+      if (error && typeof error === 'object' && 'name' in error && error.name === 'AbortError') {
+        return;
+      }
+      // Fallback to traditional download if File System Access API fails
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+  };
 
   const handleExport = async () => {
     try {
-      const response = await fetch(`/api/export?table=${tableName}&table_id=${tableId}`);
+      setIsLoading(true);
+      setError(null);
+
+      // Build query params
+      const params = new URLSearchParams({
+        table: tableName,
+        table_id: tableId,
+      });
+
+      const response = await fetch(`/api/export?${params.toString()}`);
       
       if (!response.ok) {
         const errorData = await response.json();
@@ -443,16 +529,15 @@ export function useExport({ tableId, tableName }: ExportDialogProps) {
 
       // Check if job was completed immediately (unlikely but possible)
       if (data.status === 'completed' && data.downloadUrl) {
-        const a = document.createElement('a');
-        a.href = data.downloadUrl;
-        a.download = `${tableName}.rdf`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
+        await saveFileToUserChosenLocation(data.downloadUrl, `${tableName}.rdf`);
+        setIsLoading(false);
         toast.success('Data exported successfully');
+        onSuccess?.();
+        onClose();
       } else {
         // Job is queued or processing
         setJobId(data.jobId);
+        setStatus(data.status || 'pending');
         if (data.position > 0) {
           toast.info(`Export queued. Position: ${data.position}`);
         } else {
@@ -461,10 +546,90 @@ export function useExport({ tableId, tableName }: ExportDialogProps) {
       }
     } catch (error: object | unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to export data';
+      setError(errorMessage);
+      setIsLoading(false);
       toast.error(errorMessage);
       setJobId(null);
     }
   };
 
-  return handleExport;
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Export Table</DialogTitle>
+          <DialogDescription className="text-muted-foreground">
+            Export your table data to an RDF file. You&apos;ll be able to choose where to save it on your computer.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="grid gap-4 py-4">
+          {error && (
+            <p className="text-sm text-destructive">{error}</p>
+          )}
+          
+          {jobId && status && status !== 'completed' && status !== 'failed' && (
+            <div className="space-y-2 p-4 bg-muted/50 rounded-lg">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Status:</span>
+                <span className="text-sm capitalize">{status}</span>
+              </div>
+              {queuePosition > 0 && (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Position in queue:</span>
+                  <span className="text-sm font-medium">{queuePosition}</span>
+                </div>
+              )}
+              {estimatedWaitTime > 0 && (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Estimated wait:</span>
+                  <span className="text-sm font-medium">
+                    {Math.ceil(estimatedWaitTime / 1000)}s
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        <DialogFooter className="gap-2 sm:gap-0">
+          <Button variant="outline" onClick={onClose} disabled={isLoading}>
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleExport}
+            className="bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 !text-white dark:!text-white"
+            disabled={isLoading || !!error}
+          >
+            {isLoading ? "Exporting..." : "Export"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+export interface ExportDialogPropsHook {
+  tableId: string;
+  tableName: string;
+}
+
+export function useExport({ tableId, tableName }: ExportDialogPropsHook) {
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+  const openDialog = () => {
+    setIsDialogOpen(true);
+  };
+
+  return {
+    openDialog,
+    ExportDialog: (
+      <ExportDialog
+        isOpen={isDialogOpen}
+        onClose={() => setIsDialogOpen(false)}
+        tableId={tableId}
+        tableName={tableName}
+      />
+    ),
+  };
 } 

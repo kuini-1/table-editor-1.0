@@ -9,7 +9,7 @@ import { useEditingIndicators } from '@/hooks/useEditingIndicators';
 import { TableHeader } from '@/components/table/TableHeader';
 import { DataTable } from '@/components/table/DataTable';
 import { TablePagination } from '@/components/table/TablePagination';
-import { DeleteDialog, ImportDialog, useExport } from '@/components/table/TableDialogs';
+import { DeleteDialog, ImportDialog, ExportDialog } from '@/components/table/TableDialogs';
 import { EditConflictWarning } from '@/components/table/EditConflictWarning';
 import { EditingIndicator } from '@/components/table/EditingIndicator';
 import {
@@ -53,6 +53,7 @@ export default function HlsItemPage() {
   const [selectedRow, setSelectedRow] = useState<HlsItemRow | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+  const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | undefined>();
 
   const supabase = createClient();
@@ -110,8 +111,6 @@ export default function HlsItemPage() {
     tableId,
   });
 
-  const handleExport = useExport({ tableId, tableName });
-
   if (loading) {
     return <DataTableSkeleton columnCount={columns.length} />;
   }
@@ -148,7 +147,7 @@ export default function HlsItemPage() {
           setIsFormOpen(true);
         }}
         onImport={() => setIsImportDialogOpen(true)}
-        onExport={handleExport}
+        onExport={() => setIsExportDialogOpen(true)}
         onRefresh={refreshData}
         onAddFilter={handleAddFilter}
         onRemoveFilter={handleRemoveFilter}
@@ -290,6 +289,13 @@ export default function HlsItemPage() {
         tableId={tableId}
         tableName="table_hls_item_data"
       />
-    </div>
+
+      <ExportDialog
+        isOpen={isExportDialogOpen}
+        onClose={() => setIsExportDialogOpen(false)}
+        tableId={tableId}
+        tableName={tableName}
+      />
+      </div>
   );
 } 

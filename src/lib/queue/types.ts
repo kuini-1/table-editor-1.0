@@ -22,6 +22,7 @@ export interface ConversionJob {
   filePath?: string; // For import: RDF file path, For export: CSV file path
   outputDir?: string; // User directory for output
   downloadUrl?: string; // For export: download URL after completion
+  folder?: string; // Optional folder path for organizing exports
 }
 
 export interface ConversionJobResult {

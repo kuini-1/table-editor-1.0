@@ -8,7 +8,7 @@ import WorldForm from './WorldForm';
 import { DataTable } from '@/components/table/DataTable';
 import { TableHeader } from '@/components/table/TableHeader';
 import { TablePagination } from '@/components/table/TablePagination';
-import { DeleteDialog, ImportDialog, useExport } from '@/components/table/TableDialogs';
+import { DeleteDialog, ImportDialog, ExportDialog } from '@/components/table/TableDialogs';
 import { useEditingSession } from '@/hooks/useEditingSession';
 import { useEditingIndicators } from '@/hooks/useEditingIndicators';
 import { EditConflictWarning } from '@/components/table/EditConflictWarning';
@@ -70,6 +70,7 @@ export default function WorldPage() {
   const [selectedRow, setSelectedRow] = useState<WorldData | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+  const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | undefined>();
 
   const supabase = createClient();
@@ -133,8 +134,6 @@ export default function WorldPage() {
     tableId,
   });
 
-  const handleExport = useExport({ tableId, tableName });
-
   if (loading) {
     return <DataTableSkeleton columnCount={columns.length} />;
   }
@@ -171,7 +170,7 @@ export default function WorldPage() {
           setIsFormOpen(true);
         }}
         onImport={() => setIsImportDialogOpen(true)}
-        onExport={handleExport}
+        onExport={() => setIsExportDialogOpen(true)}
         onRefresh={refreshData}
         onBulkDelete={() => {
           if (selectedRows.size > 0) {
@@ -289,6 +288,13 @@ export default function WorldPage() {
         tableId={tableId}
         tableName={tableName}
       />
-    </div>
+
+      <ExportDialog
+        isOpen={isExportDialogOpen}
+        onClose={() => setIsExportDialogOpen(false)}
+        tableId={tableId}
+        tableName={tableName}
+      />
+      </div>
   );
 } 

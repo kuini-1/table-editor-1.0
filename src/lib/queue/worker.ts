@@ -375,7 +375,17 @@ async function processExportJob(job: ConversionJob, workerIndex: number): Promis
   
   // Generate timestamp to create unique folder and prevent caching issues
   const timestamp = Date.now();
-  const storagePath = `${job.userId}/${timestamp}/${tableName}.rdf`;
+  
+  // Build storage path with optional folder
+  let storagePath: string;
+  if (job.folder) {
+    // Use folder structure: userId/folder/timestamp/tableName.rdf
+    const cleanedFolder = job.folder.trim().replace(/^\/+|\/+$/g, '');
+    storagePath = `${job.userId}/${cleanedFolder}/${timestamp}/${tableName}.rdf`;
+  } else {
+    // Default structure: userId/timestamp/tableName.rdf
+    storagePath = `${job.userId}/${timestamp}/${tableName}.rdf`;
+  }
 
   try {
     // Execute conversion: Convert.exe tableName userId rdf

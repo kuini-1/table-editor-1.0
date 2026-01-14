@@ -15,7 +15,7 @@ import { useEditingIndicators } from '@/hooks/useEditingIndicators';
 import { TableHeader } from '@/components/table/TableHeader';
 import { TablePagination } from '@/components/table/TablePagination';
 import { DataTable } from "@/components/table/DataTable";
-import { DeleteDialog, ImportDialog, useExport } from '@/components/table/TableDialogs';
+import { DeleteDialog, ImportDialog, ExportDialog } from '@/components/table/TableDialogs';
 import { EditConflictWarning } from '@/components/table/EditConflictWarning';
 import { EditingIndicator } from '@/components/table/EditingIndicator';
 import { useStore } from "@/lib/store";
@@ -75,6 +75,7 @@ export default function ItemOptionPage() {
   const [selectedRow, setSelectedRow] = useState<ItemOptionRow | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+  const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | undefined>();
 
   const supabase = createClient();
@@ -136,8 +137,6 @@ export default function ItemOptionPage() {
     tableId,
   });
 
-  const handleExport = useExport({ tableId, tableName });
-
   if (loading) {
     return <DataTableSkeleton columnCount={columns.length} />;
   }
@@ -174,7 +173,7 @@ export default function ItemOptionPage() {
           setIsFormOpen(true);
         }}
         onImport={() => setIsImportDialogOpen(true)}
-        onExport={handleExport}
+        onExport={() => setIsExportDialogOpen(true)}
         onRefresh={refreshData}
         onBulkDelete={() => {
           if (selectedRows.size > 0) {
@@ -294,6 +293,13 @@ export default function ItemOptionPage() {
         }}
         itemName={selectedRow?.wszOption_Name || "this item option"}
       />
-    </div>
+
+      <ExportDialog
+        isOpen={isExportDialogOpen}
+        onClose={() => setIsExportDialogOpen(false)}
+        tableId={tableId}
+        tableName={tableName}
+      />
+      </div>
   );
 } 

@@ -75,7 +75,8 @@ class ConversionQueue {
     tableId: string,
     type: ConversionJobType,
     filePath?: string,
-    outputDir?: string
+    outputDir?: string,
+    folder?: string
   ): ConversionJob {
     // Check if queue is full
     if (this.queue.length >= MAX_QUEUE_SIZE) {
@@ -93,6 +94,7 @@ class ConversionQueue {
       position: this.queue.length + 1,
       filePath,
       outputDir,
+      folder,
     };
 
     this.queue.push(job);

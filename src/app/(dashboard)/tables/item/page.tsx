@@ -14,7 +14,7 @@ import { useEditingSession } from "@/hooks/useEditingSession";
 import { useEditingIndicators } from "@/hooks/useEditingIndicators";
 import { TableHeader } from '@/components/table/TableHeader';
 import { TablePagination } from '@/components/table/TablePagination';
-import { DeleteDialog, ImportDialog, useExport } from '@/components/table/TableDialogs';
+import { DeleteDialog, ImportDialog, ExportDialog } from '@/components/table/TableDialogs';
 import { EditConflictWarning } from '@/components/table/EditConflictWarning';
 import { EditingIndicator } from '@/components/table/EditingIndicator';
 import { useStore } from "@/lib/store";
@@ -83,6 +83,7 @@ export default function ItemTablePage() {
   const [selectedRow, setSelectedRow] = useState<ItemTableRow | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+  const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | undefined>();
 
   const supabase = createClient();
@@ -142,7 +143,6 @@ export default function ItemTablePage() {
     setIsImportDialogOpen(true);
   }, []);
 
-  const handleExport = useExport({ tableId, tableName });
 
   const handleFormSubmit = useMemo(() => (data: ItemTableFormData) => {
     if (formMode === 'add') {
@@ -187,7 +187,7 @@ export default function ItemTablePage() {
         selectedCount={selectedRows.size}
         onAddRow={handleAdd}
         onImport={handleImport}
-        onExport={handleExport}
+        onExport={() => setIsExportDialogOpen(true)}
         onRefresh={refreshData}
         onBulkDelete={handleBulkDelete}
         onAddFilter={handleAddFilter}
@@ -277,6 +277,13 @@ export default function ItemTablePage() {
         }}
         tableName={tableName}
         tableId={tableId}
+      />
+
+      <ExportDialog
+        isOpen={isExportDialogOpen}
+        onClose={() => setIsExportDialogOpen(false)}
+        tableId={tableId}
+        tableName={tableName}
       />
     </div>
   );

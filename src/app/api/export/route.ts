@@ -90,9 +90,27 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const table = searchParams.get('table');
   const tableId = searchParams.get('table_id');
+  const folder = searchParams.get('folder') || '';
 
   if (!table || !tableId) {
     return NextResponse.json({ error: 'Missing required parameters' }, { status: 400 });
+  }
+
+  // Validate folder name
+  if (folder) {
+    const cleanedFolder = folder.trim().replace(/^\/+|\/+$/g, '');
+    if (cleanedFolder && !/^[a-zA-Z0-9\s_\-/]+$/.test(cleanedFolder)) {
+      return NextResponse.json({ 
+        error: 'Invalid folder name',
+        details: 'Folder name can only contain letters, numbers, spaces, hyphens, underscores, and forward slashes'
+      }, { status: 400 });
+    }
+    if (cleanedFolder.includes('..')) {
+      return NextResponse.json({ 
+        error: 'Invalid folder path',
+        details: 'Path traversal is not allowed'
+      }, { status: 400 });
+    }
   }
 
   try {
@@ -216,18 +234,20 @@ export async function GET(req: Request) {
       }, { status: 500 });
     }
 
-    // Add job to queue
+    // Add job to queue with folder parameter
     let job;
     try {
+      const cleanedFolder = folder.trim().replace(/^\/+|\/+$/g, '');
       job = conversionQueue.addJob(
         user.id,
         table,
         tableId,
         'export',
         csvPath,
-        userDir
+        userDir,
+        cleanedFolder || undefined // Pass folder if provided
       );
-      console.log('Job added to queue:', job.id);
+      console.log('Job added to queue:', job.id, cleanedFolder ? `folder: ${cleanedFolder}` : '');
     } catch (queueError: object | unknown) {
       console.error('Failed to add job to queue:', queueError);
       // Clean up files
