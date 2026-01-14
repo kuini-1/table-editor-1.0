@@ -397,6 +397,7 @@ export function ExportDialog({
   tableName 
 }: ExportDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [jobId, setJobId] = useState<string | null>(null);
   const [queuePosition, setQueuePosition] = useState<number>(0);
@@ -413,6 +414,7 @@ export function ExportDialog({
       setEstimatedWaitTime(0);
       setStatus(null);
       setDownloadUrl(null);
+      setIsSaving(false);
     }
   }, [isOpen]);
 
@@ -454,17 +456,36 @@ export function ExportDialog({
     return () => clearInterval(interval);
   }, [jobId, isOpen, tableName, onSuccess, onClose]);
 
+  // Browser detection helper
+  const detectBrowser = () => {
+    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+    const isFirefox = /firefox/i.test(navigator.userAgent);
+    const isChrome = /chrome/i.test(navigator.userAgent) && !/edg/i.test(navigator.userAgent);
+    const isEdge = /edg/i.test(navigator.userAgent);
+    return { isSafari, isFirefox, isChrome, isEdge };
+  };
+
   // Helper function to save file using File System Access API or fallback
   const saveFileToUserChosenLocation = async (url: string, filename: string) => {
     // Check if File System Access API is available and we're in a secure context
     const isSecureContext = window.isSecureContext;
     const hasFileSystemAccess = 'showSaveFilePicker' in window;
+    const browser = detectBrowser();
     
-    console.log('File save context:', { isSecureContext, hasFileSystemAccess, userAgent: navigator.userAgent });
+    console.log('File save context:', { 
+      isSecureContext, 
+      hasFileSystemAccess, 
+      browser,
+      userAgent: navigator.userAgent 
+    });
 
     // Try to use File System Access API if available and in secure context
     if (hasFileSystemAccess && isSecureContext) {
       try {
+        setIsLoading(true);
+        
+        setIsSaving(true);
+        
         // Fetch the file first
         console.log('Fetching file from:', url);
         const response = await fetch(url);
@@ -475,9 +496,9 @@ export function ExportDialog({
         console.log('File fetched successfully, size:', blob.size);
 
         // Show save file picker - this allows user to choose folder and filename
+        // This MUST be called directly from a user gesture (button click)
         console.log('Showing save file picker...');
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const fileHandle = await (window as any).showSaveFilePicker({
+        const fileHandle = await window.showSaveFilePicker({
           suggestedName: filename,
           types: [{
             description: 'RDF Files',
@@ -494,32 +515,52 @@ export function ExportDialog({
         await writable.write(blob);
         await writable.close();
         console.log('File saved successfully to user-selected location');
-        return;
+        setIsSaving(false);
+        return true; // Success
       } catch (error: unknown) {
+        setIsSaving(false);
+        
         // If user cancels the file picker, don't show an error
         if (error && typeof error === 'object' && 'name' in error && error.name === 'AbortError') {
           console.log('User cancelled file save dialog');
-          return;
+          return false; // User cancelled
         }
-        // Log the error for debugging
-        console.error('File System Access API failed, falling back to download:', error);
+        
+        // Log specific error types for debugging
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        const errorName = error && typeof error === 'object' && 'name' in error ? error.name : 'Unknown';
+        console.error('File System Access API failed:', { 
+          error: errorMessage, 
+          name: errorName,
+          errorObject: error 
+        });
+        
+        // Show user-friendly error message
+        if (errorName === 'SecurityError') {
+          toast.error('Security error: File System Access API requires HTTPS and user interaction.');
+        } else if (errorName === 'NotAllowedError') {
+          toast.error('Permission denied: Please allow file access when prompted.');
+        } else {
+          toast.error(`Failed to save file: ${errorMessage}`);
+        }
+        
         // Fall through to fallback
       }
     } else {
       // Log why we're not using File System Access API
       if (!isSecureContext) {
         console.warn('File System Access API requires HTTPS. Using fallback download method.');
+        toast.info('For folder selection, please use HTTPS. Using default download location.');
       } else if (!hasFileSystemAccess) {
         console.warn('File System Access API not supported in this browser. Using fallback download method.');
-        // Show a helpful message for Safari/Firefox users
-        const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-        const isFirefox = /firefox/i.test(navigator.userAgent);
-        if (isSafari || isFirefox) {
+        
+        // Show browser-specific helpful messages
+        if (browser.isSafari) {
           toast.info(
-            isSafari 
-              ? 'For folder selection, please use Chrome or Edge on Mac'
-              : 'For folder selection, please use Chrome or Edge'
+            'Safari doesn\'t support folder selection. Use Chrome or Edge, or configure Safari: Preferences > General > File download location > "Ask for each download"'
           );
+        } else if (browser.isFirefox) {
+          toast.info('Firefox doesn\'t support folder selection. Please use Chrome or Edge for this feature.');
         }
       }
     }
@@ -528,6 +569,7 @@ export function ExportDialog({
     // Note: This doesn't allow folder selection, but works in all browsers
     console.log('Using fallback download method');
     try {
+      setIsSaving(true);
       const a = document.createElement('a');
       a.href = url;
       a.download = filename;
@@ -537,10 +579,14 @@ export function ExportDialog({
       // Clean up after a short delay
       setTimeout(() => {
         document.body.removeChild(a);
+        setIsSaving(false);
       }, 100);
+      return true;
     } catch (fallbackError) {
+      setIsSaving(false);
       console.error('Fallback download also failed:', fallbackError);
       toast.error('Failed to download file. Please try right-clicking the link and selecting "Save As".');
+      return false;
     }
   };
 
@@ -596,19 +642,60 @@ export function ExportDialog({
           <DialogTitle>Export Table</DialogTitle>
           <DialogDescription className="text-muted-foreground">
             Export your table data to an RDF file.
-            {typeof window !== 'undefined' && 'showSaveFilePicker' in window && window.isSecureContext ? (
-              <span className="block mt-1 text-xs">You&apos;ll be able to choose where to save it on your computer.</span>
-            ) : (
-              <span className="block mt-1 text-xs text-amber-600 dark:text-amber-400">
-                For folder selection, use Chrome or Edge browser. Other browsers will save to your default download folder.
-              </span>
-            )}
+            {(() => {
+              const browser = typeof window !== 'undefined' ? detectBrowser() : { isSafari: false, isFirefox: false, isChrome: false, isEdge: false };
+              const hasFileSystemAccess = typeof window !== 'undefined' && 'showSaveFilePicker' in window;
+              const isSecureContext = typeof window !== 'undefined' && window.isSecureContext;
+              
+              if (hasFileSystemAccess && isSecureContext) {
+                return (
+                  <span className="block mt-1 text-xs text-green-600 dark:text-green-400">
+                    You&apos;ll be able to choose where to save it on your computer.
+                  </span>
+                );
+              } else if (browser.isSafari) {
+                return (
+                  <span className="block mt-1 text-xs text-amber-600 dark:text-amber-400">
+                    Safari doesn&apos;t support folder selection. Use Chrome or Edge, or configure Safari: Preferences &gt; General &gt; File download location &gt; &quot;Ask for each download&quot;
+                  </span>
+                );
+              } else if (browser.isFirefox) {
+                return (
+                  <span className="block mt-1 text-xs text-amber-600 dark:text-amber-400">
+                    Firefox doesn&apos;t support folder selection. Please use Chrome or Edge for this feature.
+                  </span>
+                );
+              } else if (!isSecureContext) {
+                return (
+                  <span className="block mt-1 text-xs text-amber-600 dark:text-amber-400">
+                    Folder selection requires HTTPS. Using default download location.
+                  </span>
+                );
+              } else {
+                return (
+                  <span className="block mt-1 text-xs text-amber-600 dark:text-amber-400">
+                    For folder selection, use Chrome or Edge browser. Other browsers will save to your default download folder.
+                  </span>
+                );
+              }
+            })()}
           </DialogDescription>
         </DialogHeader>
 
         <div className="grid gap-4 py-4">
           {error && (
             <p className="text-sm text-destructive">{error}</p>
+          )}
+          
+          {status === 'completed' && downloadUrl && (
+            <div className="space-y-2 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+              <p className="text-sm font-medium text-green-900 dark:text-green-100">
+                Export completed successfully!
+              </p>
+              <p className="text-xs text-green-700 dark:text-green-300">
+                Click the button below to choose where to save the file on your computer.
+              </p>
+            </div>
           )}
           
           {jobId && status && status !== 'completed' && status !== 'failed' && (
@@ -642,17 +729,20 @@ export function ExportDialog({
           {downloadUrl ? (
             <Button 
               onClick={async () => {
-                if (downloadUrl) {
-                  await saveFileToUserChosenLocation(downloadUrl, `${tableName}.rdf`);
-                  toast.success('File saved successfully');
-                  onSuccess?.();
-                  onClose();
+                if (downloadUrl && !isSaving) {
+                  const success = await saveFileToUserChosenLocation(downloadUrl, `${tableName}.rdf`);
+                  if (success) {
+                    toast.success('File saved successfully');
+                    onSuccess?.();
+                    onClose();
+                  }
                 }
               }}
               className="bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600 !text-white dark:!text-white"
+              disabled={isSaving}
             >
               <Download className="mr-2 h-4 w-4" />
-              Choose Save Location
+              {isSaving ? 'Saving...' : 'Choose Save Location'}
             </Button>
           ) : (
             <Button 
