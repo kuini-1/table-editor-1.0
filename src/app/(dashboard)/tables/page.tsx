@@ -138,7 +138,7 @@ function getTableNameFromType(type: string): string {
 }
 
 // Component for table row menu with import/export options
-function TableRowMenu({ onImport, onExport }: { onImport: () => void; onExport: () => void }) {
+function TableRowMenu({ onImport, onExport }: { onImport?: () => void; onExport: () => void }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -154,10 +154,12 @@ function TableRowMenu({ onImport, onExport }: { onImport: () => void; onExport: 
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onImport(); }}>
-          <Upload className="mr-2 h-4 w-4" />
-          Import
-        </DropdownMenuItem>
+        {onImport && (
+          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onImport(); }}>
+            <Upload className="mr-2 h-4 w-4" />
+            Import
+          </DropdownMenuItem>
+        )}
         <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onExport(); }}>
           <Download className="mr-2 h-4 w-4" />
           Export
@@ -190,6 +192,7 @@ export default function TablesPage() {
   const {
     userProfile,
     fetchUserProfile,
+    fetchTablePermissions,
   } = useStore();
 
   const CACHE_DURATION = {
@@ -732,7 +735,11 @@ export default function TablesPage() {
                           className={`hover:bg-gray-50/80 dark:hover:bg-gray-700/50 cursor-pointer ${
                             selectedTable?.id === table.id ? 'bg-indigo-50/50 dark:bg-indigo-900/20' : ''
                           } ${isPinned ? 'bg-amber-50/30 dark:bg-amber-900/10' : ''}`}
-                          onClick={() => window.open(`/tables/${getFolderNameForType(table.type)}?id=${table.id}`, '_blank')}
+                          onClick={async () => {
+                            // Fetch permissions before navigation to cache them
+                            await fetchTablePermissions(table.id);
+                            window.open(`/tables/${getFolderNameForType(table.type)}?id=${table.id}`, '_blank');
+                          }}
                         >
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
                             {table.name}
@@ -790,7 +797,7 @@ export default function TablesPage() {
                                 </Button>
                               )}
                               <TableRowMenu 
-                                onImport={() => setImportDialogTable({ id: table.id, name: getTableNameFromType(table.type) })}
+                                onImport={userRole === 'owner' ? () => setImportDialogTable({ id: table.id, name: getTableNameFromType(table.type) }) : undefined}
                                 onExport={() => setExportDialogTable({ id: table.id, name: getTableNameFromType(table.type) })}
                               />
                             </div>

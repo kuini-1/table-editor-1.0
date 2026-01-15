@@ -13,18 +13,18 @@ const itemTabs = [
         id: "durability",
         title: "Durability",
         description: "Item durability settings",
-        columns: ["bydurability", "bydurability_count"]
+        columns: ["byDurability", "byDurability_Count"]
       },
       {
         id: "offensive-stats",
         title: "Offensive Stats",
         description: "Combat offensive statistics",
         columns: [
-          "bybattle_attribute",
-          "wphysical_offence",
-          "wenergy_offence",
-          "fattack_range_bonus",
-          "wattack_speed_rate"
+          "byBattle_Attribute",
+          "wPhysical_Offence",
+          "wEnergy_Offence",
+          "fAttack_Range_Bonus",
+          "wAttack_Speed_Rate"
         ]
       },
       {
@@ -32,8 +32,8 @@ const itemTabs = [
         title: "Defensive Stats",
         description: "Combat defensive statistics",
         columns: [
-          "wphysical_defence",
-          "wenergy_defence"
+          "wPhysical_Defence",
+          "wEnergy_Defence"
         ]
       },
       {
@@ -41,10 +41,10 @@ const itemTabs = [
         title: "Stat Revisions",
         description: "Stat revision multipliers",
         columns: [
-          "fattack_physical_revision",
-          "fattack_energy_revision",
-          "fdefence_physical_revision",
-          "fdefence_energy_revision"
+          "fAttack_Physical_Revision",
+          "fAttack_Energy_Revision",
+          "fDefence_Physical_Revision",
+          "fDefence_Energy_Revision"
         ]
       }
     ]
@@ -57,17 +57,17 @@ const itemTabs = [
         id: "level-requirements",
         title: "Level Requirements",
         description: "Minimum and maximum level requirements",
-        columns: ["byneed_min_level", "byneed_max_level"]
+        columns: ["byNeed_Min_Level", "byNeed_Max_Level"]
       },
       {
         id: "class-gender",
         title: "Class & Gender",
         description: "Class and gender restrictions",
         columns: [
-          "dwneed_class_bit_flag",
-          "dwneed_gender_bit_flag",
-          "byclass_special",
-          "byrace_special"
+          "dwNeed_Class_Bit_Flag",
+          "dwNeed_Gender_Bit_Flag",
+          "byClass_Special",
+          "byRace_Special"
         ]
       },
       {
@@ -75,12 +75,12 @@ const itemTabs = [
         title: "Stat Requirements",
         description: "Required attribute values",
         columns: [
-          "wneed_str",
-          "wneed_con",
-          "wneed_foc",
-          "wneed_dex",
-          "wneed_sol",
-          "wneed_eng"
+          "wNeed_Str",
+          "wNeed_Con",
+          "wNeed_Foc",
+          "wNeed_Dex",
+          "wNeed_Sol",
+          "wNeed_Eng"
         ]
       },
       {
@@ -88,9 +88,9 @@ const itemTabs = [
         title: "Other Requirements",
         description: "Additional requirements",
         columns: [
-          "byrestricttype",
-          "byneedfunction",
-          "needitemtblidx"
+          "byRestrictType",
+          "byNeedFunction",
+          "NeedItemTblidx"
         ]
       }
     ]
@@ -104,11 +104,11 @@ const itemTabs = [
         title: "Enhancement Options",
         description: "Item enhancement settings",
         columns: [
-          "biscanhaveoption",
-          "item_option_tblidx",
-          "byitemgroup",
-          "charm_tblidx",
-          "set_item_tblidx"
+          "bIsCanHaveOption",
+          "Item_Option_Tblidx",
+          "byItemGroup",
+          "Charm_Tblidx",
+          "set_Item_Tblidx"
         ]
       },
       {
@@ -116,11 +116,11 @@ const itemTabs = [
         title: "Creation Flags",
         description: "Item creation capabilities",
         columns: [
-          "bcreatesuperiorable",
-          "bcreateexcellentable",
-          "bcreaterareable",
-          "bcreatelegendaryable",
-          "biscanrenewal"
+          "bCreateSuperiorAble",
+          "bCreateExcellentAble",
+          "bCreateRareAble",
+          "bCreateLegendaryAble",
+          "bIsCanRenewal"
         ]
       },
       {
@@ -128,10 +128,10 @@ const itemTabs = [
         title: "Enhancement Tables",
         description: "Enhancement table references",
         columns: [
-          "enchantratetblidx",
-          "excellenttblidx",
-          "raretblidx",
-          "legendarytblidx"
+          "enchantRateTblidx",
+          "excellentTblidx",
+          "rareTblidx",
+          "legendaryTblidx"
         ]
       }
     ]
@@ -145,9 +145,9 @@ const itemTabs = [
         title: "Model Settings",
         description: "3D model configuration",
         columns: [
-          "bymodel_type",
-          "szmodel",
-          "szsub_weapon_act_model"
+          "byModel_Type",
+          "szModel",
+          "szSub_Weapon_Act_Model"
         ]
       },
       {
@@ -155,12 +155,12 @@ const itemTabs = [
         title: "Scouter Settings",
         description: "Scouter device configuration",
         columns: [
-          "wscouter_watt",
-          "dwscouter_maxpower",
-          "byscouter_parts_type1",
-          "byscouter_parts_type2",
-          "byscouter_parts_type3",
-          "byscouter_parts_type4"
+          "wScouter_Watt",
+          "dwScouter_MaxPower",
+          "byScouter_Parts_Type1",
+          "byScouter_Parts_Type2",
+          "byScouter_Parts_Type3",
+          "byScouter_Parts_Type4"
         ]
       },
       {
@@ -168,9 +168,9 @@ const itemTabs = [
         title: "Duration Settings",
         description: "Item duration and timing",
         columns: [
-          "dwusedurationmax",
-          "bydurationtype",
-          "dwdurationgroup"
+          "dwUseDurationMax",
+          "byDurationType",
+          "dwDurationGroup"
         ]
       },
       {
@@ -178,13 +178,13 @@ const itemTabs = [
         title: "Other Settings",
         description: "Miscellaneous item settings",
         columns: [
-          "bybag_size",
-          "wcostumehidebitflag",
-          "commonpoint",
-          "bycommonpointtype",
-          "contentstblidx",
-          "use_item_tblidx",
-          "bytmptabtype"
+          "byBag_Size",
+          "wCostumeHideBitFlag",
+          "CommonPoint",
+          "byCommonPointType",
+          "contentsTblidx",
+          "Use_Item_Tblidx",
+          "byTmpTabType"
         ]
       }
     ]
@@ -198,9 +198,9 @@ const itemTabs = [
         title: "Disassembly Settings",
         description: "Item disassembly configuration",
         columns: [
-          "wdisassemble_bit_flag",
-          "byusedisassemble",
-          "bydroplevel"
+          "wDisassemble_Bit_Flag",
+          "byUseDisassemble",
+          "byDropLevel"
         ]
       },
       {
@@ -208,8 +208,8 @@ const itemTabs = [
         title: "Normal Disassembly",
         description: "Normal disassembly range",
         columns: [
-          "bydisassemblenormalmin",
-          "bydisassemblenormalmax"
+          "byDisassembleNormalMin",
+          "byDisassembleNormalMax"
         ]
       },
       {
@@ -217,9 +217,9 @@ const itemTabs = [
         title: "Upper Disassembly",
         description: "Upper tier disassembly settings",
         columns: [
-          "bydisassembleuppermin",
-          "bydisassembleuppermax",
-          "bydropvisual"
+          "byDisassembleUpperMin",
+          "byDisassembleUpperMax",
+          "byDropVisual"
         ]
       }
     ]
@@ -230,23 +230,23 @@ const itemTabs = [
 const itemQuickViewSections = [
   {
     title: "Basic Information",
-    columns: ["tblidx", "name", "wsznametext", "szicon_name"]
+    columns: ["tblidx", "Name", "wszNameText", "szIcon_Name"]
   },
   {
     title: "Item Properties",
-    columns: ["byitem_type", "byequip_type", "byrank"]
+    columns: ["byItem_Type", "byEquip_Type", "byRank"]
   },
   {
     title: "Economy",
-    columns: ["dwcost", "dwsell_price", "dwweight"]
+    columns: ["dwCost", "dwSell_Price", "dwWeight"]
   },
   {
     title: "Combat Stats",
-    columns: ["wphysical_offence", "wenergy_offence", "wphysical_defence", "wenergy_defence"]
+    columns: ["wPhysical_Offence", "wEnergy_Offence", "wPhysical_Defence", "wEnergy_Defence"]
   },
   {
     title: "Flags",
-    columns: ["bvalidity_able", "biscanhaveoption"]
+    columns: ["bValidity_Able", "bIsCanHaveOption"]
   }
 ];
 
@@ -260,24 +260,24 @@ const itemQuickStats = [
   },
   { 
     label: 'Rank', 
-    column: 'byrank',
+    column: 'byRank',
     formatValue: (value: unknown) => String(value ?? '—')
   },
   { 
     label: 'Physical Offense', 
-    column: 'wphysical_offence',
+    column: 'wPhysical_Offence',
     formatValue: (value: unknown) => String(value ?? 0),
     color: 'green'
   },
   { 
     label: 'Energy Offense', 
-    column: 'wenergy_offence',
+    column: 'wEnergy_Offence',
     formatValue: (value: unknown) => String(value ?? 0),
     color: 'blue'
   },
   { 
     label: 'Cost', 
-    column: 'dwcost',
+    column: 'dwCost',
     formatValue: (value: unknown) => String(value ?? 0),
     color: 'purple'
   },

@@ -31,11 +31,11 @@ const setItemTabs = [
 const setItemQuickViewSections = [
   {
     title: "Basic Information",
-    columns: ["tblidx", "bvalidity_able"]
+    columns: ["tblidx", "bValidity_Able"]
   },
   {
     title: "Set Options",
-    columns: ["semisetoption", "fullsetoption"]
+    columns: ["semiSetOption", "fullSetOption"]
   }
 ];
 
@@ -48,13 +48,13 @@ const setItemQuickStats = [
   },
   { 
     label: 'Semi Set Option', 
-    column: 'semisetoption',
+    column: 'semiSetOption',
     formatValue: (value: unknown) => String(value ?? '—'),
     color: 'blue'
   },
   { 
     label: 'Full Set Option', 
-    column: 'fullsetoption',
+    column: 'fullSetOption',
     formatValue: (value: unknown) => String(value ?? '—'),
     color: 'purple'
   },

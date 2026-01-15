@@ -12,7 +12,7 @@ const dungeonTabs = [
         id: "basic-info",
         title: "Basic Information",
         description: "Enter basic dungeon information",
-        columns: ["tblidx", "bydungeontype", "bymaxmember", "linkworld"]
+        columns: ["tblidx", "byDungeonType", "byMaxMember", "linkWorld"]
       }
     ]
   },
@@ -24,13 +24,13 @@ const dungeonTabs = [
         id: "level-requirements",
         title: "Level Requirements",
         description: "Set level requirements for the dungeon",
-        columns: ["byminlevel", "bymaxlevel"]
+        columns: ["byMinLevel", "byMaxLevel"]
       },
       {
         id: "other-requirements",
         title: "Other Requirements",
         description: "Additional requirements",
-        columns: ["needitemtblidx"]
+        columns: ["needItemTblidx"]
       }
     ]
   },
@@ -42,7 +42,7 @@ const dungeonTabs = [
         id: "reward-settings",
         title: "Reward Settings",
         description: "Configure dungeon rewards",
-        columns: ["dwhonorpoint"]
+        columns: ["dwHonorPoint"]
       }
     ]
   },
@@ -54,7 +54,7 @@ const dungeonTabs = [
         id: "additional-settings",
         title: "Additional Settings",
         description: "Other dungeon settings",
-        columns: ["wpstblidx", "opencine", "groupidx"]
+        columns: ["wpsTblidx", "openCine", "groupIdx"]
       }
     ]
   }
@@ -63,14 +63,14 @@ const dungeonTabs = [
 const dungeonQuickViewSections = [
   {
     title: "Basic Information",
-    columns: ["tblidx", "bydungeontype", "bymaxmember", "linkworld"]
+    columns: ["tblidx", "byDungeonType", "byMaxMember", "linkWorld"]
   }
 ];
 
 const dungeonQuickStats = [
   { label: 'ID', column: 'tblidx' },
-  { label: 'Dungeon Type', column: 'bydungeontype' },
-  { label: 'Max Members', column: 'bymaxmember', color: 'blue' },
+  { label: 'Dungeon Type', column: 'byDungeonType' },
+  { label: 'Max Members', column: 'byMaxMember', color: 'blue' },
 ];
 
 interface DungeonFormProps {

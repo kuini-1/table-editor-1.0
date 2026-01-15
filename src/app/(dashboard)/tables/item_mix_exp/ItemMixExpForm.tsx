@@ -4,24 +4,24 @@ import type { ItemMixExpFormData } from "./schema";
 import { columns, itemMixExpSchema } from "./schema";
 
 const itemMixExpSections = [
-  {
-    id: 'basic-info',
-    title: 'Basic Information',
-    description: 'Enter the basic details for this item mix experience entry',
-    columns: ['tblidx', 'dwneedexp', 'byunknown']
-  }
+      {
+        id: 'basic-info',
+        title: 'Basic Information',
+        description: 'Enter the basic details for this item mix experience entry',
+        columns: ['tblidx', 'dwNeedEXP', 'byUnknown']
+      }
 ];
 
 const itemMixExpQuickViewSections = [
   {
     title: 'Basic Information',
-    columns: ['tblidx', 'dwneedexp', 'byunknown']
+    columns: ['tblidx', 'dwNeedEXP', 'byUnknown']
   }
 ];
 
 const itemMixExpQuickStats = [
   { label: 'ID', column: 'tblidx' },
-  { label: 'Need EXP', column: 'dwneedexp', color: 'blue' },
+  { label: 'Need EXP', column: 'dwNeedEXP', color: 'blue' },
 ];
 
 interface ItemMixExpFormProps {

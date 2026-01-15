@@ -12,22 +12,22 @@ const itemGroupListTabs = [
         id: "mob-settings",
         title: "Mob Settings",
         description: "Mob configuration",
-        columns: ["mob_index", "dwmob_type", "dwworld_rule_type", "dwinterval"]
+        columns: ["mob_Index", "dwMob_Type", "dwWorld_Rule_Type", "dwInterval"]
       },
       {
         id: "drop-settings",
         title: "Drop Settings",
         description: "Drop probability settings",
         columns: [
-          "dwno_drop",
-          "dwzenny"
+          "dwNo_Drop",
+          "dwZenny"
         ]
       },
       {
         id: "item-bag-settings",
         title: "Item Bag Settings",
         description: "Item bag configuration",
-        columns: ["dwitembagcount", "dwtotalprob"]
+        columns: ["dwItemBagCount", "dwTotalProb"]
       }
     ]
   },
@@ -49,11 +49,11 @@ const itemGroupListTabs = [
 const itemGroupListQuickViewSections = [
   {
     title: "Basic Information",
-    columns: ["tblidx", "wszname", "bylevel", "bytry_count"]
+    columns: ["tblidx", "wszName", "byLevel", "byTry_Count"]
   },
   {
     title: "Drop Settings",
-    columns: ["dwsuperior", "dwexcellent", "dwrare", "dwlegendary"]
+    columns: ["dwSuperior", "dwExcellent", "dwRare", "dwLegendary"]
   }
 ];
 
@@ -66,18 +66,18 @@ const itemGroupListQuickStats = [
   },
   { 
     label: 'Name', 
-    column: 'wszname',
+    column: 'wszName',
     formatValue: (value: unknown) => String(value ?? '—')
   },
   { 
     label: 'Level', 
-    column: 'bylevel',
+    column: 'byLevel',
     formatValue: (value: unknown) => String(value ?? '—'),
     color: 'blue'
   },
   { 
     label: 'Item Bag Count', 
-    column: 'dwitembagcount',
+    column: 'dwItemBagCount',
     formatValue: (value: unknown) => String(value ?? '—'),
     color: 'purple'
   },

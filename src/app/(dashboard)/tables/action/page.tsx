@@ -21,7 +21,6 @@ import {
 import type { FormMode } from '@/components/table/ModularForm';
 import { ErrorDisplay } from '@/components/ErrorDisplay';
 import { DataTableSkeleton } from '@/components/ui/DataTableSkeleton';
-import { createClient } from '@/lib/supabase/client';
 import { ActionForm } from './ActionForm';
 import { columns, type ActionTableRow } from './schema';
 
@@ -29,7 +28,7 @@ export default function ActionTablePage() {
   const searchParams = useSearchParams();
   const tableId = searchParams.get('id') || '';
   const tableName = 'table_action_data';
-  const { userProfile } = useStore();
+  const { userProfile, permissions, fetchTablePermissions } = useStore();
   const selectedTable = userProfile?.data?.id === tableId ? {
     id: tableId,
     name: 'Action Table',
@@ -42,18 +41,24 @@ export default function ActionTablePage() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
-  const [currentUserId, setCurrentUserId] = useState<string | undefined>();
+  // Get current user ID and permissions from store
+  const currentUserId = userProfile?.data?.id;
+  const tablePermissions = permissions[tableId];
+  const hasPermission = tablePermissions?.can_get ?? null;
 
-  const supabase = createClient();
-
-  // Get current user ID
+  // Fetch permissions if not cached
   useEffect(() => {
-    const fetchUserId = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      setCurrentUserId(user?.id);
-    };
-    fetchUserId();
-  }, [supabase]);
+    if (!tableId || !currentUserId) return;
+    
+    // Check if permissions are cached and valid
+    const now = Date.now();
+    const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
+    const isCached = tablePermissions && (now - tablePermissions.timestamp) < CACHE_DURATION;
+    
+    if (!isCached) {
+      fetchTablePermissions(tableId);
+    }
+  }, [tableId, currentUserId, tablePermissions, fetchTablePermissions]);
 
   // Track editing session when edit form is open
   useEditingSession({
@@ -61,6 +66,9 @@ export default function ActionTablePage() {
     rowId: formMode === 'edit' && selectedRow ? selectedRow.id : null,
     sessionType: 'editing',
     enabled: isFormOpen && formMode === 'edit' && !!selectedRow,
+    userId: currentUserId,
+    userEmail: userProfile?.data?.email,
+    userName: userProfile?.data?.full_name,
   });
 
   // Get real-time editing indicators
@@ -71,6 +79,7 @@ export default function ActionTablePage() {
   } = useEditingIndicators({
     tableId,
     enabled: !!tableId,
+    hasPermission,
   });
 
   const {
@@ -98,7 +107,8 @@ export default function ActionTablePage() {
       columns,
     },
     tableId,
-  });
+  userId: currentUserId,
+    hasGetPermission: hasPermission,});
 
 
   if (loading) {
@@ -134,7 +144,7 @@ export default function ActionTablePage() {
           setSelectedRow(null);
           setIsFormOpen(true);
         }}
-        onImport={() => setIsImportDialogOpen(true)}
+        onImport={userProfile?.data?.role === 'owner' ? () => setIsImportDialogOpen(true) : undefined}
         onExport={() => setIsExportDialogOpen(true)}
         onRefresh={refreshData}
         onBulkDelete={() => {
@@ -184,7 +194,7 @@ export default function ActionTablePage() {
           side="right" 
           className="w-[100vw] sm:w-[95vw] md:w-[95vw] lg:w-[95vw] xl:w-[95vw] bg-gray-900 border-gray-800 p-0 flex flex-col max-w-[95vw]"
         >
-          <SheetHeader className="px-6 py-4 border-b border-gray-200 dark:border-gray-800">
+          <SheetHeader className="px-6 py-4 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800">
             <SheetTitle className="text-indigo-600 dark:text-indigo-400 text-2xl font-bold">
               {formMode === 'add' ? 'Add Action Entry' : 
                formMode === 'edit' ? 'Edit Action Entry' : 
@@ -192,9 +202,9 @@ export default function ActionTablePage() {
             </SheetTitle>
           </SheetHeader>
           
-          <div className="flex-1 overflow-hidden bg-white dark:bg-gray-800">
+          <div className="flex-1 min-h-0 flex flex-col bg-white dark:bg-gray-800">
             {formMode === 'edit' && selectedRow && (
-              <div className="px-6 pt-4">
+              <div className="px-6 pt-4 flex-shrink-0">
                 <EditConflictWarning
                   sessions={getOtherUsersEditingRow(selectedRow.id, currentUserId)}
                   currentUserId={currentUserId}
@@ -205,7 +215,7 @@ export default function ActionTablePage() {
                 />
               </div>
             )}
-            <div className="flex-1 overflow-hidden">
+            <div className="flex-1 min-h-0">
               <ActionForm
               initialData={selectedRow ?? undefined}
               onSubmit={(data) => {

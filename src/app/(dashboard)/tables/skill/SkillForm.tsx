@@ -12,15 +12,15 @@ const skillTabs = [
         id: "basic-info",
         title: "Basic Information",
         description: "Enter basic skill information",
-        columns: ["note"]
+        columns: ["Note"]
       },
       {
         id: "class-type",
         title: "Class and Type",
         description: "Skill classification settings",
         columns: [
-          "byskill_active_type",
-          "byskill_group"
+          "bySkill_Active_Type",
+          "bySkill_Group"
         ]
       },
       {
@@ -39,12 +39,12 @@ const skillTabs = [
         title: "Timing",
         description: "Cast time, cooldown, and duration",
         columns: [
-          "fcasting_time",
-          "dwcastingtimeinmillisecs",
-          "wcool_time",
-          "dwcooltimeinmillisecs",
-          "wkeep_time",
-          "dwkeeptimeinmillisecs"
+          "fCasting_Time",
+          "dwCastingTimeInMilliSecs",
+          "wCool_Time",
+          "dwCoolTimeInMilliSecs",
+          "wKeep_Time",
+          "dwKeepTimeInMilliSecs"
         ]
       }
     ]
@@ -58,9 +58,9 @@ const skillTabs = [
         title: "Target Settings",
         description: "Target selection configuration",
         columns: [
-          "byappoint_target",
-          "byapply_target",
-          "byapply_target_max"
+          "byAppoint_Target",
+          "byApply_Target",
+          "byApply_Target_Max"
         ]
       },
       {
@@ -119,15 +119,15 @@ const skillTabs = [
 const skillQuickViewSections = [
   {
     title: "Basic Information",
-    columns: ["tblidx", "skill_name", "wsznametext", "szicon_name"]
+    columns: ["tblidx", "Skill_Name", "wszNameText", "szIcon_Name"]
   },
   {
     title: "Class & Type",
-    columns: ["byclass_type", "byskill_class", "byskill_type", "byskill_grade"]
+    columns: ["byClass_Type", "bySkill_Class", "bySkill_Type", "bySkill_Grade"]
   },
   {
     title: "Requirements",
-    columns: ["byrequire_train_level", "dwrequire_zenny", "wrequiresp"]
+    columns: ["byRequire_Train_Level", "dwRequire_Zenny", "wRequireSP"]
   }
 ];
 
@@ -140,18 +140,18 @@ const skillQuickStats = [
   },
   { 
     label: 'Skill Name', 
-    column: 'skill_name',
+    column: 'Skill_Name',
     formatValue: (value: unknown) => String(value ?? '—')
   },
   { 
     label: 'Skill Class', 
-    column: 'byskill_class',
+    column: 'bySkill_Class',
     formatValue: (value: unknown) => String(value ?? '—'),
     color: 'blue'
   },
   { 
     label: 'Required Level', 
-    column: 'byrequire_train_level',
+    column: 'byRequire_Train_Level',
     formatValue: (value: unknown) => String(value ?? '—'),
     color: 'purple'
   },

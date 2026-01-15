@@ -12,7 +12,7 @@ const systemEffectTabs = [
         id: "basic-info",
         title: "Basic Information",
         description: "Enter basic system effect information",
-        columns: ["effect_info_text"]
+        columns: ["Effect_Info_Text"]
       }
     ]
   },
@@ -24,7 +24,7 @@ const systemEffectTabs = [
         id: "keep-effects",
         title: "Keep Effects",
         description: "Configure keep effects",
-        columns: ["keep_effect_name", "bytarget_effect_position", "wkeep_animation_index"]
+        columns: ["Keep_Effect_Name", "byTarget_Effect_Position", "wKeep_Animation_Index"]
       }
     ]
   },
@@ -36,13 +36,13 @@ const systemEffectTabs = [
         id: "success-effects",
         title: "Success Effects",
         description: "Configure success effects",
-        columns: ["szsuccess_effect_name", "bysuccess_projectile_type", "bysuccess_effect_position"]
+        columns: ["szSuccess_Effect_Name", "bySuccess_Projectile_Type", "bySuccess_Effect_Position"]
       },
       {
         id: "end-effects",
         title: "End Effects",
         description: "Configure end effects",
-        columns: ["szsuccess_end_effect_name", "byend_effect_position"]
+        columns: ["szSuccess_End_Effect_Name", "byEnd_Effect_Position"]
       }
     ]
   }
@@ -51,7 +51,7 @@ const systemEffectTabs = [
 const systemEffectQuickViewSections = [
   {
     title: "Basic Information",
-    columns: ["tblidx", "wszname", "byeffect_type", "byactive_effect_type", "effect_info_text"]
+    columns: ["tblidx", "wszName", "byEffect_Type", "byActive_Effect_Type", "Effect_Info_Text"]
   }
 ];
 
@@ -64,12 +64,12 @@ const systemEffectQuickStats = [
   },
   { 
     label: 'Name', 
-    column: 'wszname',
+    column: 'wszName',
     formatValue: (value: unknown) => String(value ?? '—')
   },
   { 
     label: 'Effect Type', 
-    column: 'byeffect_type',
+    column: 'byEffect_Type',
     formatValue: (value: unknown) => String(value ?? '—'),
     color: 'blue'
   },

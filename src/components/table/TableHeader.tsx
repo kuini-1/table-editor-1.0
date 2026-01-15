@@ -17,7 +17,7 @@ interface TableHeaderProps {
   filters: ColumnFilters;
   selectedCount: number;
   onAddRow: () => void;
-  onImport: () => void;
+  onImport?: () => void;
   onExport: () => void;
   onRefresh: () => void;
   onBulkDelete?: () => void;
@@ -84,14 +84,16 @@ export function TableHeader({
                     Delete Selected ({selectedCount})
                   </Button>
                 )}
-                <Button
-                  variant="outline"
-                  onClick={onImport}
-                  className="flex items-center justify-center gap-2 w-full"
-                >
-                  <Upload className="h-4 w-4" />
-                  Import
-                </Button>
+                {onImport && (
+                  <Button
+                    variant="outline"
+                    onClick={onImport}
+                    className="flex items-center justify-center gap-2 w-full"
+                  >
+                    <Upload className="h-4 w-4" />
+                    Import
+                  </Button>
+                )}
                 {showExport && (
                   <Button
                     variant="outline"

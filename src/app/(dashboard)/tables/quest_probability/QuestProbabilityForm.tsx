@@ -12,13 +12,13 @@ const questProbabilityTabs = [
         id: "basic-info",
         title: "Basic Information",
         description: "Enter basic quest probability information",
-        columns: ["tblidx", "wszname", "wsznote"]
+        columns: ["tblidx", "wszName", "wszNote"]
       },
       {
         id: "settings",
         title: "Settings",
         description: "Configure quest probability settings",
-        columns: ["eusetype", "byprobabilitytype", "ballowblank", "bycount"]
+        columns: ["eUseType", "byProbabilityType", "bAllowBlank", "byCount"]
       }
     ]
   },
@@ -30,11 +30,11 @@ const questProbabilityTabs = [
       title: `Probability Set ${index}`,
       description: `Configure probability set ${index}`,
       columns: [
-        `bytype_probability_${index}`,
+        `byType_probability_${index}`,
         `tblidx_probability_${index}`,
-        `dwminvalue_probability_${index}`,
-        `dwmaxvalue_probability_${index}`,
-        `dwrate_probability_${index}`
+        `dwMinValue_probability_${index}`,
+        `dwMaxValue_probability_${index}`,
+        `dwRate_probability_${index}`
       ]
     }))
   }
@@ -43,11 +43,11 @@ const questProbabilityTabs = [
 const questProbabilityQuickViewSections = [
   {
     title: "Basic Information",
-    columns: ["tblidx", "wszname", "wsznote"]
+    columns: ["tblidx", "wszName", "wszNote"]
   },
   {
     title: "Settings",
-    columns: ["eusetype", "byprobabilitytype", "ballowblank", "bycount"]
+    columns: ["eUseType", "byProbabilityType", "bAllowBlank", "byCount"]
   }
 ];
 
@@ -60,12 +60,12 @@ const questProbabilityQuickStats = [
   },
   { 
     label: 'Name', 
-    column: 'wszname',
+    column: 'wszName',
     formatValue: (value: unknown) => String(value ?? '—')
   },
   { 
     label: 'Probability Type', 
-    column: 'byprobabilitytype',
+    column: 'byProbabilityType',
     formatValue: (value: unknown) => String(value ?? '—'),
     color: 'blue'
   },

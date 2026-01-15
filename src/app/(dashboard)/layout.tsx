@@ -101,7 +101,6 @@ export default function DashboardLayout({
   const [userRole, setUserRole] = useState<string | null>(null);
   const hasFetchedRoleRef = useRef(false);
   const [bandwidthInfo, setBandwidthInfo] = useState<{ used: number; limit: number } | null>(null);
-  const [userId, setUserId] = useState<string | null>(null);
 
   // Handle hydration mismatch
   useEffect(() => {
@@ -149,34 +148,35 @@ export default function DashboardLayout({
     fetchUserRole();
   }, [userProfile, fetchUserProfile]);
 
-  // Fetch user ID and bandwidth info
+  // Fetch bandwidth info using userProfile from store
   useEffect(() => {
-    const fetchUserAndBandwidth = async () => {
+    const userIdFromStore = userProfile?.data?.id;
+    
+    if (!userIdFromStore) {
+      // Wait for userProfile to be loaded
+      return;
+    }
+    
+    const fetchBandwidth = async () => {
       try {
-        const supabase = createClient();
-        const { data: { user } } = await supabase.auth.getUser();
-        
-        if (user) {
-          setUserId(user.id);
-          const info = await getBandwidthInfo(user.id);
-          setBandwidthInfo(info);
-        }
+        const info = await getBandwidthInfo(userIdFromStore);
+        setBandwidthInfo(info);
       } catch (error) {
         console.error('Error fetching bandwidth info:', error);
       }
     };
 
-    fetchUserAndBandwidth();
+    fetchBandwidth();
     
     // Refresh bandwidth info every 30 seconds
     const interval = setInterval(() => {
-      if (userId) {
-        getBandwidthInfo(userId).then(setBandwidthInfo).catch(console.error);
+      if (userIdFromStore) {
+        getBandwidthInfo(userIdFromStore).then(setBandwidthInfo).catch(console.error);
       }
     }, 30000);
 
     return () => clearInterval(interval);
-  }, [userId]);
+  }, [userProfile?.data?.id]);
 
   // Filter navigation items based on user role
   const filteredNavigation = navigation.filter(item => 

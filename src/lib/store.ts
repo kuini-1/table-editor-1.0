@@ -11,13 +11,16 @@ interface UserProfile {
   full_name?: string;
 }
 
+interface TablePermissionData {
+  can_get: boolean;
+  can_put: boolean;
+  can_post: boolean;
+  can_delete: boolean;
+  timestamp: number;
+}
+
 interface TablePermissions {
-  [tableId: string]: {
-    can_get: boolean;
-    can_put: boolean;
-    can_post: boolean;
-    can_delete: boolean;
-  };
+  [tableId: string]: TablePermissionData;
 }
 
 interface TableData {
@@ -151,14 +154,16 @@ export const useStore = create<State & Actions>()(
             owners: data.owners,
           };
 
-          // Cache permissions for sub-owners
+          // Cache permissions for sub-owners (with timestamps)
           if (data.role === 'sub_owner' && data.sub_owners?.[0]?.permissions) {
+            const now = Date.now();
             const permissions = data.sub_owners[0].permissions.reduce((acc: TablePermissions, perm: Record<string, unknown>) => {
               acc[perm.table_id as string] = {
                 can_get: perm.can_get as boolean,
                 can_put: perm.can_put as boolean,
                 can_post: perm.can_post as boolean,
                 can_delete: perm.can_delete as boolean,
+                timestamp: now,
               };
               return acc;
             }, {});
@@ -185,16 +190,20 @@ export const useStore = create<State & Actions>()(
         const profile = state.userProfile?.data;
         const now = Date.now();
 
-        if (!profile) return;
-
-        // Return cached permissions if still valid
-        const cachedPermissions = state.permissions[tableId];
-        if (cachedPermissions && (now - (state.userProfile?.timestamp || 0)) < CACHE_DURATION.PERMISSIONS) {
+        if (!profile) {
+          console.warn('Cannot fetch table permissions: user profile not loaded');
           return;
         }
 
+        // Check if permissions are already cached and valid
+        const cachedPermissions = state.permissions[tableId];
+        if (cachedPermissions && (now - cachedPermissions.timestamp) < CACHE_DURATION.PERMISSIONS) {
+          return; // Use cached permissions
+        }
+
+        const supabase = createClient();
         try {
-          // For owners, return full permissions without API call
+          // For owners, set all permissions to true without API call
           if (profile.role === 'owner') {
             set((state) => ({
               permissions: {
@@ -204,14 +213,71 @@ export const useStore = create<State & Actions>()(
                   can_put: true,
                   can_post: true,
                   can_delete: true,
+                  timestamp: now,
                 },
               },
             }));
             return;
           }
 
-          // For sub-owners, permissions are already loaded in fetchUserProfile
-          // No need for additional API call
+          // For sub-owners, check if permissions are already loaded from fetchUserProfile
+          // If available in sub_owners data, use those (no RPC call needed)
+          const subOwner = profile.sub_owners?.[0] as { id: string; permissions?: Array<Record<string, unknown>> } | undefined;
+          if (subOwner?.permissions) {
+            const subOwnerPermissions = subOwner.permissions.find(
+              (p: Record<string, unknown>) => p.table_id === tableId
+            );
+            
+            if (subOwnerPermissions) {
+              set((state) => ({
+                permissions: {
+                  ...state.permissions,
+                  [tableId]: {
+                    can_get: subOwnerPermissions.can_get as boolean,
+                    can_put: subOwnerPermissions.can_put as boolean,
+                    can_post: subOwnerPermissions.can_post as boolean,
+                    can_delete: subOwnerPermissions.can_delete as boolean,
+                    timestamp: now,
+                  },
+                },
+              }));
+              return;
+            }
+          }
+
+          // If not found in sub_owners data, call RPC for all actions
+          const actions = ['select', 'update', 'insert', 'delete'] as const;
+          const actionResults = await Promise.all(
+            actions.map(async (action) => {
+              const { data, error } = await supabase.rpc('check_table_permission', {
+                p_table_id: tableId,
+                p_action: action,
+              });
+              
+              if (error) {
+                console.error(`Error checking ${action} permission:`, error);
+                return false;
+              }
+              
+              return !!data;
+            })
+          );
+
+          // Map results to permission structure
+          const permissions: TablePermissionData = {
+            can_get: actionResults[0],
+            can_put: actionResults[1],
+            can_post: actionResults[2],
+            can_delete: actionResults[3],
+            timestamp: now,
+          };
+
+          set((state) => ({
+            permissions: {
+              ...state.permissions,
+              [tableId]: permissions,
+            },
+          }));
         } catch (error) {
           console.error('Error fetching table permissions:', error);
         }

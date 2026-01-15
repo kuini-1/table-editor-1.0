@@ -7,6 +7,133 @@ export const BANDWIDTH_LIMITS = {
 } as const;
 
 /**
+ * Calculate bandwidth limit based on subscription status and stored limit
+ * Ensures limits match subscription tiers (Trial: 50MB, Basic: 10GB, Pro: 50GB)
+ */
+function calculateBandwidthLimit(
+  subscriptionStatus: string | null | undefined,
+  storedLimit: number | null | undefined
+): number {
+  // If trialing, always use trial limit
+  if (subscriptionStatus === 'trialing') {
+    return BANDWIDTH_LIMITS.TRIAL;
+  }
+
+  // If active, use stored limit (should be set by webhook based on tier)
+  // But validate it matches expected tier limits
+  if (subscriptionStatus === 'active' && storedLimit) {
+    // Validate stored limit matches a known tier
+    if (storedLimit === BANDWIDTH_LIMITS.BASIC || storedLimit === BANDWIDTH_LIMITS.PRO) {
+      return storedLimit;
+    }
+    // If stored limit doesn't match, default to Basic
+    return BANDWIDTH_LIMITS.BASIC;
+  }
+
+  // Default to trial limit
+  return BANDWIDTH_LIMITS.DEFAULT;
+}
+
+/**
+ * Get the owner's user ID for a sub_owner
+ * Returns the owner's user ID if user is a sub_owner, otherwise returns the original userId
+ */
+async function getOwnerUserIdForSubOwner(userId: string): Promise<string> {
+  try {
+    // Only works on server
+    if (typeof window !== 'undefined') {
+      return userId;
+    }
+
+    const serviceClient = await getServiceClient();
+    if (!serviceClient) {
+      return userId;
+    }
+
+    // Get user's profile to check role
+    const { data: userProfile, error: profileError } = await serviceClient
+      .from('profiles')
+      .select('role, sub_owners(owner_id)')
+      .eq('id', userId)
+      .single();
+
+    if (profileError || !userProfile || userProfile.role !== 'sub_owner') {
+      return userId;
+    }
+
+    // Get owner_id from sub_owners
+    const subOwnerData = userProfile.sub_owners as unknown as Array<{ owner_id: string }>;
+    if (!subOwnerData || subOwnerData.length === 0) {
+      return userId;
+    }
+
+    const ownerId = subOwnerData[0].owner_id;
+
+    // Get owner's profile_id via owners table
+    const { data: ownerData, error: ownerError } = await serviceClient
+      .from('owners')
+      .select('profile_id')
+      .eq('id', ownerId)
+      .single();
+
+    if (ownerError || !ownerData) {
+      return userId;
+    }
+
+    return ownerData.profile_id;
+  } catch (error) {
+    console.error('Error getting owner user ID for sub owner:', error);
+    return userId;
+  }
+}
+
+/**
+ * Get all sub owner profile IDs for an owner
+ * Returns array of sub owner profile IDs, or empty array if not owner or no sub owners
+ * @internal - May be used for future features like bulk operations
+ */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any
+async function getAllSubOwnerProfileIds(ownerProfileId: string): Promise<string[]> {
+  try {
+    // Only works on server
+    if (typeof window !== 'undefined') {
+      return [];
+    }
+
+    const serviceClient = await getServiceClient();
+    if (!serviceClient) {
+      return [];
+    }
+
+    // Get owner_id from owners table
+    const { data: ownerData, error: ownerError } = await serviceClient
+      .from('owners')
+      .select('id')
+      .eq('profile_id', ownerProfileId)
+      .single();
+
+    if (ownerError || !ownerData) {
+      return [];
+    }
+
+    // Get all sub_owners for this owner
+    const { data: subOwners, error: subOwnersError } = await serviceClient
+      .from('sub_owners')
+      .select('profile_id')
+      .eq('owner_id', ownerData.id);
+
+    if (subOwnersError || !subOwners) {
+      return [];
+    }
+
+    return subOwners.map((so: { profile_id: string }) => so.profile_id);
+  } catch (error) {
+    console.error('Error getting sub owner profile IDs:', error);
+    return [];
+  }
+}
+
+/**
  * Get Supabase service client for server-side operations
  * Only works on server, returns null on client
  */
@@ -52,6 +179,7 @@ const fetchPromises = new Map<string, Promise<{ used: number; limit: number }>>(
 
 /**
  * Get current bandwidth usage and limit for a user
+ * For sub_owners, returns the owner's bandwidth info
  * Uses direct database access on server, API endpoint on client
  * Throttled to prevent excessive API calls
  */
@@ -59,14 +187,17 @@ export async function getBandwidthInfo(userId: string): Promise<{
   used: number;
   limit: number;
 }> {
-  // Check cache first
-  const cached = bandwidthCache.get(userId);
+  // Get the actual user ID to check (owner's ID if user is sub_owner)
+  const actualUserId = await getOwnerUserIdForSubOwner(userId);
+  
+  // Check cache first (use actualUserId for cache key)
+  const cached = bandwidthCache.get(actualUserId);
   if (cached && Date.now() - cached.timestamp < BANDWIDTH_CACHE_TTL) {
     return { used: cached.used, limit: cached.limit };
   }
 
   // If there's already a fetch in progress, reuse it
-  const existingFetch = fetchPromises.get(userId);
+  const existingFetch = fetchPromises.get(actualUserId);
   if (existingFetch) {
     return existingFetch;
   }
@@ -80,26 +211,26 @@ export async function getBandwidthInfo(userId: string): Promise<{
         const { data: profile, error } = await serviceClient
           .from('profiles')
           .select('current_month_bandwidth_used, monthly_bandwidth_limit, subscription_status')
-          .eq('id', userId)
+          .eq('id', actualUserId)
           .single();
 
         if (error || !profile) {
           throw new Error('Failed to fetch bandwidth info from database');
         }
 
-        // Calculate limit based on subscription status
-        let limit = profile.monthly_bandwidth_limit || BANDWIDTH_LIMITS.DEFAULT;
-        if (profile.subscription_status === 'trialing') {
-          limit = BANDWIDTH_LIMITS.TRIAL;
-        }
+        // Calculate limit based on subscription status and tier
+        const limit = calculateBandwidthLimit(
+          profile.subscription_status,
+          profile.monthly_bandwidth_limit
+        );
 
         const used = profile.current_month_bandwidth_used || 0;
 
-        // Update cache
-        bandwidthCache.set(userId, { used, limit, timestamp: Date.now() });
+        // Update cache (use actualUserId for cache key)
+        bandwidthCache.set(actualUserId, { used, limit, timestamp: Date.now() });
 
         // Remove from pending fetches
-        fetchPromises.delete(userId);
+        fetchPromises.delete(actualUserId);
 
         return { used, limit };
       }
@@ -115,17 +246,17 @@ export async function getBandwidthInfo(userId: string): Promise<{
 
       const { used, limit } = await response.json();
 
-      // Update cache
-      bandwidthCache.set(userId, { used, limit, timestamp: Date.now() });
+      // Update cache (use actualUserId for cache key)
+      bandwidthCache.set(actualUserId, { used, limit, timestamp: Date.now() });
 
       // Remove from pending fetches
-      fetchPromises.delete(userId);
+      fetchPromises.delete(actualUserId);
 
       return { used, limit };
     } catch (error) {
       console.error('Error fetching bandwidth info:', error);
       // Remove from pending fetches
-      fetchPromises.delete(userId);
+      fetchPromises.delete(actualUserId);
       // Return default values on error
       const defaultLimit = BANDWIDTH_LIMITS.DEFAULT;
       return { used: 0, limit: defaultLimit };
@@ -133,18 +264,20 @@ export async function getBandwidthInfo(userId: string): Promise<{
   })();
 
   // Store the promise
-  fetchPromises.set(userId, fetchPromise);
+  fetchPromises.set(actualUserId, fetchPromise);
 
   return fetchPromise;
 }
 
 /**
  * Check if a request would exceed bandwidth limit
+ * For sub_owners, checks against owner's bandwidth
  */
 export async function checkBandwidthLimit(
   userId: string,
   estimatedSize: number
 ): Promise<{ allowed: boolean; error?: string }> {
+  // getBandwidthInfo already handles sub_owner -> owner mapping
   const { used, limit } = await getBandwidthInfo(userId);
 
   const newUsage = used + estimatedSize;
@@ -195,6 +328,7 @@ function getApiBaseUrl(): string {
 /**
  * Flush pending bandwidth updates
  * Uses direct database access on server, API endpoint on client
+ * For sub_owners, tracks bandwidth against both owner's account and sub owner's own account
  */
 async function flushBandwidthUpdates(): Promise<void> {
   if (pendingUpdates.size === 0) {
@@ -209,30 +343,89 @@ async function flushBandwidthUpdates(): Promise<void> {
     if (totalBytes <= 0) continue;
 
     try {
-      // On server, use direct database access
+      // Check if user is a sub_owner
       const serviceClient = await getServiceClient();
-      if (serviceClient) {
-        // Try to use RPC function first
-        const { error: rpcError } = await serviceClient.rpc('increment_bandwidth_usage', {
+      if (!serviceClient) {
+        // On client, use API endpoint
+        const baseUrl = getApiBaseUrl();
+        const url = `${baseUrl}/api/bandwidth`;
+        
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ bytes: totalBytes }),
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          console.error('Error tracking bandwidth via API:', error);
+        }
+        continue;
+      }
+
+      // Get user's profile to check role
+      const { data: userProfile, error: profileError } = await serviceClient
+        .from('profiles')
+        .select('role')
+        .eq('id', userId)
+        .single();
+
+      const isSubOwner = !profileError && userProfile?.role === 'sub_owner';
+      const actualUserId = await getOwnerUserIdForSubOwner(userId);
+
+      // Track bandwidth against owner (for limit checking)
+      // Try to use RPC function first
+      const { error: rpcError } = await serviceClient.rpc('increment_bandwidth_usage', {
+        p_user_id: actualUserId,
+        p_bytes: totalBytes,
+      });
+
+      if (rpcError) {
+        // Fallback to manual update for owner
+        const { data: profile, error: profileError } = await serviceClient
+          .from('profiles')
+          .select('current_month_bandwidth_used')
+          .eq('id', actualUserId)
+          .single();
+
+        if (profileError) {
+          console.error('Error fetching profile for bandwidth update:', profileError);
+        } else if (profile) {
+          const currentUsed = profile.current_month_bandwidth_used || 0;
+          const { error: updateError } = await serviceClient
+            .from('profiles')
+            .update({
+              current_month_bandwidth_used: currentUsed + totalBytes,
+            })
+            .eq('id', actualUserId);
+
+          if (updateError) {
+            console.error('Error updating owner bandwidth:', updateError);
+          }
+        }
+      }
+
+      // If user is sub_owner, also track bandwidth against their own profile
+      if (isSubOwner && userId !== actualUserId) {
+        const { error: subOwnerRpcError } = await serviceClient.rpc('increment_bandwidth_usage', {
           p_user_id: userId,
           p_bytes: totalBytes,
         });
 
-        if (rpcError) {
-          // Fallback to manual update
-          const { data: profile, error: profileError } = await serviceClient
+        if (subOwnerRpcError) {
+          // Fallback to manual update for sub owner
+          const { data: subOwnerProfile, error: subOwnerProfileError } = await serviceClient
             .from('profiles')
             .select('current_month_bandwidth_used')
             .eq('id', userId)
             .single();
 
-          if (profileError) {
-            console.error('Error fetching profile for bandwidth update:', profileError);
-            continue;
-          }
-
-          if (profile) {
-            const currentUsed = profile.current_month_bandwidth_used || 0;
+          if (subOwnerProfileError) {
+            console.error('Error fetching sub owner profile for bandwidth update:', subOwnerProfileError);
+          } else if (subOwnerProfile) {
+            const currentUsed = subOwnerProfile.current_month_bandwidth_used || 0;
             const { error: updateError } = await serviceClient
               .from('profiles')
               .update({
@@ -241,34 +434,15 @@ async function flushBandwidthUpdates(): Promise<void> {
               .eq('id', userId);
 
             if (updateError) {
-              console.error('Error updating bandwidth:', updateError);
-              continue;
+              console.error('Error updating sub owner bandwidth:', updateError);
             }
           }
         }
-
-        // Invalidate cache
-        bandwidthCache.delete(userId);
-        continue;
       }
 
-      // On client, use API endpoint
-      const baseUrl = getApiBaseUrl();
-      const url = `${baseUrl}/api/bandwidth`;
-      
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ bytes: totalBytes }),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        console.error('Error tracking bandwidth via API:', error);
-      } else {
-        // Invalidate cache
+      // Invalidate cache for both owner and sub owner
+      bandwidthCache.delete(actualUserId);
+      if (isSubOwner) {
         bandwidthCache.delete(userId);
       }
     } catch (error) {
@@ -280,6 +454,7 @@ async function flushBandwidthUpdates(): Promise<void> {
 /**
  * Track bandwidth usage by incrementing the user's usage counter
  * Uses batched updates to reduce API calls
+ * For sub_owners, tracks bandwidth against owner's account
  */
 export async function trackBandwidthUsage(
   userId: string,
@@ -294,9 +469,12 @@ export async function trackBandwidthUsage(
     return;
   }
 
-  // Add to pending updates
-  const currentPending = pendingUpdates.get(userId) || 0;
-  pendingUpdates.set(userId, currentPending + actualSize);
+  // Get the actual user ID to track (owner's ID if user is sub_owner)
+  const actualUserId = await getOwnerUserIdForSubOwner(userId);
+
+  // Add to pending updates (use actualUserId)
+  const currentPending = pendingUpdates.get(actualUserId) || 0;
+  pendingUpdates.set(actualUserId, currentPending + actualSize);
 
   // Schedule batch update if not already scheduled
   if (!batchUpdateTimer) {

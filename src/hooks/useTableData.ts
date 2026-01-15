@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import type { ColumnFilter, ColumnFilters } from '@/components/table/TableFilter';
 import { ErrorDisplay } from '@/components/ErrorDisplay';
 import { useEditingSession } from './useEditingSession';
+import { useStore } from '@/lib/store';
 
 interface TableConfig {
   tableName: string;
@@ -17,9 +18,11 @@ interface TableConfig {
 interface UseTableDataProps {
   config: TableConfig;
   tableId: string;
+  userId?: string;
+  hasGetPermission?: boolean | null;
 }
 
-export function useTableData<T extends { id: string }>({ config, tableId }: UseTableDataProps) {
+export function useTableData<T extends { id: string }>({ config, tableId, userId: providedUserId, hasGetPermission: providedGetPermission }: UseTableDataProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<T[]>([]);
@@ -31,6 +34,10 @@ export function useTableData<T extends { id: string }>({ config, tableId }: UseT
   const permissionCacheRef = useRef<Record<string, { result: boolean; timestamp: number }>>({});
   const userCacheRef = useRef<{ user: { id: string } | null; timestamp: number } | null>(null);
   const [isFiltering, setIsFiltering] = useState(false);
+  
+  // Get permissions from store
+  const { permissions } = useStore();
+  const storePermissions = permissions[tableId];
 
   // Memoize supabase client to prevent recreation
   const supabaseRef = useRef(createClient());
@@ -59,19 +66,57 @@ export function useTableData<T extends { id: string }>({ config, tableId }: UseT
       return false;
     }
 
+    // For 'get' action, prioritize store permissions, then provided prop, then fallback to RPC
+    if (action === 'get') {
+      // First check store permissions (most reliable, cached)
+      if (storePermissions?.can_get !== undefined) {
+        return storePermissions.can_get;
+      }
+      // Then check provided prop
+      if (providedGetPermission !== undefined && providedGetPermission !== null) {
+        return providedGetPermission;
+      }
+    }
+    
+    // For other actions, check store permissions first if available
+    if (action === 'put' && storePermissions?.can_put !== undefined) {
+      return storePermissions.can_put;
+    }
+    if (action === 'post' && storePermissions?.can_post !== undefined) {
+      return storePermissions.can_post;
+    }
+    if (action === 'delete' && storePermissions?.can_delete !== undefined) {
+      return storePermissions.can_delete;
+    }
+
     const cacheKey = `${tableId}-${action}`;
     const cached = permissionCacheRef.current[cacheKey];
-    if (cached && Date.now() - cached.timestamp < PERMISSION_CACHE_DURATION) {
+    const PERMISSION_CACHE_DURATION_LOCAL = PERMISSION_CACHE_DURATION;
+    const USER_CACHE_DURATION_LOCAL = USER_CACHE_DURATION;
+    if (cached && Date.now() - cached.timestamp < PERMISSION_CACHE_DURATION_LOCAL) {
       return cached.result;
     }
 
     try {
-      // Use cached user if available to avoid duplicate getUser() calls
-      let user = userCacheRef.current?.user || null;
-      if (!userCacheRef.current || Date.now() - userCacheRef.current.timestamp > USER_CACHE_DURATION) {
+      // Always use provided userId first to avoid getUser() calls
+      // Only fall back to cached user or fetch if absolutely necessary
+      let user: { id: string } | null = providedUserId ? { id: providedUserId } : null;
+      
+      // If no provided userId, try cached user (only if cache is still valid)
+      if (!user && userCacheRef.current?.user) {
+        const cacheAge = Date.now() - userCacheRef.current.timestamp;
+        if (cacheAge < USER_CACHE_DURATION_LOCAL) {
+          user = userCacheRef.current.user;
+        }
+      }
+      
+      // Only fetch user if we don't have one (either not provided and cache expired/missing)
+      if (!user) {
         const { data: { user: fetchedUser } } = await supabase.auth.getUser();
         user = fetchedUser;
-        userCacheRef.current = { user: fetchedUser, timestamp: Date.now() };
+        if (fetchedUser) {
+          userCacheRef.current = { user: fetchedUser, timestamp: Date.now() };
+        }
       }
       
       if (!user) {
@@ -103,50 +148,36 @@ export function useTableData<T extends { id: string }>({ config, tableId }: UseT
         return false;
       }
 
-      // Log the actual RPC response
-      console.log('RPC check_table_permission response:', {
-        tableId,
-        action: dbAction,
-        data,
-        dataType: typeof data,
-        dataValue: data,
-        isTrue: data === true,
-        isTruthy: !!data,
-        isStrictlyTrue: data === true,
-        isStrictlyFalse: data === false,
-        isNull: data === null,
-        isUndefined: data === undefined
-      });
+      // RPC response logged only in debug mode (removed verbose logging)
 
       // If RPC returns false but we have permission in database, log a warning
-      if (!data && userCacheRef.current?.user) {
+      // Use provided userId or cached user instead of calling getUser()
+      const userIdForCheck = providedUserId || userCacheRef.current?.user?.id;
+      if (!data && userIdForCheck) {
         // Double-check by querying directly
         try {
-          const { data: { user } } = await supabase.auth.getUser();
-          if (user) {
-            const { data: subOwner } = await supabase
-              .from('sub_owners')
-              .select('id')
-              .eq('profile_id', user.id)
+          const { data: subOwner } = await supabase
+            .from('sub_owners')
+            .select('id')
+            .eq('profile_id', userIdForCheck)
+            .single();
+          
+          if (subOwner) {
+            const { data: directPerms } = await supabase
+              .from('sub_owner_permissions')
+              .select('can_get, can_put, can_post, can_delete')
+              .eq('sub_owner_id', subOwner.id)
+              .eq('table_id', tableId)
               .single();
             
-            if (subOwner) {
-              const { data: directPerms } = await supabase
-                .from('sub_owner_permissions')
-                .select('can_get, can_put, can_post, can_delete')
-                .eq('sub_owner_id', subOwner.id)
-                .eq('table_id', tableId)
-                .single();
-              
-              if (directPerms && directPerms[`can_${action === 'get' ? 'get' : action === 'put' ? 'put' : action === 'post' ? 'post' : 'delete'}`]) {
-                console.warn('RPC function returned false but direct query shows permission exists!', {
-                  tableId,
-                  action,
-                  dbAction,
-                  directPerms,
-                  rpcResult: data
-                });
-              }
+            if (directPerms && directPerms[`can_${action === 'get' ? 'get' : action === 'put' ? 'put' : action === 'post' ? 'post' : 'delete'}`]) {
+              console.warn('RPC function returned false but direct query shows permission exists!', {
+                tableId,
+                action,
+                dbAction,
+                directPerms,
+                rpcResult: data
+              });
             }
           }
         } catch (checkError) {
@@ -165,7 +196,7 @@ export function useTableData<T extends { id: string }>({ config, tableId }: UseT
       console.error('Error checking permission:', error);
       return false;
     }
-  }, [tableId, supabase]);
+  }, [tableId, supabase, providedGetPermission, providedUserId, storePermissions]);
 
   const handleError = (err: object | unknown) => {
     let errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred';
@@ -202,15 +233,15 @@ export function useTableData<T extends { id: string }>({ config, tableId }: UseT
     try {
       const hasPermission = await checkPermission('get');
       if (!hasPermission) {
-        // Try to get more diagnostic info
-        try {
-          const { data: { user } } = await supabase.auth.getUser();
-          if (user) {
+        // Use provided userId for diagnostic info instead of calling getUser()
+        const userIdForDiag = providedUserId || userCacheRef.current?.user?.id;
+        if (userIdForDiag) {
+          try {
             // Check if user is sub_owner
             const { data: subOwner } = await supabase
               .from('sub_owners')
               .select('id')
-              .eq('profile_id', user.id)
+              .eq('profile_id', userIdForDiag)
               .single();
             
             if (subOwner) {
@@ -224,16 +255,16 @@ export function useTableData<T extends { id: string }>({ config, tableId }: UseT
               
               console.error('Permission check failed. Diagnostic info:', {
                 tableId,
-                userId: user.id,
+                userId: userIdForDiag,
                 subOwnerId: subOwner.id,
                 permissions,
                 hasPermissionRecord: !!permissions,
                 canGet: permissions?.can_get,
               });
             }
+          } catch (diagError) {
+            console.error('Error getting diagnostic info:', diagError);
           }
-        } catch (diagError) {
-          console.error('Error getting diagnostic info:', diagError);
         }
         
         setError('You do not have permission to view this table');
@@ -350,7 +381,7 @@ export function useTableData<T extends { id: string }>({ config, tableId }: UseT
     }
   }, [filters, tableId, checkPermission, page, pageSize]);
 
-  const handleAddRow = async (formData: Omit<T, 'id'>) => {
+  const handleAddRow = useCallback(async (formData: Omit<T, 'id'>) => {
     try {
       const hasPermission = await checkPermission('post');
       if (!hasPermission) {
@@ -373,7 +404,7 @@ export function useTableData<T extends { id: string }>({ config, tableId }: UseT
       handleError(err);
       throw err;
     }
-  };
+  }, [checkPermission, supabase, configRef, tableId]);
 
   const handleEditRow = async (id: string, formData: Partial<T>) => {
     try {

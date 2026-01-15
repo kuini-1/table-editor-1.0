@@ -367,15 +367,17 @@ export function FormDialog<T extends BaseFormData>({
 }: FormDialogProps<T>) {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-[90vw] sm:max-w-[85vw] md:max-w-3xl h-[90vh] overflow-hidden">
-        <ModularForm
-          columns={columns as ModularFormColumn[]}
-          initialData={initialData}
-          onSubmit={onSubmit}
-          onCancel={onClose}
-          mode={mode}
-          tableId={tableId}
-        />
+      <DialogContent className="max-w-[90vw] sm:max-w-[85vw] md:max-w-3xl h-[90vh] p-0 gap-0 [&>button]:hidden overflow-hidden">
+        <div className="flex flex-col h-full min-h-0">
+          <ModularForm
+            columns={columns as ModularFormColumn[]}
+            initialData={initialData}
+            onSubmit={onSubmit}
+            onCancel={onClose}
+            mode={mode}
+            tableId={tableId}
+          />
+        </div>
       </DialogContent>
     </Dialog>
   );

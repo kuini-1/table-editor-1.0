@@ -12,7 +12,7 @@ const formulaTabs = [
         id: "basic-info",
         title: "Basic Information",
         description: "Enter basic formula information",
-        columns: ["tblidx", "bvalidity_able"]
+        columns: ["tblidx", "bValidity_Able"]
       }
     ]
   },
@@ -24,7 +24,7 @@ const formulaTabs = [
         id: "rate-settings",
         title: "Rate Settings",
         description: "Configure formula rates",
-        columns: ["afrate_0", "afrate_1", "afrate_2", "afrate_3"]
+        columns: ["afRate_0", "afRate_1", "afRate_2", "afRate_3"]
       }
     ]
   }
@@ -33,13 +33,13 @@ const formulaTabs = [
 const formulaQuickViewSections = [
   {
     title: "Basic Information",
-    columns: ["tblidx", "bvalidity_able"]
+    columns: ["tblidx", "bValidity_Able"]
   }
 ];
 
 const formulaQuickStats = [
   { label: 'ID', column: 'tblidx' },
-  { label: 'Valid', column: 'bvalidity_able' },
+  { label: 'Valid', column: 'bValidity_Able' },
 ];
 
 interface FormulaFormProps {

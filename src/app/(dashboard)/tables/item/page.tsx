@@ -18,7 +18,6 @@ import { DeleteDialog, ImportDialog, ExportDialog } from '@/components/table/Tab
 import { EditConflictWarning } from '@/components/table/EditConflictWarning';
 import { EditingIndicator } from '@/components/table/EditingIndicator';
 import { useStore } from "@/lib/store";
-import { createClient } from "@/lib/supabase/client";
 import { itemTableSchema, columns } from "./schema";
 import ItemForm from "./ItemForm";
 import { ErrorDisplay } from '@/components/ErrorDisplay';
@@ -49,6 +48,33 @@ export default function ItemTablePage() {
     [userProfile?.data?.id, tableId]
   );
   
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [formMode, setFormMode] = useState<FormMode>('add');
+  const [selectedRow, setSelectedRow] = useState<ItemTableRow | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+  const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
+
+  // Get current user ID and permissions from store
+  const currentUserId = userProfile?.data?.id;
+  const { permissions, fetchTablePermissions } = useStore();
+  const tablePermissions = permissions[tableId];
+  const hasPermission = tablePermissions?.can_get ?? null;
+
+  // Fetch permissions if not cached
+  useEffect(() => {
+    if (!tableId || !currentUserId) return;
+    
+    // Check if permissions are cached and valid
+    const now = Date.now();
+    const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
+    const isCached = tablePermissions && (now - tablePermissions.timestamp) < CACHE_DURATION;
+    
+    if (!isCached) {
+      fetchTablePermissions(tableId);
+    }
+  }, [tableId, currentUserId, tablePermissions, fetchTablePermissions]);
+  
   // Use table data hook
   const {
     data,
@@ -76,26 +102,9 @@ export default function ItemTablePage() {
       columns,
     },
     tableId,
+    userId: currentUserId,
+    hasGetPermission: hasPermission,
   });
-  
-  const [isFormOpen, setIsFormOpen] = useState(false);
-  const [formMode, setFormMode] = useState<FormMode>('add');
-  const [selectedRow, setSelectedRow] = useState<ItemTableRow | null>(null);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
-  const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
-  const [currentUserId, setCurrentUserId] = useState<string | undefined>();
-
-  const supabase = createClient();
-
-  // Get current user ID
-  useEffect(() => {
-    const fetchUserId = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      setCurrentUserId(user?.id);
-    };
-    fetchUserId();
-  }, [supabase]);
 
   // Track editing session when edit form is open
   useEditingSession({
@@ -103,6 +112,9 @@ export default function ItemTablePage() {
     rowId: formMode === 'edit' && selectedRow ? selectedRow.id : null,
     sessionType: 'editing',
     enabled: isFormOpen && formMode === 'edit' && !!selectedRow,
+    userId: currentUserId,
+    userEmail: userProfile?.data?.email,
+    userName: userProfile?.data?.full_name,
   });
 
   // Get real-time editing indicators
@@ -113,6 +125,7 @@ export default function ItemTablePage() {
   } = useEditingIndicators({
     tableId,
     enabled: !!tableId,
+    hasPermission,
   });
 
   // Memoize handlers to prevent unnecessary re-renders
@@ -186,7 +199,7 @@ export default function ItemTablePage() {
         filters={filters}
         selectedCount={selectedRows.size}
         onAddRow={handleAdd}
-        onImport={handleImport}
+        onImport={userProfile?.data?.role === 'owner' ? handleImport : undefined}
         onExport={() => setIsExportDialogOpen(true)}
         onRefresh={refreshData}
         onBulkDelete={handleBulkDelete}
@@ -229,9 +242,9 @@ export default function ItemTablePage() {
             </SheetTitle>
           </SheetHeader>
           
-          <div className="flex-1 overflow-hidden bg-white dark:bg-gray-800">
+          <div className="flex-1 min-h-0 flex flex-col bg-white dark:bg-gray-800">
             {formMode === 'edit' && selectedRow && (
-              <div className="px-6 pt-4">
+              <div className="px-6 pt-4 flex-shrink-0">
                 <EditConflictWarning
                   sessions={getOtherUsersEditingRow(selectedRow.id, currentUserId)}
                   currentUserId={currentUserId}
@@ -242,7 +255,7 @@ export default function ItemTablePage() {
                 />
               </div>
             )}
-            <div className="flex-1 overflow-hidden">
+            <div className="flex-1 min-h-0">
               <ItemForm
                 open={isFormOpen}
                 onOpenChange={setIsFormOpen}

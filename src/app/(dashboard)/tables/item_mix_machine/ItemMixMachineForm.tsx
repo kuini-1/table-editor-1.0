@@ -8,7 +8,7 @@ const itemMixMachineTableSections = [
     id: 'basic-info',
     title: 'Basic Information',
     description: 'Enter the basic details for this item mix machine entry',
-    columns: ['tblidx', 'bValidityAble', 'name', 'byMachineType', 'wFunctionBitFlag', 'byMixZennyDiscountRate', 'dynamicObjectTblidx']
+        columns: ['tblidx', 'bValidityAble', 'name', 'byMachineType', 'wFunctionBitFlag', 'byMixZennyDiscountRate', 'dynamicObjectTblidx']
   },
   {
     id: 'recipes-0-4',

@@ -27,7 +27,7 @@ const itemBagListTabs = [
 const itemBagListQuickViewSections = [
   {
     title: "Basic Information",
-    columns: ["tblidx", "wszname", "bylevel", "benchant_able", "dwitemcount", "dwtotalprob"]
+    columns: ["tblidx", "wszName", "byLevel", "bEnchant_Able", "dwItemCount", "dwTotalProb"]
   }
 ];
 
@@ -40,18 +40,18 @@ const itemBagListQuickStats = [
   },
   { 
     label: 'Name', 
-    column: 'wszname',
+    column: 'wszName',
     formatValue: (value: unknown) => String(value ?? '—')
   },
   { 
     label: 'Level', 
-    column: 'bylevel',
+    column: 'byLevel',
     formatValue: (value: unknown) => String(value ?? '—'),
     color: 'blue'
   },
   { 
     label: 'Item Count', 
-    column: 'dwitemcount',
+    column: 'dwItemCount',
     formatValue: (value: unknown) => String(value ?? '—'),
     color: 'purple'
   },

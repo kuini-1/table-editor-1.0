@@ -12,7 +12,7 @@ const itemEnchantTabs = [
         id: "level-type",
         title: "Level and Type Settings",
         description: "Level requirements and type configuration",
-        columns: ["byrvtype", "byexclidx"]
+        columns: ["byRvType", "byExclIdx"]
       }
     ]
   },
@@ -36,10 +36,10 @@ const itemEnchantTabs = [
         title: "Item Flags",
         description: "Item quality flags",
         columns: [
-          "bissuperior",
-          "bisexcellent",
-          "bisrare",
-          "bislegendary"
+          "bIsSuperior",
+          "bIsExcellent",
+          "bIsRare",
+          "bIsLegendary"
         ]
       }
     ]
@@ -49,11 +49,11 @@ const itemEnchantTabs = [
 const itemEnchantQuickViewSections = [
   {
     title: "Basic Information",
-    columns: ["tblidx", "wszname", "setblidx", "bsetype"]
+    columns: ["tblidx", "wszName", "seTblidx", "bSeType"]
   },
   {
     title: "Enchant Settings",
-    columns: ["byminlevel", "bymaxlevel", "wenchant_value", "wmaxvalue"]
+    columns: ["byMinLevel", "byMaxLevel", "wEnchant_Value", "wMaxValue"]
   }
 ];
 
@@ -66,18 +66,18 @@ const itemEnchantQuickStats = [
   },
   { 
     label: 'Name', 
-    column: 'wszname',
+    column: 'wszName',
     formatValue: (value: unknown) => String(value ?? '—')
   },
   { 
     label: 'Enchant Value', 
-    column: 'wenchant_value',
+    column: 'wEnchant_Value',
     formatValue: (value: unknown) => String(value ?? '—'),
     color: 'blue'
   },
   { 
     label: 'Max Value', 
-    column: 'wmaxvalue',
+    column: 'wMaxValue',
     formatValue: (value: unknown) => String(value ?? '—'),
     color: 'purple'
   },

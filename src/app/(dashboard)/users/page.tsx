@@ -36,6 +36,7 @@ interface User {
   full_name?: string;
   created_at: string;
   sub_owner_id?: string;
+  bandwidth_used?: number;
   default_permissions?: {
     can_get: boolean;
     can_put: boolean;
@@ -66,6 +67,7 @@ interface SubOwnerResponse {
       email: string;
       full_name: string | null;
       created_at: string;
+      current_month_bandwidth_used: number | null;
     };
     permissions: Array<{
       table: {
@@ -172,7 +174,8 @@ export default function UsersPage() {
               id,
               email,
               full_name,
-              created_at
+              created_at,
+              current_month_bandwidth_used
             ),
             permissions:sub_owner_permissions(
               table:tables(
@@ -197,6 +200,7 @@ export default function UsersPage() {
         email: so.profile.email,
         full_name: so.profile.full_name || undefined,
         created_at: so.profile.created_at,
+        bandwidth_used: so.profile.current_month_bandwidth_used || 0,
         sub_owner_id: so.id,
         default_permissions: {
           can_get: so.default_can_get,
@@ -664,6 +668,9 @@ export default function UsersPage() {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                       Created At
                     </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                      Bandwidth Used
+                    </th>
                     <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                       Actions
                     </th>
@@ -680,6 +687,22 @@ export default function UsersPage() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                         {new Date(user.created_at).toLocaleDateString()}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                        {(() => {
+                          const formatBytes = (bytes: number): string => {
+                            if (bytes < 1024) {
+                              return `${bytes} B`;
+                            } else if (bytes < 1024 * 1024) {
+                              return `${(bytes / 1024).toFixed(1)} KB`;
+                            } else if (bytes < 1024 * 1024 * 1024) {
+                              return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+                            } else {
+                              return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+                            }
+                          };
+                          return formatBytes(user.bandwidth_used || 0);
+                        })()}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <div className="flex justify-end space-x-2">

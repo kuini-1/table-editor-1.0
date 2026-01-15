@@ -12,7 +12,7 @@ const slotMachineTabs = [
         id: "basic-info",
         title: "Basic Information",
         description: "Enter basic slot machine information",
-        columns: ["wsznametext", "bactive"]
+        columns: ["wszNameText", "bActive"]
       }
     ]
   },
@@ -24,7 +24,7 @@ const slotMachineTabs = [
         id: "item-details",
         title: "Item Details",
         description: "Configure slot machine item details",
-        columns: ["slotmachinetblidx", "cashitemtblidx", "bystackcount", "bypercent"]
+        columns: ["slotMachineTblidx", "cashItemTblidx", "byStackCount", "byPercent"]
       }
     ]
   }
@@ -33,11 +33,11 @@ const slotMachineTabs = [
 const slotMachineQuickViewSections = [
   {
     title: "Basic Information",
-    columns: ["tblidx", "wsznametext", "bactive"]
+    columns: ["tblidx", "wszNameText", "bActive"]
   },
   {
     title: "Item Details",
-    columns: ["slotmachinetblidx", "cashitemtblidx", "bystackcount", "bypercent"]
+    columns: ["slotMachineTblidx", "cashItemTblidx", "byStackCount", "byPercent"]
   }
 ];
 
@@ -50,18 +50,18 @@ const slotMachineQuickStats = [
   },
   { 
     label: 'Name', 
-    column: 'wsznametext',
+    column: 'wszNameText',
     formatValue: (value: unknown) => String(value ?? '—')
   },
   { 
     label: 'Slot Machine ID', 
-    column: 'slotmachinetblidx',
+    column: 'slotMachineTblidx',
     formatValue: (value: unknown) => String(value ?? '—'),
     color: 'blue'
   },
   { 
     label: 'Percent', 
-    column: 'bypercent',
+    column: 'byPercent',
     formatValue: (value: unknown) => String(value ?? '—'),
     color: 'purple'
   },

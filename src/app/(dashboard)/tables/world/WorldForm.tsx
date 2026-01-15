@@ -13,9 +13,9 @@ const worldTabs = [
         title: "Basic Information",
         description: "Enter basic world information",
         columns: [
-          "dwdynamiccreatecountsharegroup",
-          "bydoortype",
-          "dwdestroytimeinmillisec"
+          "dwDynamicCreateCountShareGroup",
+          "byDoorType",
+          "dwDestroyTimeInMilliSec"
         ]
       },
       {
@@ -23,9 +23,9 @@ const worldTabs = [
         title: "Spawn Tables",
         description: "Configure spawn table names",
         columns: [
-          "wszmobspawn_table_name",
-          "wsznpcspawn_table_name",
-          "wszobjspawn_table_name"
+          "wszMobSpawn_Table_Name",
+          "wszNpcSpawn_Table_Name",
+          "wszObjSpawn_Table_Name"
         ]
       }
     ]
@@ -39,8 +39,8 @@ const worldTabs = [
         title: "Start & End Locations",
         description: "Start and end coordinates",
         columns: [
-          "vstart_x", "vstart_y", "vstart_z",
-          "vend_x", "vend_y", "vend_z"
+          "vStart_X", "vStart_Y", "vStart_Z",
+          "vEnd_X", "vEnd_Y", "vEnd_Z"
         ]
       },
       {
@@ -48,7 +48,7 @@ const worldTabs = [
         title: "Standard Location",
         description: "Standard location coordinates",
         columns: [
-          "vstandardloc_x", "vstandardloc_y", "vstandardloc_z"
+          "vStandardLoc_X", "vStandardLoc_Y", "vStandardLoc_Z"
         ]
       },
       {
@@ -56,8 +56,8 @@ const worldTabs = [
         title: "Default Location & Direction",
         description: "Default location and direction",
         columns: [
-          "vdefaultloc_x", "vdefaultloc_y", "vdefaultloc_z",
-          "vdefaultdir_x", "vdefaultdir_y", "vdefaultdir_z"
+          "vDefaultLoc_X", "vDefaultLoc_Y", "vDefaultLoc_Z",
+          "vDefaultDir_X", "vDefaultDir_Y", "vDefaultDir_Z"
         ]
       }
     ]
@@ -71,8 +71,8 @@ const worldTabs = [
         title: "Battle 1 Locations",
         description: "First battle start and end locations",
         columns: [
-          "vbattlestartloc_x", "vbattlestartloc_y", "vbattlestartloc_z",
-          "vbattleendloc_x", "vbattleendloc_y", "vbattleendloc_z"
+          "vBattleStartLoc_X", "vBattleStartLoc_Y", "vBattleStartLoc_Z",
+          "vBattleEndLoc_X", "vBattleEndLoc_Y", "vBattleEndLoc_Z"
         ]
       },
       {
@@ -80,8 +80,8 @@ const worldTabs = [
         title: "Battle 2 Locations",
         description: "Second battle start and end locations",
         columns: [
-          "vbattlestart2loc_x", "vbattlestart2loc_y", "vbattlestart2loc_z",
-          "vbattleend2loc_x", "vbattleend2loc_y", "vbattleend2loc_z"
+          "vBattleStart2Loc_X", "vBattleStart2Loc_Y", "vBattleStart2Loc_Z",
+          "vBattleEnd2Loc_X", "vBattleEnd2Loc_Y", "vBattleEnd2Loc_Z"
         ]
       },
       {
@@ -89,8 +89,8 @@ const worldTabs = [
         title: "Outside Battle Locations",
         description: "Outside battle start and end locations",
         columns: [
-          "voutsidebattlestartloc_x", "voutsidebattlestartloc_y", "voutsidebattlestartloc_z",
-          "voutsidebattleendloc_x", "voutsidebattleendloc_y", "voutsidebattleendloc_z"
+          "vOutSideBattleStartLoc_X", "vOutSideBattleStartLoc_Y", "vOutSideBattleStartLoc_Z",
+          "vOutSideBattleEndLoc_X", "vOutSideBattleEndLoc_Y", "vOutSideBattleEndLoc_Z"
         ]
       },
       {
@@ -98,8 +98,8 @@ const worldTabs = [
         title: "Spectator Locations",
         description: "Spectator start and end locations",
         columns: [
-          "vspectatorstartloc_x", "vspectatorstartloc_y", "vspectatorstartloc_z",
-          "vspectatorendloc_x", "vspectatorendloc_y", "vspectatorendloc_z"
+          "vSpectatorStartLoc_X", "vSpectatorStartLoc_Y", "vSpectatorStartLoc_Z",
+          "vSpectatorEndLoc_X", "vSpectatorEndLoc_Y", "vSpectatorEndLoc_Z"
         ]
       }
     ]
@@ -113,8 +113,8 @@ const worldTabs = [
         title: "Start Point 1",
         description: "Start point 1 location and direction",
         columns: [
-          "vstart1loc_x", "vstart1loc_y", "vstart1loc_z",
-          "vstart1dir_x", "vstart1dir_y", "vstart1dir_z"
+          "vStart1Loc_X", "vStart1Loc_Y", "vStart1Loc_Z",
+          "vStart1Dir_X", "vStart1Dir_Y", "vStart1Dir_Z"
         ]
       },
       {
@@ -122,8 +122,8 @@ const worldTabs = [
         title: "Start Point 2",
         description: "Start point 2 location and direction",
         columns: [
-          "vstart2loc_x", "vstart2loc_y", "vstart2loc_z",
-          "vstart2dir_x", "vstart2dir_y", "vstart2dir_z"
+          "vStart2Loc_X", "vStart2Loc_Y", "vStart2Loc_Z",
+          "vStart2Dir_X", "vStart2Dir_Y", "vStart2Dir_Z"
         ]
       },
       {
@@ -131,8 +131,8 @@ const worldTabs = [
         title: "Waiting Point 1",
         description: "Waiting point 1 location and direction",
         columns: [
-          "vwaitingpoint1loc_x", "vwaitingpoint1loc_y", "vwaitingpoint1loc_z",
-          "vwaitingpoint1dir_x", "vwaitingpoint1dir_y", "vwaitingpoint1dir_z"
+          "vWaitingPoint1Loc_X", "vWaitingPoint1Loc_Y", "vWaitingPoint1Loc_Z",
+          "vWaitingPoint1Dir_X", "vWaitingPoint1Dir_Y", "vWaitingPoint1Dir_Z"
         ]
       },
       {
@@ -140,8 +140,8 @@ const worldTabs = [
         title: "Waiting Point 2",
         description: "Waiting point 2 location and direction",
         columns: [
-          "vwaitingpoint2loc_x", "vwaitingpoint2loc_y", "vwaitingpoint2loc_z",
-          "vwaitingpoint2dir_x", "vwaitingpoint2dir_y", "vwaitingpoint2dir_z"
+          "vWaitingPoint2Loc_X", "vWaitingPoint2Loc_Y", "vWaitingPoint2Loc_Z",
+          "vWaitingPoint2Dir_X", "vWaitingPoint2Dir_Y", "vWaitingPoint2Dir_Z"
         ]
       }
     ]
@@ -155,9 +155,9 @@ const worldTabs = [
         title: "World Settings",
         description: "Configure world settings",
         columns: [
-          "fsplitsize",
-          "wfuncflag",
-          "worldruletbldx"
+          "fSplitSize",
+          "wFuncFlag",
+          "worldRuleTbldx"
         ]
       },
       {
@@ -165,9 +165,9 @@ const worldTabs = [
         title: "Outworld Settings",
         description: "Configure outworld settings",
         columns: [
-          "outworldtblidx",
-          "outworldloc_x", "outworldloc_y", "outworldloc_z",
-          "outworlddir_x", "outworlddir_y", "outworlddir_z"
+          "outWorldTblidx",
+          "outWorldLoc_X", "outWorldLoc_Y", "outWorldLoc_Z",
+          "outWorldDir_X", "outWorldDir_Y", "outWorldDir_Z"
         ]
       },
       {
@@ -175,12 +175,12 @@ const worldTabs = [
         title: "Resource Settings",
         description: "Configure resource settings",
         columns: [
-          "wszresourcefolder",
-          "fbgmresttime",
-          "dwworldresourceid",
-          "ffreecamera_height",
-          "wszenterresourceflash",
-          "wszleaveresourceflash"
+          "wszResourceFolder",
+          "fBGMRestTime",
+          "dwWorldResourceID",
+          "fFreeCamera_Height",
+          "wszEnterResourceFlash",
+          "wszLeaveResourceFlash"
         ]
       },
       {
@@ -188,9 +188,9 @@ const worldTabs = [
         title: "Other Settings",
         description: "Other world settings",
         columns: [
-          "wpslinkindex",
-          "bystartpointrange",
-          "dwprohibition_bit_flag"
+          "wpsLinkIndex",
+          "byStartPointRange",
+          "dwProhibition_Bit_Flag"
         ]
       }
     ]
@@ -203,8 +203,8 @@ const worldTabs = [
       title: `Dragon Ball ${i}`,
       description: `Configure dragon ball ${i} rates`,
       columns: [
-        `abydragonballhaverate_${i}`,
-        `abydragonballdroprate_${i}`
+        `abyDragonBallHaveRate_${i}`,
+        `abyDragonBallDropRate_${i}`
       ]
     }))
   }
@@ -213,11 +213,11 @@ const worldTabs = [
 const worldQuickViewSections = [
   {
     title: "Basic Information",
-    columns: ["tblidx", "szname", "wszname", "bdynamic", "ncreatecount"]
+    columns: ["tblidx", "szName", "wszName", "bDynamic", "nCreateCount"]
   },
   {
     title: "World Settings",
-    columns: ["bnight_able", "bystatic_time", "byworldruletype"]
+    columns: ["bNight_Able", "byStatic_Time", "byWorldRuleType"]
   }
 ];
 
@@ -230,18 +230,18 @@ const worldQuickStats = [
   },
   { 
     label: 'Name', 
-    column: 'szname',
+    column: 'szName',
     formatValue: (value: unknown) => String(value ?? '—')
   },
   { 
     label: 'Dynamic', 
-    column: 'bdynamic',
+    column: 'bDynamic',
     formatValue: (value: unknown) => value ? 'Yes' : 'No',
     color: 'blue'
   },
   { 
     label: 'Create Count', 
-    column: 'ncreatecount',
+    column: 'nCreateCount',
     formatValue: (value: unknown) => String(value ?? '—'),
     color: 'purple'
   },

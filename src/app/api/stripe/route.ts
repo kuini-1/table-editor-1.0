@@ -26,7 +26,7 @@ export async function GET() {
     // Get the user's profile to check their role
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('*')
+      .select('*, sub_owners(owner_id), owners(id)')
       .eq('id', user.id)
       .single();
 
@@ -40,23 +40,58 @@ export async function GET() {
       return NextResponse.json({ error: 'User profile not found' }, { status: 404 });
     }
 
+    // If user is a sub_owner, get the owner's profile instead
+    let profileToUse = profile;
+    if (profile.role === 'sub_owner') {
+      const subOwnerData = profile.sub_owners as unknown as Array<{ owner_id: string }>;
+      if (subOwnerData && subOwnerData.length > 0) {
+        const ownerId = subOwnerData[0].owner_id;
+        
+        // Get owner's profile_id via owners table
+        const { data: ownerData, error: ownerError } = await supabase
+          .from('owners')
+          .select('profile_id')
+          .eq('id', ownerId)
+          .single();
+
+        if (!ownerError && ownerData) {
+          // Get owner's profile
+          const { data: ownerProfile, error: ownerProfileError } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', ownerData.profile_id)
+            .single();
+
+          if (!ownerProfileError && ownerProfile) {
+            profileToUse = ownerProfile;
+            console.log('Sub owner detected, using owner profile:', {
+              subOwnerId: user.id,
+              ownerId: ownerProfile.id,
+              ownerSubscriptionId: ownerProfile.stripe_subscription_id
+            });
+          }
+        }
+      }
+    }
+
     console.log('Found profile:', {
       role: profile.role,
       id: profile.id,
-      stripe_customer_id: profile.stripe_customer_id,
-      stripe_subscription_id: profile.stripe_subscription_id,
-      subscription_status: profile.subscription_status
+      usingProfileId: profileToUse.id,
+      stripe_customer_id: profileToUse.stripe_customer_id,
+      stripe_subscription_id: profileToUse.stripe_subscription_id,
+      subscription_status: profileToUse.subscription_status
     });
 
     // If no subscription ID in profile, check Stripe for active subscriptions
-    if (!profile.stripe_subscription_id) {
+    if (!profileToUse.stripe_subscription_id) {
       // If we have a customer ID, check Stripe for subscriptions
-      if (profile.stripe_customer_id) {
-        console.log('No subscription ID in profile, checking Stripe for customer:', profile.stripe_customer_id);
+      if (profileToUse.stripe_customer_id) {
+        console.log('No subscription ID in profile, checking Stripe for customer:', profileToUse.stripe_customer_id);
         try {
           // List all subscriptions for this customer
           const subscriptions = await stripe.subscriptions.list({
-            customer: profile.stripe_customer_id,
+            customer: profileToUse.stripe_customer_id,
             status: 'all', // Get all subscriptions to find active/trialing ones
             limit: 10
           });
@@ -72,14 +107,14 @@ export async function GET() {
               status: activeSubscription.status
             });
 
-            // Update profile with the subscription ID and status
+            // Update owner's profile with the subscription ID and status (not sub_owner's)
             await supabase
               .from('profiles')
               .update({
                 stripe_subscription_id: activeSubscription.id,
                 subscription_status: activeSubscription.status
               })
-              .eq('id', user.id);
+              .eq('id', profileToUse.id);
 
             // Get the price details
             const price = await stripe.prices.retrieve(activeSubscription.items.data[0].price.id);
@@ -101,7 +136,7 @@ export async function GET() {
               },
             });
           } else {
-            console.log('No active subscription found in Stripe for customer:', profile.stripe_customer_id);
+            console.log('No active subscription found in Stripe for customer:', profileToUse.stripe_customer_id);
             return NextResponse.json({ subscription: null });
           }
         } catch (error) {
@@ -110,16 +145,16 @@ export async function GET() {
           return NextResponse.json({ subscription: null });
         }
       } else {
-        console.log('No subscription ID or customer ID found for user:', user.id);
+        console.log('No subscription ID or customer ID found');
         return NextResponse.json({ subscription: null });
       }
     }
 
     try {
       // Get subscription details from Stripe
-      console.log('Fetching Stripe subscription:', profile.stripe_subscription_id);
+      console.log('Fetching Stripe subscription:', profileToUse.stripe_subscription_id);
       const subscription = await stripe.subscriptions.retrieve(
-        profile.stripe_subscription_id
+        profileToUse.stripe_subscription_id
       );
 
       console.log('Retrieved subscription from Stripe:', {
@@ -132,14 +167,14 @@ export async function GET() {
       const price = await stripe.prices.retrieve(subscription.items.data[0].price.id);
       const subscriptionItem = subscription.items.data[0];
 
-      // Update subscription status in profile if it's different (keeps it in sync)
-      if (subscription.status !== profile.subscription_status) {
+      // Update subscription status in owner's profile if it's different (keeps it in sync)
+      if (subscription.status !== profileToUse.subscription_status) {
         await supabase
           .from('profiles')
           .update({
             subscription_status: subscription.status
           })
-          .eq('id', user.id);
+          .eq('id', profileToUse.id);
       }
 
       return NextResponse.json({
@@ -200,16 +235,23 @@ export async function POST(request: Request) {
 
     const { priceId, action } = await request.json();
 
-    // Get user profile
+    // Get user profile to check role
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('stripe_customer_id, stripe_subscription_id')
+      .select('role, stripe_customer_id, stripe_subscription_id')
       .eq('id', user.id)
       .single();
 
     if (profileError) {
       console.error('Error fetching profile:', profileError);
       return NextResponse.json({ error: 'Failed to fetch profile' }, { status: 500 });
+    }
+
+    // Sub owners cannot manage subscriptions
+    if (profile?.role === 'sub_owner') {
+      return NextResponse.json({ 
+        error: 'Sub owners cannot manage subscriptions. Please contact the account owner.' 
+      }, { status: 403 });
     }
 
     if (action === 'create') {

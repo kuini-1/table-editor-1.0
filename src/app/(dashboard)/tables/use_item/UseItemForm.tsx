@@ -13,7 +13,7 @@ const useItemTabs = [
         title: "Basic Information",
         description: "Enter basic use item information",
         columns: [
-          "use_info_text"
+          "Use_Info_Text"
         ]
       }
     ]
@@ -27,11 +27,11 @@ const useItemTabs = [
         title: "Flags",
         description: "Configure flags",
         columns: [
-          "dwcool_time_bit_flag",
-          "wfunction_bit_flag",
-          "dwuse_restriction_rule_bit_flag",
-          "dwuse_allow_rule_bit_flag",
-          "wneed_state_bit_flag"
+          "dwCool_Time_Bit_Flag",
+          "wFunction_Bit_Flag",
+          "dwUse_Restriction_Rule_Bit_Flag",
+          "dwUse_Allow_Rule_Bit_Flag",
+          "wNeed_State_Bit_Flag"
         ]
       }
     ]
@@ -45,10 +45,10 @@ const useItemTabs = [
         title: "Target Settings",
         description: "Configure target settings",
         columns: [
-          "byappoint_target",
-          "byapply_target",
-          "dwapply_target_index",
-          "byapply_target_max"
+          "byAppoint_Target",
+          "byApply_Target",
+          "dwApply_Target_Index",
+          "byApply_Target_Max"
         ]
       },
       {
@@ -56,9 +56,9 @@ const useItemTabs = [
         title: "Range Settings",
         description: "Configure range settings",
         columns: [
-          "byapply_range",
-          "byapply_area_size_1",
-          "byapply_area_size_2"
+          "byApply_Range",
+          "byApply_Area_Size_1",
+          "byApply_Area_Size_2"
         ]
       }
     ]
@@ -72,10 +72,10 @@ const useItemTabs = [
         title: "Requirements",
         description: "Configure requirements",
         columns: [
-          "dwrequire_lp",
-          "wrequire_ep",
-          "byrequire_rp_ball",
-          "requiredquestid"
+          "dwRequire_LP",
+          "wRequire_EP",
+          "byRequire_RP_Ball",
+          "RequiredQuestID"
         ]
       }
     ]
@@ -89,10 +89,10 @@ const useItemTabs = [
         title: "Timing",
         description: "Configure timing settings",
         columns: [
-          "dwcastingtimeinmillisecs",
-          "dwcooltimeinmillisecs",
-          "dwkeeptimeinmillisecs",
-          "bkeep_effect"
+          "dwCastingTimeInMilliSecs",
+          "dwCoolTimeInMilliSecs",
+          "dwKeepTimeInMilliSecs",
+          "bKeep_Effect"
         ]
       }
     ]
@@ -106,10 +106,10 @@ const useItemTabs = [
         title: "Range",
         description: "Configure range settings",
         columns: [
-          "byuse_range_min",
-          "fuse_range_min",
-          "byuse_range_max",
-          "fuse_range_max"
+          "byUse_Range_Min",
+          "fUse_Range_Min",
+          "byUse_Range_Max",
+          "fUse_Range_Max"
         ]
       }
     ]
@@ -123,15 +123,15 @@ const useItemTabs = [
         title: "Effects",
         description: "Configure effects",
         columns: [
-          "szcasting_effect",
-          "szaction_effect",
-          "wcasting_animation_start",
-          "wcasting_animation_loop",
-          "waction_animation_index",
-          "waction_loop_animation_index",
-          "waction_end_animation_index",
-          "bycastingeffectposition",
-          "byactioneffectposition"
+          "szCasting_Effect",
+          "szAction_Effect",
+          "wCasting_Animation_Start",
+          "wCasting_Animation_Loop",
+          "wAction_Animation_Index",
+          "wAction_Loop_Animation_Index",
+          "wAction_End_Animation_Index",
+          "byCastingEffectPosition",
+          "byActionEffectPosition"
         ]
       }
     ]
@@ -145,10 +145,10 @@ const useItemTabs = [
         title: "Location",
         description: "Configure location settings",
         columns: [
-          "useworldtblidx",
-          "fuseloc_x",
-          "fuseloc_z",
-          "fuseloc_radius"
+          "useWorldTblidx",
+          "fUseLoc_X",
+          "fUseLoc_Z",
+          "fUseLoc_Radius"
         ]
       }
     ]
@@ -172,11 +172,11 @@ const useItemTabs = [
 const useItemQuickViewSections = [
   {
     title: "Basic Information",
-    columns: ["tblidx", "byuse_item_active_type", "bybuff_group", "bybuffkeeptype", "use_info_text"]
+    columns: ["tblidx", "byUse_Item_Active_Type", "byBuff_Group", "byBuffKeepType", "Use_Info_Text"]
   },
   {
     title: "Timing",
-    columns: ["fcasting_time", "dwcool_time", "dwkeep_time"]
+    columns: ["fCasting_Time", "dwCool_Time", "dwKeep_Time"]
   }
 ];
 
@@ -189,13 +189,13 @@ const useItemQuickStats = [
   },
   { 
     label: 'Active Type', 
-    column: 'byuse_item_active_type',
+    column: 'byUse_Item_Active_Type',
     formatValue: (value: unknown) => String(value ?? '—'),
     color: 'blue'
   },
   { 
     label: 'Buff Group', 
-    column: 'bybuff_group',
+    column: 'byBuff_Group',
     formatValue: (value: unknown) => String(value ?? '—'),
     color: 'purple'
   },

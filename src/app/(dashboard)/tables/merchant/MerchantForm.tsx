@@ -12,7 +12,7 @@ const merchantTabs = [
         id: "basic-info",
         title: "Basic Information",
         description: "Enter basic merchant information",
-        columns: ["tblidx", "wsznametext", "bysell_type", "tab_name", "dwneedmileage"]
+        columns: ["tblidx", "wszNameText", "bySell_Type", "Tab_Name", "dwNeedMileage"]
       }
     ]
   },
@@ -24,10 +24,10 @@ const merchantTabs = [
       title: `Item Bundle ${i + 1}`,
       description: `Configure item bundle ${i + 1}`,
       columns: [
-        `aitem_tblidx_${i}`,
-        `aneeditemtblidx_${i}`,
-        `abyneeditemstack_${i}`,
-        `adwneedzenny_${i}`
+        `aitem_Tblidx_${i}`,
+        `aNeedItemTblidx_${i}`,
+        `abyNeedItemStack_${i}`,
+        `adwNeedZenny_${i}`
       ]
     }))
   }
@@ -36,7 +36,7 @@ const merchantTabs = [
 const merchantQuickViewSections = [
   {
     title: "Basic Information",
-    columns: ["tblidx", "wsznametext", "bysell_type", "tab_name", "dwneedmileage"]
+    columns: ["tblidx", "wszNameText", "bySell_Type", "Tab_Name", "dwNeedMileage"]
   }
 ];
 
@@ -49,12 +49,12 @@ const merchantQuickStats = [
   },
   { 
     label: 'Name', 
-    column: 'wsznametext',
+    column: 'wszNameText',
     formatValue: (value: unknown) => String(value ?? '—')
   },
   { 
     label: 'Sell Type', 
-    column: 'bysell_type',
+    column: 'bySell_Type',
     formatValue: (value: unknown) => String(value ?? '—'),
     color: 'blue'
   },

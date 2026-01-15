@@ -17,23 +17,50 @@ const supabase = createServiceClient(
   }
 );
 
-// Helper function to get bandwidth limit based on price ID
-function getBandwidthLimit(priceId: string, subscriptionStatus?: string): number {
+// Helper function to get bandwidth limit based on price ID and subscription status
+async function getBandwidthLimit(priceId: string, subscriptionStatus?: string): Promise<number> {
   // If subscription is in trial, use trial limit (50MB)
   if (subscriptionStatus === 'trialing') {
     return 50 * 1024 * 1024; // 50MB in bytes
   }
   
-  // Basic plan price IDs
-  if (priceId.includes('basic')) {
-    return 10 * 1024 * 1024 * 1024; // 10GB in bytes
+  try {
+    // Retrieve the price object from Stripe to get accurate plan information
+    const price = await stripe.prices.retrieve(priceId);
+    
+    // Check price nickname (most reliable)
+    const nickname = price.nickname?.toLowerCase() || '';
+    if (nickname.includes('basic')) {
+      return 10 * 1024 * 1024 * 1024; // 10GB in bytes
+    }
+    if (nickname.includes('pro')) {
+      return 50 * 1024 * 1024 * 1024; // 50GB in bytes
+    }
+    
+    // Fallback: Check price ID string
+    const priceIdLower = priceId.toLowerCase();
+    if (priceIdLower.includes('basic')) {
+      return 10 * 1024 * 1024 * 1024; // 10GB in bytes
+    }
+    if (priceIdLower.includes('pro')) {
+      return 50 * 1024 * 1024 * 1024; // 50GB in bytes
+    }
+    
+    // Fallback: Check amount (Basic is typically cheaper than Pro)
+    // This is a last resort and might need adjustment based on actual pricing
+    const amount = price.unit_amount || 0;
+    if (amount > 0 && amount < 5000) { // Assuming Basic is less than $50
+      return 10 * 1024 * 1024 * 1024; // 10GB in bytes
+    }
+    if (amount >= 5000) { // Assuming Pro is $50 or more
+      return 50 * 1024 * 1024 * 1024; // 50GB in bytes
+    }
+  } catch (error) {
+    console.error('Error retrieving price from Stripe:', error);
   }
-  // Pro plan price IDs
-  if (priceId.includes('pro')) {
-    return 50 * 1024 * 1024 * 1024; // 50GB in bytes
-  }
-  // Default to trial limit for new subscriptions
-  return 50 * 1024 * 1024; // 50MB in bytes
+  
+  // Default to Basic limit if we can't determine (safer than trial limit)
+  return 10 * 1024 * 1024 * 1024; // 10GB in bytes (Basic)
 }
 
 export async function POST(request: Request) {
@@ -88,16 +115,35 @@ export async function POST(request: Request) {
         const invoice = await stripe.invoices.retrieve(session.invoice as string);
         console.log('Retrieved invoice:', invoice);
 
-        // Update profile with subscription details and bandwidth limit
+        // Calculate bandwidth limit based on subscription tier
+        const bandwidthLimit = await getBandwidthLimit(priceId, subscription.status);
+        
+        // Extract billing cycle start day from current_period_start (Unix timestamp)
+        // Convert to date and get day of month (1-31)
+        const billingCycleStartDate = new Date(subscription.current_period_start * 1000);
+        const billingCycleStartDay = billingCycleStartDate.getDate();
+        
+        console.log('Setting bandwidth limit and billing cycle:', {
+          userId,
+          priceId,
+          subscriptionStatus: subscription.status,
+          bandwidthLimit,
+          bandwidthLimitGB: (bandwidthLimit / (1024 * 1024 * 1024)).toFixed(2),
+          billingCycleStartDay,
+          currentPeriodStart: subscription.current_period_start
+        });
+
+        // Update profile with subscription details, bandwidth limit, and billing cycle start day
         const { error: updateError } = await supabase
           .from('profiles')
           .update({
             stripe_customer_id: session.customer as string,
             stripe_subscription_id: session.subscription as string,
             subscription_status: subscription.status,
-            monthly_bandwidth_limit: getBandwidthLimit(priceId, subscription.status),
+            monthly_bandwidth_limit: bandwidthLimit,
             current_month_bandwidth_used: 0,
-            last_bandwidth_reset: new Date().toISOString()
+            last_bandwidth_reset: new Date().toISOString(),
+            billing_cycle_start_day: billingCycleStartDay
           })
           .eq('id', userId);
 
@@ -122,30 +168,29 @@ export async function POST(request: Request) {
         });
 
         if (userId) {
-          // Get current profile to check if we need to update bandwidth limit
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('monthly_bandwidth_limit')
-            .eq('id', userId)
-            .single();
+          // Get price ID from subscription items to determine plan tier
+          const priceId = subscription.items.data[0]?.price?.id || '';
           
-          // Determine bandwidth limit based on subscription status
-          let bandwidthLimit = profile?.monthly_bandwidth_limit;
+          // Always calculate bandwidth limit based on subscription status and price ID
+          // This ensures limits match subscription tiers correctly
+          const bandwidthLimit: number = await getBandwidthLimit(priceId, subscription.status);
           
-          // If status is trialing, set to trial limit (50MB)
-          if (subscription.status === 'trialing') {
-            bandwidthLimit = 50 * 1024 * 1024; // 50MB
-          } else if (subscription.status === 'active') {
-            // If becoming active, check if we need to update from trial limit
-            // Get price ID from subscription items to determine plan
-            const priceId = subscription.items.data[0]?.price?.id || '';
-            if (!bandwidthLimit || bandwidthLimit === 50 * 1024 * 1024) {
-              // Only update if currently at trial limit or not set
-              bandwidthLimit = getBandwidthLimit(priceId, subscription.status);
-            }
-          }
+          // Extract billing cycle start day from current_period_start (Unix timestamp)
+          // Convert to date and get day of month (1-31)
+          const billingCycleStartDate = new Date(subscription.current_period_start * 1000);
+          const billingCycleStartDay = billingCycleStartDate.getDate();
           
-          // Update profile with current subscription status and bandwidth limit
+          console.log('Updating bandwidth limit and billing cycle:', {
+            userId,
+            subscriptionStatus: subscription.status,
+            priceId,
+            bandwidthLimit,
+            bandwidthLimitGB: ((bandwidthLimit as number) / (1024 * 1024 * 1024)).toFixed(2),
+            billingCycleStartDay,
+            currentPeriodStart: subscription.current_period_start
+          });
+          
+          // Update profile with current subscription status, bandwidth limit, and billing cycle start day
           // This keeps our database in sync with Stripe, especially for trial status
           const { error: updateError } = await supabase
             .from('profiles')
@@ -153,6 +198,7 @@ export async function POST(request: Request) {
               stripe_subscription_id: subscription.id,
               subscription_status: subscription.status,
               monthly_bandwidth_limit: bandwidthLimit,
+              billing_cycle_start_day: billingCycleStartDay
             })
             .eq('id', userId);
 
@@ -160,7 +206,10 @@ export async function POST(request: Request) {
             console.error('Error updating profile subscription status:', updateError);
             // Don't fail the webhook, just log the error
           } else {
-            console.log('Successfully updated subscription status:', subscription.status);
+            console.log('Successfully updated subscription status and bandwidth limit:', {
+              status: subscription.status,
+              bandwidthLimit
+            });
           }
         }
         

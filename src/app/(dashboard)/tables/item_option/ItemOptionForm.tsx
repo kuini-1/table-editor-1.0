@@ -13,11 +13,11 @@ const itemOptionTabs = [
         title: "Basic Information",
         description: "Enter basic item option information",
         columns: [
-          "bvalidity_able",
-          "byqualityindex",
-          "activeeffect",
-          "factiverate",
-          "sznote"
+          "bValidity_Able",
+          "byQualityIndex",
+          "activeEffect",
+          "fActiveRate",
+          "szNote"
         ]
       }
     ]
@@ -42,11 +42,11 @@ const itemOptionTabs = [
 const itemOptionQuickViewSections = [
   {
     title: "Basic Information",
-    columns: ["tblidx", "wszoption_name", "byoption_rank", "byitem_group"]
+    columns: ["tblidx", "wszOption_Name", "byOption_Rank", "byItem_Group"]
   },
   {
     title: "Quality & Cost",
-    columns: ["bymaxquality", "byquality", "dwcost", "bylevel"]
+    columns: ["byMaxQuality", "byQuality", "dwCost", "byLevel"]
   }
 ];
 
@@ -59,18 +59,18 @@ const itemOptionQuickStats = [
   },
   { 
     label: 'Option Name', 
-    column: 'wszoption_name',
+    column: 'wszOption_Name',
     formatValue: (value: unknown) => String(value ?? '—')
   },
   { 
     label: 'Option Rank', 
-    column: 'byoption_rank',
+    column: 'byOption_Rank',
     formatValue: (value: unknown) => String(value ?? '—'),
     color: 'blue'
   },
   { 
     label: 'Cost', 
-    column: 'dwcost',
+    column: 'dwCost',
     formatValue: (value: unknown) => String(value ?? '—'),
     color: 'purple'
   },

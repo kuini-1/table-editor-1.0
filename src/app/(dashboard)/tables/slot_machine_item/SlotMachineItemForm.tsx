@@ -12,7 +12,7 @@ const slotMachineItemTabs = [
         id: "basic-info",
         title: "Basic Information",
         description: "Enter basic slot machine information",
-        columns: ["szfile_name", "wfirstwincoin"]
+        columns: ["szFile_Name", "wfirstWinCoin"]
       }
     ]
   },
@@ -35,7 +35,7 @@ const slotMachineItemTabs = [
 const slotMachineItemQuickViewSections = [
   {
     title: "Basic Information",
-    columns: ["tblidx", "dwname", "wsznametext", "bycoin", "bonoff", "bytype"]
+    columns: ["tblidx", "dwName", "wszNameText", "byCoin", "bOnOff", "byType"]
   }
 ];
 
@@ -48,18 +48,18 @@ const slotMachineItemQuickStats = [
   },
   { 
     label: 'Name', 
-    column: 'dwname',
+    column: 'dwName',
     formatValue: (value: unknown) => String(value ?? '—')
   },
   { 
     label: 'Coin', 
-    column: 'bycoin',
+    column: 'byCoin',
     formatValue: (value: unknown) => String(value ?? '—'),
     color: 'blue'
   },
   { 
     label: 'First Win Coin', 
-    column: 'wfirstwincoin',
+    column: 'wfirstWinCoin',
     formatValue: (value: unknown) => String(value ?? '—'),
     color: 'purple'
   },

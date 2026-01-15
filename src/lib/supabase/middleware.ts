@@ -68,7 +68,7 @@ export async function updateSession(request: NextRequest) {
   if (user && !userError) {
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('id, stripe_subscription_id, subscription_status')
+      .select('id, stripe_subscription_id, subscription_status, role')
       .eq('id', user.id)
       .single();
 
@@ -84,13 +84,14 @@ export async function updateSession(request: NextRequest) {
     }
 
     // Check subscription/trial access for protected routes (excluding settings where they can manage subscription)
+    // For sub_owners, checks owner's subscription
     const protectedRoutes = ['/tables', '/users'];
     const isProtectedRoute = protectedRoutes.some(route => 
       request.nextUrl.pathname.startsWith(route)
     );
 
     if (isProtectedRoute) {
-      const hasAccess = hasActiveSubscriptionSync(profile);
+      const hasAccess = await hasActiveSubscriptionSync(profile, user.id);
 
       if (!hasAccess) {
         // Redirect to subscription settings page
@@ -100,7 +101,7 @@ export async function updateSession(request: NextRequest) {
 
     // If authenticated user tries to access login/register pages, check subscription first
     if (request.nextUrl.pathname.startsWith('/login') || request.nextUrl.pathname.startsWith('/register')) {
-      if (hasActiveSubscriptionSync(profile)) {
+      if (await hasActiveSubscriptionSync(profile, user.id)) {
         return NextResponse.redirect(new URL('/tables', request.url));
       } else {
         // No subscription, redirect to subscription settings
@@ -110,7 +111,7 @@ export async function updateSession(request: NextRequest) {
 
     // If authenticated user is on home page, check subscription first
     if (request.nextUrl.pathname === '/' || request.nextUrl.pathname === '') {
-      if (hasActiveSubscriptionSync(profile)) {
+      if (await hasActiveSubscriptionSync(profile, user.id)) {
         return NextResponse.redirect(new URL('/tables', request.url));
       } else {
         // No subscription, redirect to subscription settings

@@ -12,7 +12,7 @@ const mobTabs = [
         id: "basic-info",
         title: "Basic Information",
         description: "Enter basic mob information",
-        columns: ["sznametext", "szmodel", "szillust", "bvalidity_able", "bshow_name"]
+        columns: ["szNameText", "szModel", "szILLust", "bValidity_Able", "bShow_Name"]
       }
     ]
   },
@@ -36,7 +36,7 @@ const mobTabs = [
         id: "attributes",
         title: "Attributes",
         description: "Base attribute values",
-        columns: ["wbasicstr", "wbasiccon", "wbasicfoc", "wbasicdex", "wbasicsol", "wbasiceng"]
+        columns: ["wBasicStr", "wBasicCon", "wBasicFoc", "wBasicDex", "wBasicSol", "wBasicEng"]
       }
     ]
   },
@@ -49,18 +49,18 @@ const mobTabs = [
         title: "Combat Settings",
         description: "Combat behavior configuration",
         columns: [
-          "bybattle_attribute",
-          "wattack_speed_rate",
-          "byattack_type",
-          "fattack_range",
-          "wattack_rate",
-          "wdodge_rate",
-          "wblock_rate",
-          "wcurse_success_rate",
-          "wcurse_tolerance_rate",
-          "wbasic_aggro_point",
-          "byattack_animation_quantity",
-          "wattackcooltime"
+          "byBattle_Attribute",
+          "wAttack_Speed_Rate",
+          "byAttack_Type",
+          "fAttack_Range",
+          "wAttack_Rate",
+          "wDodge_Rate",
+          "wBlock_Rate",
+          "wCurse_Success_Rate",
+          "wCurse_Tolerance_Rate",
+          "wBasic_Aggro_Point",
+          "byAttack_Animation_Quantity",
+          "wAttackCoolTime"
         ]
       }
     ]
@@ -74,15 +74,15 @@ const mobTabs = [
         title: "Movement Settings",
         description: "Movement speed and range",
         columns: [
-          "fwalk_speed_origin",
-          "fwalk_speed",
-          "frun_speed_origin",
-          "frun_speed",
-          "fradius_x",
-          "fradius_z",
-          "fradius",
-          "ffly_height",
-          "fscale"
+          "fWalk_Speed_Origin",
+          "fWalk_Speed",
+          "fRun_Speed_Origin",
+          "fRun_Speed",
+          "fRadius_X",
+          "fRadius_Z",
+          "fRadius",
+          "fFly_Height",
+          "fScale"
         ]
       }
     ]
@@ -96,11 +96,11 @@ const mobTabs = [
         title: "Perception Settings",
         description: "Detection and sight configuration",
         columns: [
-          "wsight_range",
-          "wscan_range",
-          "byvisible_sight_range",
-          "wsightangle",
-          "szcamera_bone_name"
+          "wSight_Range",
+          "wScan_Range",
+          "byVisible_Sight_Range",
+          "wSightAngle",
+          "szCamera_Bone_Name"
         ]
       }
     ]
@@ -114,11 +114,11 @@ const mobTabs = [
         title: "Defense Stats",
         description: "Defensive capabilities",
         columns: [
-          "wstomachachedefence",
-          "wpoisondefence",
-          "wbleeddefence",
-          "wburndefence",
-          "dwimmunity_bit_flag"
+          "wStomachacheDefence",
+          "wPoisonDefence",
+          "wBleedDefence",
+          "wBurnDefence",
+          "dwImmunity_Bit_Flag"
         ]
       }
     ]
@@ -132,8 +132,8 @@ const mobTabs = [
         title: "Regeneration Settings",
         description: "Health and energy regeneration",
         columns: [
-          "wlp_regeneration",
-          "wep_regeneration"
+          "wLP_Regeneration",
+          "wEP_Regeneration"
         ]
       }
     ]
@@ -147,23 +147,23 @@ const mobTabs = [
         title: "Drop Settings",
         description: "Item and currency drops",
         columns: [
-          "dwdrop_zenny",
-          "fdrop_zenny_rate",
-          "dwexp",
-          "drop_item_tblidx",
-          "dropquesttblidx",
-          "idxbigbag1",
-          "bydroprate1",
-          "bytrycount1",
-          "idxbigbag2",
-          "bydroprate2",
-          "bytrycount2",
-          "idxbigbag3",
-          "bydroprate3",
-          "bytrycount3",
-          "bisdragonballdrop",
-          "frewardexprate",
-          "frewardzennyrate"
+          "dwDrop_Zenny",
+          "fDrop_Zenny_Rate",
+          "dwExp",
+          "drop_Item_Tblidx",
+          "dropQuestTblidx",
+          "idxBigBag1",
+          "byDropRate1",
+          "byTryCount1",
+          "idxBigBag2",
+          "byDropRate2",
+          "byTryCount2",
+          "idxBigBag3",
+          "byDropRate3",
+          "byTryCount3",
+          "bIsDragonBallDrop",
+          "fRewardExpRate",
+          "fRewardZennyRate"
         ]
       }
     ]
@@ -177,19 +177,19 @@ const mobTabs = [
         title: "AI & Behavior Settings",
         description: "AI behavior and mob properties",
         columns: [
-          "dwai_bit_flag",
-          "bspawn_animation",
-          "dwdialoggroup",
-          "dwallianceidx",
-          "waggromaxcount",
-          "dwnpcattributeflag",
-          "dwmobgroup",
-          "wmob_kind",
-          "bymob_type",
-          "bsize",
-          "wtmqpoint",
-          "wmonsterclass",
-          "wuserace"
+          "dwAi_Bit_Flag",
+          "bSpawn_Animation",
+          "dwDialogGroup",
+          "dwAllianceIdx",
+          "wAggroMaxCount",
+          "dwNpcAttributeFlag",
+          "dwMobGroup",
+          "wMob_Kind",
+          "byMob_Type",
+          "bSize",
+          "wTMQPoint",
+          "wMonsterClass",
+          "wUseRace"
         ]
       }
     ]
@@ -203,18 +203,18 @@ const mobTabs = [
         title: "Formula Settings",
         description: "Formula and rate multipliers",
         columns: [
-          "dwformulaoffset",
-          "fsettingrate_lp",
-          "fsettingrate_lpregen",
-          "fsettingrate_phyoffence",
-          "fsettingrate_engoffence",
-          "fsettingrate_phydefence",
-          "fsettingrate_engdefence",
-          "fsettingrate_attackrate",
-          "fsettingrate_dodgerate",
-          "fsettingphyoffencerate",
-          "fsettingengoffencerate",
-          "fsettingrate_defence_role"
+          "dwFormulaOffset",
+          "fSettingRate_LP",
+          "fSettingRate_LPRegen",
+          "fSettingRate_PhyOffence",
+          "fSettingRate_EngOffence",
+          "fSettingRate_PhyDefence",
+          "fSettingRate_EngDefence",
+          "fSettingRate_AttackRate",
+          "fSettingRate_DodgeRate",
+          "fSettingPhyOffenceRate",
+          "fSettingEngOffenceRate",
+          "fSettingRate_Defence_Role"
         ]
       }
     ]
@@ -258,9 +258,9 @@ const mobTabs = [
         title: "Other Settings",
         description: "Miscellaneous settings",
         columns: [
-          "dwunknown",
-          "byunknown",
-          "byunknown2"
+          "dwUnknown",
+          "byUnknown",
+          "byUnknown2"
         ]
       }
     ]
@@ -270,15 +270,15 @@ const mobTabs = [
 const mobQuickViewSections = [
   {
     title: "Basic Information",
-    columns: ["tblidx", "name", "wsznametext", "bylevel", "bygrade"]
+    columns: ["tblidx", "Name", "wszNameText", "byLevel", "byGrade"]
   },
   {
     title: "Combat Stats",
-    columns: ["wbasic_physical_offence", "wbasic_energy_offence", "wbasic_physical_defence", "wbasic_energy_defence"]
+    columns: ["wBasic_Physical_Offence", "wBasic_Energy_Offence", "wBasic_Physical_Defence", "wBasic_Energy_Defence"]
   },
   {
     title: "Base Stats",
-    columns: ["dwbasic_lp", "wbasic_ep"]
+    columns: ["dwBasic_LP", "wBasic_EP"]
   }
 ];
 
@@ -291,24 +291,24 @@ const mobQuickStats = [
   },
   { 
     label: 'Level', 
-    column: 'bylevel',
+    column: 'byLevel',
     formatValue: (value: unknown) => String(value ?? '—')
   },
   { 
     label: 'Physical Attack', 
-    column: 'wbasic_physical_offence',
+    column: 'wBasic_Physical_Offence',
     formatValue: (value: unknown) => String(value ?? 0),
     color: 'green'
   },
   { 
     label: 'Energy Attack', 
-    column: 'wbasic_energy_offence',
+    column: 'wBasic_Energy_Offence',
     formatValue: (value: unknown) => String(value ?? 0),
     color: 'blue'
   },
   { 
     label: 'EXP', 
-    column: 'dwexp',
+    column: 'dwExp',
     formatValue: (value: unknown) => String(value ?? 0),
     color: 'purple'
   },

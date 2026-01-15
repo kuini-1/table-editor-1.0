@@ -12,13 +12,13 @@ const npcTabs = [
         id: "basic-info",
         title: "Basic Information",
         description: "Enter basic NPC information",
-        columns: ["tblidx", "bvalidity_able", "name", "wsznametext", "szmodel", "bylevel", "bygrade"]
+        columns: ["tblidx", "bValidity_Able", "Name", "wszNameText", "szModel", "byLevel", "byGrade"]
       },
       {
         id: "display-settings",
         title: "Display Settings",
         description: "Configure display and visual settings",
-        columns: ["sznametext", "bspawn_animation", "szillust", "szcamera_bone_name", "fscale"]
+        columns: ["szNameText", "bSpawn_Animation", "szILLust", "szCamera_Bone_Name", "fScale"]
       }
     ]
   },
@@ -30,21 +30,21 @@ const npcTabs = [
         id: "base-stats",
         title: "Base Stats",
         description: "Base health and energy statistics",
-        columns: ["dwbasic_lp", "wbasic_ep", "wlp_regeneration", "wep_regeneration"]
+        columns: ["dwBasic_LP", "wBasic_EP", "wLP_Regeneration", "wEP_Regeneration"]
       },
       {
         id: "attributes",
         title: "Attributes",
         description: "Base attribute values",
-        columns: ["wbasicstr", "wbasiccon", "wbasicfoc", "wbasicdex", "wbasicsol", "wbasiceng"]
+        columns: ["wBasicStr", "wBasicCon", "wBasicFoc", "wBasicDex", "wBasicSol", "wBasicEng"]
       },
       {
         id: "defense-stats",
         title: "Defense Stats",
         description: "Defensive capabilities",
         columns: [
-          "wbasic_physical_defence", "wbasic_energy_defence",
-          "wstomachachedefence", "wpoisondefence", "wbleeddefence", "wburndefence"
+          "wBasic_Physical_Defence", "wBasic_Energy_Defence",
+          "wStomachacheDefence", "wPoisonDefence", "wBleedDefence", "wBurnDefence"
         ]
       }
     ]
@@ -58,9 +58,9 @@ const npcTabs = [
         title: "Attack Settings",
         description: "Combat attack configuration",
         columns: [
-          "wbasic_physical_offence", "wbasic_energy_offence",
-          "byattack_type", "byattack_animation_quantity",
-          "wattackcooltime", "wattack_speed_rate", "fattack_range"
+          "wBasic_Physical_Offence", "wBasic_Energy_Offence",
+          "byAttack_Type", "byAttack_Animation_Quantity",
+          "wAttackCoolTime", "wAttack_Speed_Rate", "fAttack_Range"
         ]
       },
       {
@@ -68,8 +68,8 @@ const npcTabs = [
         title: "Combat Rates",
         description: "Combat success rates",
         columns: [
-          "wattack_rate", "wdodge_rate", "wblock_rate",
-          "wcurse_success_rate", "wcurse_tolerance_rate"
+          "wAttack_Rate", "wDodge_Rate", "wBlock_Rate",
+          "wCurse_Success_Rate", "wCurse_Tolerance_Rate"
         ]
       },
       {
@@ -77,7 +77,7 @@ const npcTabs = [
         title: "Battle Properties",
         description: "Battle behavior settings",
         columns: [
-          "bybattle_attribute", "wbasic_aggro_point", "waggromaxcount"
+          "byBattle_Attribute", "wBasic_Aggro_Point", "wAggroMaxCount"
         ]
       }
     ]
@@ -91,9 +91,9 @@ const npcTabs = [
         title: "Speed Settings",
         description: "Movement speed configuration",
         columns: [
-          "fwalk_speed_origin", "fwalk_speed",
-          "frun_speed_origin", "frun_speed",
-          "ffly_height"
+          "fWalk_Speed_Origin", "fWalk_Speed",
+          "fRun_Speed_Origin", "fRun_Speed",
+          "fFly_Height"
         ]
       },
       {
@@ -101,8 +101,8 @@ const npcTabs = [
         title: "Range Settings",
         description: "Detection and range settings",
         columns: [
-          "fradius", "fradius_x", "fradius_z",
-          "wsight_range", "wscan_range", "byvisible_sight_range"
+          "fRadius", "fRadius_X", "fRadius_Z",
+          "wSight_Range", "wScan_Range", "byVisible_Sight_Range"
         ]
       }
     ]
@@ -143,9 +143,9 @@ const npcTabs = [
         title: "System Flags",
         description: "System behavior flags",
         columns: [
-          "dwai_bit_flag",
-          "dwnpcattributeflag",
-          "dwfunc_bit_flag"
+          "dwAi_Bit_Flag",
+          "dwNpcAttributeFlag",
+          "dwFunc_Bit_Flag"
         ]
       },
       {
@@ -168,8 +168,8 @@ const npcTabs = [
         title: "Dialog Settings",
         description: "Dialog and interaction configuration",
         columns: [
-          "dwdialoggroup",
-          "dialog_script_index"
+          "dwDialogGroup",
+          "dialog_Script_Index"
         ]
       },
       {
@@ -177,9 +177,9 @@ const npcTabs = [
         title: "Additional Settings",
         description: "Miscellaneous NPC settings",
         columns: [
-          "dwallianceidx",
-          "statustransformtblidx",
-          "contentstblidx"
+          "dwAllianceIdx",
+          "statusTransformTblidx",
+          "contentsTblidx"
         ]
       },
       {
@@ -187,9 +187,9 @@ const npcTabs = [
         title: "Unknown Values",
         description: "Unidentified fields",
         columns: [
-          "wunknown",
-          "dwunknown2",
-          "dwunknown3"
+          "wUnknown",
+          "dwUnknown2",
+          "dwUnknown3"
         ]
       }
     ]
@@ -199,15 +199,15 @@ const npcTabs = [
 const npcQuickViewSections = [
   {
     title: "Basic Information",
-    columns: ["tblidx", "bvalidity_able", "name", "wsznametext", "szmodel", "bylevel", "bygrade"]
+    columns: ["tblidx", "bValidity_Able", "Name", "wszNameText", "szModel", "byLevel", "byGrade"]
   },
   {
     title: "Combat Stats",
-    columns: ["wbasic_physical_offence", "wbasic_energy_offence", "wbasic_physical_defence", "wbasic_energy_defence"]
+    columns: ["wBasic_Physical_Offence", "wBasic_Energy_Offence", "wBasic_Physical_Defence", "wBasic_Energy_Defence"]
   },
   {
     title: "Base Stats",
-    columns: ["dwbasic_lp", "wbasic_ep"]
+    columns: ["dwBasic_LP", "wBasic_EP"]
   }
 ];
 
@@ -220,24 +220,24 @@ const npcQuickStats = [
   },
   { 
     label: 'Level', 
-    column: 'bylevel',
+    column: 'byLevel',
     formatValue: (value: unknown) => String(value ?? '—')
   },
   { 
     label: 'Physical Attack', 
-    column: 'wbasic_physical_offence',
+    column: 'wBasic_Physical_Offence',
     formatValue: (value: unknown) => String(value ?? 0),
     color: 'green'
   },
   { 
     label: 'Energy Attack', 
-    column: 'wbasic_energy_offence',
+    column: 'wBasic_Energy_Offence',
     formatValue: (value: unknown) => String(value ?? 0),
     color: 'blue'
   },
   { 
     label: 'Base LP', 
-    column: 'dwbasic_lp',
+    column: 'dwBasic_LP',
     formatValue: (value: unknown) => String(value ?? 0),
     color: 'purple'
   },

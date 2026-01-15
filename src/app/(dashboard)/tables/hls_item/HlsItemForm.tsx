@@ -75,35 +75,35 @@ export function HlsItemForm({
   // Define field labels and types
   const fieldConfig: Record<string, { label: string; type: "text" | "number" | "boolean" }> = {
     tblidx: { label: "ID", type: "number" },
-    wszname: { label: "Name", type: "text" },
-    wszcjiproductid: { label: "Product ID", type: "text" },
-    szicon_name: { label: "Icon Name", type: "text" },
-    whlsitemtype: { label: "Item Type", type: "number" },
-    byhlsdurationtype: { label: "Duration Type", type: "number" },
-    dwhlsdurationtime: { label: "Duration Time", type: "number" },
-    idxnametext: { label: "Name Text Index", type: "number" },
-    idxnotetext: { label: "Note Text Index", type: "number" },
-    itemtblidx: { label: "Main Item ID", type: "number" },
-    bonsale: { label: "On Sale", type: "boolean" },
-    byselltype: { label: "Sell Type", type: "number" },
-    dwcash: { label: "Cash", type: "number" },
-    bydiscount: { label: "Discount", type: "number" },
-    bystackcount: { label: "Stack Count", type: "number" },
-    wdisplaybitflag: { label: "Display Bit Flag", type: "number" },
-    byquicklink: { label: "Quick Link", type: "number" },
-    dwpriority: { label: "Priority", type: "number" },
-    bydisplayconsumetype: { label: "Display Consume Type", type: "number" },
-    byyadrattype: { label: "Yadrat Type", type: "number" },
-    itemtblidx_0: { label: "Item ID", type: "number" },
-    bystackcount_0: { label: "Stack Count", type: "number" },
-    itemtblidx_1: { label: "Item ID", type: "number" },
-    bystackcount_1: { label: "Stack Count", type: "number" },
-    itemtblidx_2: { label: "Item ID", type: "number" },
-    bystackcount_2: { label: "Stack Count", type: "number" },
-    itemtblidx_3: { label: "Item ID", type: "number" },
-    bystackcount_3: { label: "Stack Count", type: "number" },
-    itemtblidx_4: { label: "Item ID", type: "number" },
-    bystackcount_4: { label: "Stack Count", type: "number" },
+    wszName: { label: "Name", type: "text" },
+    wszCJIProductID: { label: "Product ID", type: "text" },
+    szIcon_Name: { label: "Icon Name", type: "text" },
+    wHLSItemType: { label: "Item Type", type: "number" },
+    byHLSDurationType: { label: "Duration Type", type: "number" },
+    dwHLSDurationTime: { label: "Duration Time", type: "number" },
+    idxNameText: { label: "Name Text Index", type: "number" },
+    idxNoteText: { label: "Note Text Index", type: "number" },
+    itemTblidx: { label: "Main Item ID", type: "number" },
+    bOnSale: { label: "On Sale", type: "boolean" },
+    bySellType: { label: "Sell Type", type: "number" },
+    dwCash: { label: "Cash", type: "number" },
+    byDiscount: { label: "Discount", type: "number" },
+    byStackCount: { label: "Stack Count", type: "number" },
+    wDisplayBitFlag: { label: "Display Bit Flag", type: "number" },
+    byQuickLink: { label: "Quick Link", type: "number" },
+    dwPriority: { label: "Priority", type: "number" },
+    byDisplayConsumeType: { label: "Display Consume Type", type: "number" },
+    byYadratType: { label: "Yadrat Type", type: "number" },
+    itemTblidx_0: { label: "Item ID", type: "number" },
+    byStackCount_0: { label: "Stack Count", type: "number" },
+    itemTblidx_1: { label: "Item ID", type: "number" },
+    byStackCount_1: { label: "Stack Count", type: "number" },
+    itemTblidx_2: { label: "Item ID", type: "number" },
+    byStackCount_2: { label: "Stack Count", type: "number" },
+    itemTblidx_3: { label: "Item ID", type: "number" },
+    byStackCount_3: { label: "Stack Count", type: "number" },
+    itemTblidx_4: { label: "Item ID", type: "number" },
+    byStackCount_4: { label: "Stack Count", type: "number" },
   };
 
   // Define tabs with their sections
@@ -116,34 +116,34 @@ export function HlsItemForm({
           label: "Basic Information",
           fields: [
             "tblidx",
-            "wszname",
-            "wszcjiproductid",
-            "szicon_name",
-            "whlsitemtype",
-            "byhlsdurationtype",
-            "dwhlsdurationtime",
-            "idxnametext",
-            "idxnotetext"
+            "wszName",
+            "wszCJIProductID",
+            "szIcon_Name",
+            "wHLSItemType",
+            "byHLSDurationType",
+            "dwHLSDurationTime",
+            "idxNameText",
+            "idxNoteText"
           ]
         },
         {
           label: "Sale Settings",
           fields: [
-            "bonsale",
-            "byselltype",
-            "dwcash",
-            "bydiscount",
-            "bystackcount"
+            "bOnSale",
+            "bySellType",
+            "dwCash",
+            "byDiscount",
+            "byStackCount"
           ]
         },
         {
           label: "Display Settings",
           fields: [
-            "wdisplaybitflag",
-            "byquicklink",
-            "dwpriority",
-            "bydisplayconsumetype",
-            "byyadrattype"
+            "wDisplayBitFlag",
+            "byQuickLink",
+            "dwPriority",
+            "byDisplayConsumeType",
+            "byYadratType"
           ]
         }
       ]
@@ -154,27 +154,27 @@ export function HlsItemForm({
       itemSets: [
         {
           label: "Main Item",
-          fields: ["itemtblidx", "bystackcount"]
+          fields: ["itemTblidx", "byStackCount"]
         },
         {
           label: "Bundle Item 1",
-          fields: ["itemtblidx_0", "bystackcount_0"]
+          fields: ["itemTblidx_0", "byStackCount_0"]
         },
         {
           label: "Bundle Item 2",
-          fields: ["itemtblidx_1", "bystackcount_1"]
+          fields: ["itemTblidx_1", "byStackCount_1"]
         },
         {
           label: "Bundle Item 3",
-          fields: ["itemtblidx_2", "bystackcount_2"]
+          fields: ["itemTblidx_2", "byStackCount_2"]
         },
         {
           label: "Bundle Item 4",
-          fields: ["itemtblidx_3", "bystackcount_3"]
+          fields: ["itemTblidx_3", "byStackCount_3"]
         },
         {
           label: "Bundle Item 5",
-          fields: ["itemtblidx_4", "bystackcount_4"]
+          fields: ["itemTblidx_4", "byStackCount_4"]
         }
       ]
     }
@@ -184,11 +184,11 @@ export function HlsItemForm({
   const quickViewSections = [
     {
       title: "Basic Information",
-      fields: ["tblidx", "wszname", "wszcjiproductid", "szicon_name", "whlsitemtype"]
+      fields: ["tblidx", "wszName", "wszCJIProductID", "szIcon_Name", "wHLSItemType"]
     },
     {
       title: "Sale Settings",
-      fields: ["bonsale", "byselltype", "dwcash", "bydiscount"]
+      fields: ["bOnSale", "bySellType", "dwCash", "byDiscount"]
     }
   ];
 
@@ -459,14 +459,14 @@ export function HlsItemForm({
     <div className="flex flex-col h-full">
       <Form {...form}>
         <form onSubmit={form.handleSubmit(handleSubmit)} className="flex flex-col h-full">
-          <div className="flex-1 overflow-hidden flex">
+          <div className="flex-1 min-h-0 overflow-hidden flex">
             {/* Left Column - Quick View Panel */}
-            <div className="w-96 border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex flex-col">
-              <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
+            <div className="w-96 border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex flex-col min-h-0">
+              <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 flex-shrink-0">
                 <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Quick View</h3>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Frequently used fields</p>
               </div>
-              <ScrollArea className="flex-1">
+              <ScrollArea className="flex-1 min-h-0">
                 <div className="p-4 space-y-4">
                   {quickViewSections.map((section, idx) => {
                     const sectionFields = section.fields.filter(field => validFieldKeys.has(field));
@@ -487,10 +487,10 @@ export function HlsItemForm({
             </div>
 
             {/* Right Column - Detailed Editing with Tabs */}
-            <div className="flex-1 flex flex-col overflow-hidden bg-gray-50 dark:bg-gray-900">
-              <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col flex-1 overflow-hidden">
+            <div className="flex-1 min-h-0 flex flex-col overflow-hidden bg-gray-50 dark:bg-gray-900">
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col flex-1 min-h-0 overflow-hidden">
                 {/* Sticky tabs list */}
-                <div className="sticky top-0 z-10 px-6 pt-2 pb-2 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
+                <div className="sticky top-0 z-10 px-6 pt-2 pb-2 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 flex-shrink-0">
                   <TabsList className="grid grid-cols-2 w-full bg-gray-100 dark:bg-gray-800 p-1">
                     {tabs.map((tab) => (
                       <TabsTrigger 
@@ -505,7 +505,7 @@ export function HlsItemForm({
                 </div>
 
                 {/* Scrollable tab content */}
-                <ScrollArea ref={scrollAreaRef} className="flex-1">
+                <ScrollArea ref={scrollAreaRef} className="flex-1 min-h-0">
                   <div className="px-6 py-2">
                     {tabs.map((tab) => (
                       <TabsContent key={tab.id} value={tab.id} className="mt-2 space-y-4">
