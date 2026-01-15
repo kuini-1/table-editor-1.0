@@ -174,9 +174,12 @@ export async function POST(req: Request) {
       console.log('Job added to queue:', job.id);
 
       // Track bandwidth usage for import (5MB per import)
+      // Use immediate flush for server-side operations to ensure updates are applied
       try {
-        const { trackBandwidthUsage } = await import('@/lib/bandwidth-tracker');
+        const { trackBandwidthUsage, flushBandwidthUpdatesImmediate } = await import('@/lib/bandwidth-tracker');
         await trackBandwidthUsage(user.id, 5 * 1024 * 1024); // 5MB
+        // Force immediate flush on server-side to ensure sub owner updates are applied
+        await flushBandwidthUpdatesImmediate();
       } catch (error) {
         console.error('Error tracking bandwidth for import:', error);
         // Don't fail the import if bandwidth tracking fails

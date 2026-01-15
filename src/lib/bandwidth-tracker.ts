@@ -88,52 +88,6 @@ async function getOwnerUserIdForSubOwner(userId: string): Promise<string> {
 }
 
 /**
- * Get all sub owner profile IDs for an owner
- * Returns array of sub owner profile IDs, or empty array if not owner or no sub owners
- * @internal - May be used for future features like bulk operations
- */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any
-async function getAllSubOwnerProfileIds(ownerProfileId: string): Promise<string[]> {
-  try {
-    // Only works on server
-    if (typeof window !== 'undefined') {
-      return [];
-    }
-
-    const serviceClient = await getServiceClient();
-    if (!serviceClient) {
-      return [];
-    }
-
-    // Get owner_id from owners table
-    const { data: ownerData, error: ownerError } = await serviceClient
-      .from('owners')
-      .select('id')
-      .eq('profile_id', ownerProfileId)
-      .single();
-
-    if (ownerError || !ownerData) {
-      return [];
-    }
-
-    // Get all sub_owners for this owner
-    const { data: subOwners, error: subOwnersError } = await serviceClient
-      .from('sub_owners')
-      .select('profile_id')
-      .eq('owner_id', ownerData.id);
-
-    if (subOwnersError || !subOwners) {
-      return [];
-    }
-
-    return subOwners.map((so: { profile_id: string }) => so.profile_id);
-  } catch (error) {
-    console.error('Error getting sub owner profile IDs:', error);
-    return [];
-  }
-}
-
-/**
  * Get Supabase service client for server-side operations
  * Only works on server, returns null on client
  */
@@ -172,6 +126,21 @@ const pendingUpdates = new Map<string, number>(); // userId -> total pending byt
 const BATCH_UPDATE_INTERVAL = 2000; // 2 seconds
 const MIN_BYTES_TO_TRACK = 1024; // Only track operations larger than 1KB
 let batchUpdateTimer: NodeJS.Timeout | null = null;
+
+/**
+ * Force immediate flush of bandwidth updates (useful for server-side operations)
+ * This ensures updates are applied immediately rather than waiting for batch interval
+ */
+export async function flushBandwidthUpdatesImmediate(): Promise<void> {
+  // Clear any pending timer
+  if (batchUpdateTimer) {
+    clearTimeout(batchUpdateTimer);
+    batchUpdateTimer = null;
+  }
+  
+  // Flush immediately
+  await flushBandwidthUpdates();
+}
 
 
 // Throttle bandwidth info fetches
@@ -375,6 +344,8 @@ async function flushBandwidthUpdates(): Promise<void> {
       const isSubOwner = !profileError && userProfile?.role === 'sub_owner';
       const actualUserId = await getOwnerUserIdForSubOwner(userId);
 
+      console.log('Flushing bandwidth update:', { userId, isSubOwner, actualUserId, totalBytes });
+
       // Track bandwidth against owner (for limit checking)
       // Try to use RPC function first
       const { error: rpcError } = await serviceClient.rpc('increment_bandwidth_usage', {
@@ -383,15 +354,16 @@ async function flushBandwidthUpdates(): Promise<void> {
       });
 
       if (rpcError) {
+        console.log('Owner RPC failed, using fallback:', rpcError);
         // Fallback to manual update for owner
-        const { data: profile, error: profileError } = await serviceClient
+        const { data: profile, error: ownerProfileError } = await serviceClient
           .from('profiles')
           .select('current_month_bandwidth_used')
           .eq('id', actualUserId)
           .single();
 
-        if (profileError) {
-          console.error('Error fetching profile for bandwidth update:', profileError);
+        if (ownerProfileError) {
+          console.error('Error fetching owner profile for bandwidth update:', ownerProfileError);
         } else if (profile) {
           const currentUsed = profile.current_month_bandwidth_used || 0;
           const { error: updateError } = await serviceClient
@@ -403,18 +375,25 @@ async function flushBandwidthUpdates(): Promise<void> {
 
           if (updateError) {
             console.error('Error updating owner bandwidth:', updateError);
+          } else {
+            console.log('Successfully updated owner bandwidth manually');
           }
         }
+      } else {
+        console.log('Successfully updated owner bandwidth via RPC');
       }
 
       // If user is sub_owner, also track bandwidth against their own profile
       if (isSubOwner && userId !== actualUserId) {
+        console.log('Tracking bandwidth for sub owner:', { userId, actualUserId, totalBytes });
+        
         const { error: subOwnerRpcError } = await serviceClient.rpc('increment_bandwidth_usage', {
           p_user_id: userId,
           p_bytes: totalBytes,
         });
 
         if (subOwnerRpcError) {
+          console.log('Sub owner RPC failed, using fallback:', subOwnerRpcError);
           // Fallback to manual update for sub owner
           const { data: subOwnerProfile, error: subOwnerProfileError } = await serviceClient
             .from('profiles')
@@ -426,18 +405,34 @@ async function flushBandwidthUpdates(): Promise<void> {
             console.error('Error fetching sub owner profile for bandwidth update:', subOwnerProfileError);
           } else if (subOwnerProfile) {
             const currentUsed = subOwnerProfile.current_month_bandwidth_used || 0;
+            const newUsed = currentUsed + totalBytes;
+            console.log('Updating sub owner bandwidth manually:', { userId, currentUsed, newUsed });
+            
             const { error: updateError } = await serviceClient
               .from('profiles')
               .update({
-                current_month_bandwidth_used: currentUsed + totalBytes,
+                current_month_bandwidth_used: newUsed,
               })
               .eq('id', userId);
 
             if (updateError) {
               console.error('Error updating sub owner bandwidth:', updateError);
+            } else {
+              console.log('Successfully updated sub owner bandwidth manually');
             }
           }
+        } else {
+          // Verify the update worked by checking the profile
+          const { data: verifyProfile } = await serviceClient
+            .from('profiles')
+            .select('current_month_bandwidth_used')
+            .eq('id', userId)
+            .single();
+          
+          console.log('Sub owner bandwidth updated via RPC. Current value:', verifyProfile?.current_month_bandwidth_used);
         }
+      } else if (isSubOwner) {
+        console.warn('Sub owner detected but userId === actualUserId, skipping sub owner update:', { userId, actualUserId });
       }
 
       // Invalidate cache for both owner and sub owner
@@ -454,7 +449,7 @@ async function flushBandwidthUpdates(): Promise<void> {
 /**
  * Track bandwidth usage by incrementing the user's usage counter
  * Uses batched updates to reduce API calls
- * For sub_owners, tracks bandwidth against owner's account
+ * For sub_owners, tracks bandwidth against both owner's account and sub owner's own account
  */
 export async function trackBandwidthUsage(
   userId: string,
@@ -469,12 +464,10 @@ export async function trackBandwidthUsage(
     return;
   }
 
-  // Get the actual user ID to track (owner's ID if user is sub_owner)
-  const actualUserId = await getOwnerUserIdForSubOwner(userId);
-
-  // Add to pending updates (use actualUserId)
-  const currentPending = pendingUpdates.get(actualUserId) || 0;
-  pendingUpdates.set(actualUserId, currentPending + actualSize);
+  // Add to pending updates using original userId (not actualUserId)
+  // This preserves the sub_owner information for dual tracking in flushBandwidthUpdates
+  const currentPending = pendingUpdates.get(userId) || 0;
+  pendingUpdates.set(userId, currentPending + actualSize);
 
   // Schedule batch update if not already scheduled
   if (!batchUpdateTimer) {

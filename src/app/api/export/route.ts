@@ -198,9 +198,12 @@ export async function GET(req: Request) {
     }
 
     // Track bandwidth usage for export (5MB per export)
+    // Use immediate flush for server-side operations to ensure updates are applied
     try {
-      const { trackBandwidthUsage } = await import('@/lib/bandwidth-tracker');
+      const { trackBandwidthUsage, flushBandwidthUpdatesImmediate } = await import('@/lib/bandwidth-tracker');
       await trackBandwidthUsage(user.id, 5 * 1024 * 1024); // 5MB
+      // Force immediate flush on server-side to ensure sub owner updates are applied
+      await flushBandwidthUpdatesImmediate();
     } catch (error) {
       console.error('Error tracking bandwidth for export:', error);
       // Don't fail the export if bandwidth tracking fails
