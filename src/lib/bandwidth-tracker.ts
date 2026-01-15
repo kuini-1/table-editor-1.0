@@ -341,95 +341,165 @@ async function flushBandwidthUpdates(): Promise<void> {
         .eq('id', userId)
         .single();
 
-      const isSubOwner = !profileError && userProfile?.role === 'sub_owner';
-      const actualUserId = await getOwnerUserIdForSubOwner(userId);
-
-      console.log('Flushing bandwidth update:', { userId, isSubOwner, actualUserId, totalBytes });
-
-      // Track bandwidth against owner (for limit checking)
-      // Try to use RPC function first
-      const { error: rpcError } = await serviceClient.rpc('increment_bandwidth_usage', {
-        p_user_id: actualUserId,
-        p_bytes: totalBytes,
-      });
-
-      if (rpcError) {
-        console.log('Owner RPC failed, using fallback:', rpcError);
-        // Fallback to manual update for owner
-        const { data: profile, error: ownerProfileError } = await serviceClient
-          .from('profiles')
-          .select('current_month_bandwidth_used')
-          .eq('id', actualUserId)
-          .single();
-
-        if (ownerProfileError) {
-          console.error('Error fetching owner profile for bandwidth update:', ownerProfileError);
-        } else if (profile) {
-          const currentUsed = profile.current_month_bandwidth_used || 0;
-          const { error: updateError } = await serviceClient
-            .from('profiles')
-            .update({
-              current_month_bandwidth_used: currentUsed + totalBytes,
-            })
-            .eq('id', actualUserId);
-
-          if (updateError) {
-            console.error('Error updating owner bandwidth:', updateError);
-          } else {
-            console.log('Successfully updated owner bandwidth manually');
-          }
-        }
-      } else {
-        console.log('Successfully updated owner bandwidth via RPC');
+      if (profileError) {
+        console.error('Error fetching user profile for bandwidth update:', profileError);
+        continue;
       }
 
-      // If user is sub_owner, also track bandwidth against their own profile
-      if (isSubOwner && userId !== actualUserId) {
-        console.log('Tracking bandwidth for sub owner:', { userId, actualUserId, totalBytes });
-        
-        const { error: subOwnerRpcError } = await serviceClient.rpc('increment_bandwidth_usage', {
-          p_user_id: userId,
+      const isSubOwner = userProfile?.role === 'sub_owner';
+      const actualUserId = await getOwnerUserIdForSubOwner(userId);
+
+      console.log('Flushing bandwidth update:', { userId, isSubOwner, actualUserId, totalBytes, userRole: userProfile?.role });
+
+      // Track bandwidth against owner (for limit checking)
+      // This always happens regardless of whether user is sub_owner or owner
+      try {
+        // Try to use RPC function first
+        const { error: rpcError } = await serviceClient.rpc('increment_bandwidth_usage', {
+          p_user_id: actualUserId,
           p_bytes: totalBytes,
         });
 
-        if (subOwnerRpcError) {
-          console.log('Sub owner RPC failed, using fallback:', subOwnerRpcError);
-          // Fallback to manual update for sub owner
-          const { data: subOwnerProfile, error: subOwnerProfileError } = await serviceClient
+        if (rpcError) {
+          console.log('Owner RPC failed, using direct update:', rpcError);
+          // Fallback to manual update for owner
+          const { data: profile, error: ownerProfileError } = await serviceClient
             .from('profiles')
             .select('current_month_bandwidth_used')
-            .eq('id', userId)
+            .eq('id', actualUserId)
             .single();
 
-          if (subOwnerProfileError) {
-            console.error('Error fetching sub owner profile for bandwidth update:', subOwnerProfileError);
-          } else if (subOwnerProfile) {
-            const currentUsed = subOwnerProfile.current_month_bandwidth_used || 0;
-            const newUsed = currentUsed + totalBytes;
-            console.log('Updating sub owner bandwidth manually:', { userId, currentUsed, newUsed });
-            
+          if (ownerProfileError) {
+            console.error('Error fetching owner profile for bandwidth update:', ownerProfileError);
+          } else if (profile) {
+            const currentUsed = profile.current_month_bandwidth_used || 0;
             const { error: updateError } = await serviceClient
               .from('profiles')
               .update({
-                current_month_bandwidth_used: newUsed,
+                current_month_bandwidth_used: currentUsed + totalBytes,
               })
-              .eq('id', userId);
+              .eq('id', actualUserId);
 
             if (updateError) {
-              console.error('Error updating sub owner bandwidth:', updateError);
+              console.error('Error updating owner bandwidth:', updateError);
             } else {
-              console.log('Successfully updated sub owner bandwidth manually');
+              console.log('Successfully updated owner bandwidth manually');
             }
           }
         } else {
-          // Verify the update worked by checking the profile
-          const { data: verifyProfile } = await serviceClient
-            .from('profiles')
-            .select('current_month_bandwidth_used')
-            .eq('id', userId)
-            .single();
-          
-          console.log('Sub owner bandwidth updated via RPC. Current value:', verifyProfile?.current_month_bandwidth_used);
+          console.log('Successfully updated owner bandwidth via RPC');
+        }
+      } catch (error) {
+        console.error('Unexpected error updating owner bandwidth:', error);
+      }
+
+      // If user is sub_owner, ALWAYS track bandwidth against their own profile
+      // This is independent of owner update success/failure
+      if (isSubOwner && userId !== actualUserId) {
+        console.log('Updating sub owner bandwidth:', { userId, actualUserId, totalBytes });
+        
+        let subOwnerUpdateSuccess = false;
+        try {
+          // Try RPC first
+          const { error: subOwnerRpcError } = await serviceClient.rpc('increment_bandwidth_usage', {
+            p_user_id: userId,
+            p_bytes: totalBytes,
+          });
+
+          if (subOwnerRpcError) {
+            console.log('Sub owner RPC failed, using direct update:', subOwnerRpcError);
+            // Always fall back to direct update for sub owners (more reliable)
+            const { data: subOwnerProfile, error: subOwnerProfileError } = await serviceClient
+              .from('profiles')
+              .select('current_month_bandwidth_used')
+              .eq('id', userId)
+              .single();
+
+            if (subOwnerProfileError) {
+              console.error('Error fetching sub owner profile for bandwidth update:', subOwnerProfileError);
+            } else if (subOwnerProfile) {
+              const currentUsed = subOwnerProfile.current_month_bandwidth_used || 0;
+              const newUsed = currentUsed + totalBytes;
+              console.log('Updating sub owner bandwidth directly:', { userId, currentUsed, newUsed });
+              
+              const { error: updateError } = await serviceClient
+                .from('profiles')
+                .update({
+                  current_month_bandwidth_used: newUsed,
+                })
+                .eq('id', userId);
+
+              if (updateError) {
+                console.error('Error updating sub owner bandwidth:', updateError);
+              } else {
+                subOwnerUpdateSuccess = true;
+                console.log('Successfully updated sub owner bandwidth via direct update');
+              }
+            }
+          } else {
+            // RPC succeeded, but verify it actually worked
+            const { data: verifyProfile, error: verifyError } = await serviceClient
+              .from('profiles')
+              .select('current_month_bandwidth_used')
+              .eq('id', userId)
+              .single();
+            
+            if (verifyError) {
+              console.error('Error verifying sub owner bandwidth update:', verifyError);
+              // RPC might have failed silently, try direct update
+              const { data: subOwnerProfile } = await serviceClient
+                .from('profiles')
+                .select('current_month_bandwidth_used')
+                .eq('id', userId)
+                .single();
+
+              if (subOwnerProfile) {
+                const currentUsed = subOwnerProfile.current_month_bandwidth_used || 0;
+                const newUsed = currentUsed + totalBytes;
+                const { error: updateError } = await serviceClient
+                  .from('profiles')
+                  .update({
+                    current_month_bandwidth_used: newUsed,
+                  })
+                  .eq('id', userId);
+
+                if (!updateError) {
+                  subOwnerUpdateSuccess = true;
+                  console.log('Sub owner bandwidth verified and updated via direct update after RPC');
+                }
+              }
+            } else {
+              subOwnerUpdateSuccess = true;
+              console.log('Sub owner bandwidth updated via RPC. Verified value:', verifyProfile?.current_month_bandwidth_used);
+            }
+          }
+
+          // Final verification: Query both profiles to confirm updates
+          if (subOwnerUpdateSuccess) {
+            const { data: finalSubOwnerProfile } = await serviceClient
+              .from('profiles')
+              .select('current_month_bandwidth_used')
+              .eq('id', userId)
+              .single();
+            
+            const { data: finalOwnerProfile } = await serviceClient
+              .from('profiles')
+              .select('current_month_bandwidth_used')
+              .eq('id', actualUserId)
+              .single();
+
+            console.log('Final verification:', {
+              subOwnerId: userId,
+              subOwnerBandwidth: finalSubOwnerProfile?.current_month_bandwidth_used,
+              ownerId: actualUserId,
+              ownerBandwidth: finalOwnerProfile?.current_month_bandwidth_used,
+              expectedIncrease: totalBytes
+            });
+          } else {
+            console.error('Sub owner bandwidth update FAILED - owner update may have succeeded but sub owner did not');
+          }
+        } catch (error) {
+          console.error('Unexpected error updating sub owner bandwidth:', error);
         }
       } else if (isSubOwner) {
         console.warn('Sub owner detected but userId === actualUserId, skipping sub owner update:', { userId, actualUserId });
