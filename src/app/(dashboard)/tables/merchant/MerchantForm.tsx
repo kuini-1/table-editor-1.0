@@ -16,21 +16,21 @@ const merchantTabs = [
       }
     ]
   },
-  {
-    id: "items",
-    label: "Item Bundles",
-    sections: Array.from({ length: 10 }, (_, i) => ({
-      id: `item-bundle-${i}`,
-      title: `Item Bundle ${i + 1}`,
-      description: `Configure item bundle ${i + 1}`,
-      columns: [
-        `aitem_Tblidx_${i}`,
-        `aNeedItemTblidx_${i}`,
-        `abyNeedItemStack_${i}`,
-        `adwNeedZenny_${i}`
-      ]
-    }))
-  }
+    {
+      id: "items",
+      label: "Item Bundles",
+      sections: Array.from({ length: 36 }, (_, i) => ({
+        id: `item-bundle-${i}`,
+        title: `Item Bundle ${i + 1}`,
+        description: `Configure item bundle ${i + 1}`,
+        columns: [
+          `aitem_Tblidx_${i}`,
+          `aNeedItemTblidx_${i}`,
+          `abyNeedItemStack_${i}`,
+          `adwNeedZenny_${i}`
+        ]
+      }))
+    }
 ];
 
 const merchantQuickViewSections = [

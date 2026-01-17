@@ -32,16 +32,6 @@ export const hlsItemSchema = z.object({
   byStackCount_3: z.coerce.number().min(0, 'Must be a positive number').optional(),
   itemTblidx_4: z.coerce.number().min(0, 'Must be a positive number').optional(),
   byStackCount_4: z.coerce.number().min(0, 'Must be a positive number').optional(),
-  itemTblidx_5: z.coerce.number().min(0, 'Must be a positive number').optional(),
-  byStackCount_5: z.coerce.number().min(0, 'Must be a positive number').optional(),
-  itemTblidx_6: z.coerce.number().min(0, 'Must be a positive number').optional(),
-  byStackCount_6: z.coerce.number().min(0, 'Must be a positive number').optional(),
-  itemTblidx_7: z.coerce.number().min(0, 'Must be a positive number').optional(),
-  byStackCount_7: z.coerce.number().min(0, 'Must be a positive number').optional(),
-  itemTblidx_8: z.coerce.number().min(0, 'Must be a positive number').optional(),
-  byStackCount_8: z.coerce.number().min(0, 'Must be a positive number').optional(),
-  itemTblidx_9: z.coerce.number().min(0, 'Must be a positive number').optional(),
-  byStackCount_9: z.coerce.number().min(0, 'Must be a positive number').optional(),
 });
 
 export type HlsItemFormData = z.infer<typeof hlsItemSchema>;
@@ -67,7 +57,7 @@ export const columns = [
   { key: 'dwPriority', label: 'Priority', type: 'number' as const, validation: hlsItemSchema.shape.dwPriority },
   { key: 'byDisplayConsumeType', label: 'Display Consume Type', type: 'number' as const, validation: hlsItemSchema.shape.byDisplayConsumeType },
   { key: 'byYadratType', label: 'Yadrat Type', type: 'number' as const, validation: hlsItemSchema.shape.byYadratType },
-  ...Array.from({ length: 10 }, (_, i) => [
+  ...Array.from({ length: 5 }, (_, i) => [
     { key: `itemTblidx_${i}`, label: `Item ${i + 1} ID`, type: 'number' as const, validation: hlsItemSchema.shape[`itemTblidx_${i}` as keyof typeof hlsItemSchema.shape] },
     { key: `byStackCount_${i}`, label: `Item ${i + 1} Stack`, type: 'number' as const, validation: hlsItemSchema.shape[`byStackCount_${i}` as keyof typeof hlsItemSchema.shape] }
   ]).flat(),
