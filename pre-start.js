@@ -35,9 +35,19 @@ function runPreStartChecks() {
     console.log(`[Pre-start] Build directory exists: ${BUILD_DIR}`);
   }
 
+  // Helper function for synchronous sleep (Node.js-based, cross-platform)
+  function sleepSync(ms) {
+    const start = Date.now();
+    while (Date.now() - start < ms) {
+      // Busy wait - simple and works everywhere
+    }
+  }
+
   // 3. Check if port is in use and kill the process
   function checkAndKillPort(port) {
     const isWindows = process.platform === 'win32';
+    const currentPid = process.pid;
+    const parentPid = process.ppid;
     
     try {
       let pid;
@@ -49,51 +59,101 @@ function runPreStartChecks() {
             encoding: 'utf-8', 
             stdio: ['pipe', 'pipe', 'ignore'] 
           });
-          const lines = output.trim().split('\n');
+          const lines = output.trim().split('\n').filter(line => line.trim());
           
-          if (lines.length > 0 && lines[0]) {
-            // Extract PID from netstat output (last column)
-            // Format: TCP    0.0.0.0:3000    0.0.0.0:0    LISTENING    12345
-            const match = lines[0].match(/\s+(\d+)\s*$/);
-            if (match) {
-              pid = match[1].trim();
-              console.log(`[Pre-start] Found process using port ${port}: PID ${pid}`);
-              
-              // Kill the process
-              try {
-                execSync(`taskkill /PID ${pid} /F`, { stdio: 'ignore' });
-                console.log(`[Pre-start] Successfully killed process ${pid} using port ${port}`);
+          // Look for LISTENING state (server socket)
+          for (const line of lines) {
+            if (line.includes('LISTENING')) {
+              // Extract PID from netstat output (last column)
+              // Format: TCP    0.0.0.0:3000    0.0.0.0:0    LISTENING    12345
+              const match = line.match(/\s+(\d+)\s*$/);
+              if (match) {
+                pid = parseInt(match[1].trim(), 10);
+                
+                // Don't kill current process or parent process
+                if (pid === currentPid || pid === parentPid) {
+                  console.log(`[Pre-start] Port ${port} is used by current process (PID ${pid}), skipping kill`);
+                  return false;
+                }
+                
+                console.log(`[Pre-start] Found process using port ${port}: PID ${pid}`);
+                
+                // Try to kill the process
+                try {
+                  // First try graceful termination
+                  execSync(`taskkill /PID ${pid} /T`, { 
+                    stdio: 'ignore',
+                    timeout: 3000 
+                  });
+                  console.log(`[Pre-start] Successfully terminated process ${pid} using port ${port}`);
+                } catch (gracefulError) {
+                  // If graceful fails, try force kill
+                  try {
+                    execSync(`taskkill /PID ${pid} /F /T`, { 
+                      stdio: 'ignore',
+                      timeout: 3000 
+                    });
+                    console.log(`[Pre-start] Successfully force-killed process ${pid} using port ${port}`);
+                  } catch (killError) {
+                    // Check if process doesn't exist (already dead)
+                    if (killError.message && killError.message.includes('not found')) {
+                      console.log(`[Pre-start] Process ${pid} already terminated`);
+                    } else {
+                      console.warn(`[Pre-start] Warning: Could not kill process ${pid}: ${killError.message}`);
+                      return false;
+                    }
+                  }
+                }
+                
                 // Give the OS a moment to release the port
                 console.log(`[Pre-start] Waiting 2 seconds for port ${port} to be released...`);
-                // Use synchronous sleep for Windows
-                execSync('timeout /t 2 /nobreak >nul 2>&1', { stdio: 'ignore' });
+                sleepSync(2000);
                 return true;
-              } catch (killError) {
-                console.warn(`[Pre-start] Warning: Could not kill process ${pid}: ${killError.message}`);
-                return false;
               }
             }
           }
+          
+          // If we get here, port is not in LISTENING state (might be ESTABLISHED connections)
+          console.log(`[Pre-start] Port ${port} is not in LISTENING state (may have established connections)`);
+          return false;
         } catch (netstatError) {
           // Port might not be in use, which is fine
-          console.log(`[Pre-start] Port ${port} is not in use`);
+          console.log(`[Pre-start] Port ${port} is not in use (or netstat check failed)`);
           return false;
         }
       } else {
         // Unix/Linux/Mac: Use lsof
         try {
-          pid = execSync(`lsof -ti:${port}`, { 
+          const pids = execSync(`lsof -ti:${port}`, { 
             encoding: 'utf-8', 
             stdio: ['pipe', 'pipe', 'ignore'] 
           }).trim();
-          if (pid) {
-            console.log(`[Pre-start] Found process using port ${port}: PID ${pid}`);
-            execSync(`kill -9 ${pid}`, { stdio: 'ignore' });
-            console.log(`[Pre-start] Successfully killed process ${pid} using port ${port}`);
-            // Give the OS a moment to release the port
-            console.log(`[Pre-start] Waiting 2 seconds for port ${port} to be released...`);
-            execSync('sleep 2', { stdio: 'ignore' });
-            return true;
+          
+          if (pids) {
+            const pidList = pids.split('\n').map(p => parseInt(p.trim(), 10)).filter(p => p);
+            
+            for (const foundPid of pidList) {
+              // Don't kill current process or parent process
+              if (foundPid === currentPid || foundPid === parentPid) {
+                console.log(`[Pre-start] Port ${port} is used by current process (PID ${foundPid}), skipping kill`);
+                continue;
+              }
+              
+              console.log(`[Pre-start] Found process using port ${port}: PID ${foundPid}`);
+              try {
+                execSync(`kill -9 ${foundPid}`, { stdio: 'ignore' });
+                console.log(`[Pre-start] Successfully killed process ${foundPid} using port ${port}`);
+              } catch (killError) {
+                console.warn(`[Pre-start] Warning: Could not kill process ${foundPid}: ${killError.message}`);
+              }
+            }
+            
+            if (pidList.length > 0) {
+              // Give the OS a moment to release the port
+              console.log(`[Pre-start] Waiting 2 seconds for port ${port} to be released...`);
+              sleepSync(2000);
+              return true;
+            }
           }
         } catch (lsofError) {
           // Port might not be in use, which is fine
