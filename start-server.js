@@ -26,7 +26,7 @@ process.on('uncaughtException', (error) => {
 process.on('unhandledRejection', (reason, promise) => {
   // Ignore shell-related rejections on Windows
   if (reason && typeof reason === 'object' && 'code' in reason) {
-    const err = reason as { code?: string; syscall?: string; path?: string };
+    const err = reason;
     if (err.code === 'ENOENT' && err.syscall === 'spawn' && err.path === '/bin/sh') {
       console.warn('[Start-server] Ignoring non-fatal shell spawn rejection (Windows compatibility)');
       return;
