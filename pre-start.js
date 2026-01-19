@@ -35,26 +35,47 @@ function runPreStartChecks() {
     console.log(`[Pre-start] Build directory exists: ${BUILD_DIR}`);
     
     // Verify critical build files exist
+    // Note: Next.js 15+ may not generate server.js/server.js.map in all cases
+    // Check for files that are reliably present in Next.js builds
     const criticalFiles = [
-      'prerender-manifest.json',
-      'server.js',
-      'server.js.map'
+      'prerender-manifest.json'
     ];
     
-    const missingFiles = [];
+    // Optional files that may or may not exist depending on Next.js version/config
+    const optionalFiles = [
+      'server.js',
+      'server.js.map',
+      'server.mjs',
+      'standalone'
+    ];
+    
+    const missingCriticalFiles = [];
     for (const file of criticalFiles) {
       const filePath = path.join(BUILD_DIR, file);
       if (!fs.existsSync(filePath)) {
-        missingFiles.push(file);
+        missingCriticalFiles.push(file);
       }
     }
     
-    if (missingFiles.length > 0) {
-      console.error(`[Pre-start] ERROR: Build appears incomplete. Missing files: ${missingFiles.join(', ')}`);
+    if (missingCriticalFiles.length > 0) {
+      console.error(`[Pre-start] ERROR: Build appears incomplete. Missing critical files: ${missingCriticalFiles.join(', ')}`);
       console.error(`[Pre-start] Please run 'npm run build' again to ensure a complete build`);
-      throw new Error(`Build incomplete: missing ${missingFiles.join(', ')}`);
+      throw new Error(`Build incomplete: missing ${missingCriticalFiles.join(', ')}`);
+    }
+    
+    // Check for optional files and warn if none exist (but don't fail)
+    const foundOptionalFiles = [];
+    for (const file of optionalFiles) {
+      const filePath = path.join(BUILD_DIR, file);
+      if (fs.existsSync(filePath)) {
+        foundOptionalFiles.push(file);
+      }
+    }
+    
+    if (foundOptionalFiles.length > 0) {
+      console.log(`[Pre-start] Build verification: Critical files present, optional files found: ${foundOptionalFiles.join(', ')}`);
     } else {
-      console.log(`[Pre-start] Build verification: All critical files present`);
+      console.log(`[Pre-start] Build verification: Critical files present (optional files not found, which may be normal for Next.js 15+)`);
     }
   }
 
