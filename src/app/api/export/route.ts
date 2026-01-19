@@ -208,9 +208,12 @@ export async function GET(req: Request) {
     console.log(`[Export] Fetching ${totalRows} rows for table ${table} with table_id ${tableId}, sorting by ${sortField}`);
     
     // Use larger batch size and parallel fetching for better performance
+    // Adjust concurrency based on dataset size to avoid overwhelming Supabase or connection pools
     const batchSize = 5000; // Larger batches reduce number of requests
     const numBatches = Math.ceil(totalRows / batchSize);
-    const maxConcurrent = 5; // Fetch up to 5 batches in parallel
+    // Limit concurrency: smaller datasets can use more parallelism, larger ones need to be more conservative
+    // This prevents connection pool exhaustion and Supabase rate limiting
+    const maxConcurrent = totalRows < 10000 ? 5 : totalRows < 50000 ? 3 : 2;
     
     // Fetch all batches in parallel (with concurrency limit)
     const fetchBatch = async (batchIndex: number): Promise<Record<string, unknown>[]> => {
@@ -229,7 +232,7 @@ export async function GET(req: Request) {
       return batchData || [];
     };
     
-    // Fetch batches with concurrency control
+    // Fetch batches with concurrency control and error handling
     const allRows: Record<string, unknown>[] = [];
     for (let i = 0; i < numBatches; i += maxConcurrent) {
       const batchPromises = [];
@@ -241,12 +244,26 @@ export async function GET(req: Request) {
         const batchResults = await Promise.all(batchPromises);
         const batchRows = batchResults.flat();
         allRows.push(...batchRows);
-        console.log(`[Export] Fetched ${allRows.length}/${totalRows} rows (${Math.min(i + maxConcurrent, numBatches)}/${numBatches} batches)...`);
+        console.log(`[Export] Fetched ${allRows.length}/${totalRows} rows (${Math.min(i + maxConcurrent, numBatches)}/${numBatches} batches, ${maxConcurrent} concurrent)...`);
+        
+        // Small delay between batch groups to avoid overwhelming Supabase
+        // Only add delay if we have more batches to fetch
+        if (i + maxConcurrent < numBatches) {
+          await new Promise(resolve => setTimeout(resolve, 50)); // 50ms delay between batch groups
+        }
       } catch (error) {
         console.error('Parallel batch fetch error:', error);
+        // Check if it's a rate limit error
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        if (errorMessage.includes('rate limit') || errorMessage.includes('429')) {
+          return NextResponse.json({
+            error: 'Rate limit exceeded',
+            details: 'Supabase rate limit reached. Please try again in a moment.'
+          }, { status: 429 });
+        }
         return NextResponse.json({
           error: 'Failed to fetch data',
-          details: error instanceof Error ? error.message : 'Unknown error'
+          details: errorMessage
         }, { status: 500 });
       }
     }

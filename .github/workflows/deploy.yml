@@ -1,11 +1,9 @@
 name: Deploy to Windows VPS
 
 # This workflow deploys the application to a Windows VPS when a version tag is pushed
+# Requires a self-hosted Windows GitHub runner configured on the target machine
 # Required GitHub Secrets:
-#   VPS_HOST: VPS IP address or hostname
-#   VPS_USER: SSH username
-#   VPS_PASSWORD: SSH password (or use VPS_SSH_KEY for key-based auth)
-#   VPS_DEPLOY_PATH: Deployment directory path on VPS (e.g., C:\xampp\htdocs)
+#   DEPLOY_PATH: Deployment directory path (e.g., C:\xampp\htdocs)
 #   PM2_APP_NAME: PM2 application name to restart
 #   NEXT_PUBLIC_SUPABASE_URL: Supabase project URL
 #   NEXT_PUBLIC_SUPABASE_ANON_KEY: Supabase anonymous key
@@ -29,7 +27,7 @@ on:
 jobs:
   deploy:
     name: Deploy to Windows VPS
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     
     steps:
       - name: Checkout code
@@ -43,131 +41,9 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
-      - name: Create deployment archive
-        continue-on-error: true
-        run: |
-          echo "=========================================="
-          echo "USING PYTHON-BASED ARCHIVE CREATION v2"
-          echo "=========================================="
-          echo "Creating deployment archive (exports folder will be included)..."
-          echo "DEBUG: Checking Python availability..."
-          if command -v python3 &> /dev/null; then
-            PYTHON_CMD=python3
-            echo "DEBUG: Using python3"
-          elif command -v python &> /dev/null; then
-            PYTHON_CMD=python
-            echo "DEBUG: Using python"
-          else
-            echo "ERROR: Neither python3 nor python found!"
-            exit 1
-          fi
-          
-          # Use Python to create the archive, which handles errors gracefully
-          # Python's tarfile module doesn't exit with code 1 for this warning
-          echo "DEBUG: Starting Python archive creation with $PYTHON_CMD..."
-          $PYTHON_CMD << 'PYTHON_SCRIPT'
-          import tarfile
-          import os
-          import sys
-          
-          exclude_patterns = {
-              'node_modules', '.next', '.git', '.github', 
-              '.DS_Store', 'deployment.tar.gz'
-          }
-          
-          def should_exclude(name):
-              if any(name.startswith(pattern) for pattern in exclude_patterns):
-                  return True
-              if name.endswith('.log') or name.startswith('.env'):
-                  return True
-              return False
-          
-          try:
-              with tarfile.open('/tmp/deployment.tar.gz', 'w:gz') as tar:
-                  for root, dirs, files in os.walk('.'):
-                      # Filter out excluded directories
-                      dirs[:] = [d for d in dirs if not should_exclude(d)]
-                      
-                      for file in files:
-                          filepath = os.path.join(root, file)
-                          arcname = os.path.relpath(filepath, '.')
-                          if not should_exclude(arcname):
-                              try:
-                                  tar.add(filepath, arcname=arcname, recursive=False)
-                              except (OSError, IOError) as e:
-                                  # Ignore file changed errors - this is expected in CI
-                                  pass
-              
-              if os.path.exists('/tmp/deployment.tar.gz'):
-                  size = os.path.getsize('/tmp/deployment.tar.gz')
-                  print(f"✓ Archive created successfully: {size / 1024 / 1024:.2f} MB")
-                  sys.exit(0)
-              else:
-                  print("ERROR: Archive was not created")
-                  sys.exit(1)
-          except Exception as e:
-              print(f"ERROR: {e}")
-              sys.exit(1)
-          PYTHON_SCRIPT
-          
-          # Verify archive exists
-          if [ ! -f /tmp/deployment.tar.gz ]; then
-            echo "ERROR: Archive file verification failed!"
-            exit 1
-          fi
-          echo "Archive verified: $(ls -lh /tmp/deployment.tar.gz | awk '{print $5}')"
-        
-      - name: Verify and move archive
-        run: |
-          # Check if archive was created successfully (this is what matters, not tar's exit code)
-          if [ ! -f /tmp/deployment.tar.gz ]; then
-            echo "ERROR: Archive file was not created! Deployment cannot continue."
-            exit 1
-          fi
-          
-          echo "✓ Archive file exists at /tmp/deployment.tar.gz"
-          echo "Moving archive to current directory..."
-          
-          # Move archive to current directory
-          mv /tmp/deployment.tar.gz deployment.tar.gz
-          
-          echo "✓ Archive moved successfully"
-          
-          # Verify exports folder is included
-          echo "Verifying exports folder is included in archive..."
-          if tar -tzf deployment.tar.gz | grep -q "^exports/"; then
-            echo "✓ exports folder found in archive"
-            tar -tzf deployment.tar.gz | grep "^exports/" | head -5
-          else
-            echo "✗ ERROR: exports folder not found in archive!"
-            exit 1
-          fi
-
-      - name: Transfer files to VPS
+      - name: Deploy and restart application
         env:
-          VPS_HOST: ${{ secrets.VPS_HOST }}
-          VPS_USER: ${{ secrets.VPS_USER }}
-          VPS_PASSWORD: ${{ secrets.VPS_PASSWORD }}
-          VPS_DEPLOY_PATH: ${{ secrets.VPS_DEPLOY_PATH }}
-        run: |
-          # Install sshpass for password authentication
-          sudo apt-get update && sudo apt-get install -y sshpass
-          
-          # Convert Windows path format for SCP (Windows OpenSSH accepts both formats)
-          # Escape backslashes and ensure proper quoting
-          DEPLOY_PATH=$(echo "$VPS_DEPLOY_PATH" | sed 's|\\|/|g')
-          
-          # Transfer the archive to VPS
-          sshpass -p "$VPS_PASSWORD" scp -o StrictHostKeyChecking=no \
-            -o UserKnownHostsFile=/dev/null \
-            deployment.tar.gz "${VPS_USER}@${VPS_HOST}:${DEPLOY_PATH}/"
-
-      - name: Deploy and restart on VPS
-        env:
-          VPS_HOST: ${{ secrets.VPS_HOST }}
-          VPS_USER: ${{ secrets.VPS_USER }}
-          VPS_PASSWORD: ${{ secrets.VPS_PASSWORD }}
-          VPS_DEPLOY_PATH: ${{ secrets.VPS_DEPLOY_PATH }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
           PM2_APP_NAME: ${{ secrets.PM2_APP_NAME }}
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
@@ -181,36 +57,12 @@ jobs:
           CONVERSION_QUEUE_MAX_SIZE: ${{ secrets.CONVERSION_QUEUE_MAX_SIZE }}
           CONVERSION_RATE_LIMIT_COOLDOWN: ${{ secrets.CONVERSION_RATE_LIMIT_COOLDOWN }}
           KEEP_EXPORT_CSV_FILES: ${{ secrets.KEEP_EXPORT_CSV_FILES }}
+        shell: pwsh
         run: |
-          # Install sshpass if not already installed
-          sudo apt-get update && sudo apt-get install -y sshpass
-          
-          # Create PowerShell deployment script using Python to ensure proper encoding
-          python3 << 'PYTHON_SCRIPT'
-          script_content = r'''param(
-            [string]$DeployPath,
-            [string]$Pm2AppName,
-            [string]$NextPublicSupabaseUrl,
-            [string]$NextPublicSupabaseAnonKey,
-            [string]$NextPublicGoogleClientId,
-            [string]$SupabaseServiceRoleKey,
-            [string]$StripeSecretKey,
-            [string]$NextPublicStripePublishableKey,
-            [string]$StripeWebhookSecret,
-            [string]$NextPublicAppUrl,
-            [string]$ConversionWorkerPoolSize,
-            [string]$ConversionQueueMaxSize,
-            [string]$ConversionRateLimitCooldown,
-            [string]$KeepExportCsvFiles
-          )
-          
           # Navigate to deployment directory
+          $DeployPath = $env:DEPLOY_PATH
           Set-Location -Path $DeployPath
           Write-Host "Current directory: $(Get-Location)"
-          Write-Host "Archive file exists: $(Test-Path deployment.tar.gz)"
-          if (Test-Path deployment.tar.gz) {
-            Write-Host "Archive file size: $((Get-Item deployment.tar.gz).Length) bytes"
-          }
           
           # Create project subfolder (e.g., table-editor)
           $projectFolder = "table-editor"
@@ -220,221 +72,75 @@ jobs:
           Set-Location -Path $projectPath
           Write-Host "Changed to project directory: $(Get-Location)"
           
-          # Copy archive to project folder for extraction
-          Copy-Item "$DeployPath\deployment.tar.gz" -Destination "$projectPath\deployment.tar.gz" -Force
+          # Copy files from runner workspace to project directory (excluding node_modules, .next, .git)
+          Write-Host "Copying files to project directory..."
+          $workspacePath = $env:GITHUB_WORKSPACE
+          $excludeDirs = @('node_modules', '.next', '.git', '.github', 'logs')
+          $excludeFiles = @('*.log', '.env*')
           
-          # Verify archive before extraction
-          Write-Host "Verifying archive before extraction..."
-          if (Test-Path "deployment.tar.gz") {
-            Write-Host "Archive exists, size: $((Get-Item deployment.tar.gz).Length) bytes"
+          Get-ChildItem -Path $workspacePath -Recurse | Where-Object {
+            $relativePath = $_.FullName.Substring($workspacePath.Length + 1)
+            $shouldExclude = $false
             
-            # Try to list archive contents using 7-Zip to verify it's valid
-            $7zipCheck = Get-Command "C:\Program Files\7-Zip\7z.exe" -ErrorAction SilentlyContinue
-            if ($7zipCheck) {
-              Write-Host "Listing archive contents (first 20 items):"
-              & "C:\Program Files\7-Zip\7z.exe" l deployment.tar.gz | Select-Object -First 25
-            }
-          } else {
-            Write-Error "Archive file not found in project folder!"
-            exit 1
-          }
-          
-          # Extract the archive (prefer 7zip on Windows as tar requires gzip which may not be available)
-          Write-Host "Extracting deployment archive to: $(Get-Location)"
-          
-          # List files before extraction
-          Write-Host "Files before extraction:"
-          Get-ChildItem | Select-Object Name | Format-Table
-          
-          # Try 7zip first (more reliable on Windows)
-          $7zipFound = $false
-          $7zipPath = $null
-          
-          # Check common 7-Zip installation paths
-          $possiblePaths = @(
-            "C:\Program Files\7-Zip\7z.exe",
-            "C:\Program Files (x86)\7-Zip\7z.exe"
-          )
-          
-          foreach ($path in $possiblePaths) {
-            Write-Host "Checking: $path"
-            if (Test-Path $path) {
-              Write-Host "Found 7-Zip at: $path"
-              $7zipPath = $path
-              $7zipFound = $true
-              break
-            }
-          }
-          
-          # If not found in common paths, try Get-Command
-          if (-not $7zipFound) {
-            Write-Host "Trying Get-Command for 7z..."
-            $cmd = Get-Command 7z -ErrorAction SilentlyContinue
-            if ($cmd) {
-              Write-Host "Found 7z command: $($cmd.Source)"
-              $7zipPath = $cmd.Source
-              $7zipFound = $true
-            }
-          }
-          
-          # If 7zip found, use it (preferred method on Windows)
-          if ($7zipFound -and $7zipPath) {
-            Write-Host "Using 7-Zip at: $7zipPath"
-            Write-Host "Archive file before extraction:"
-            Get-Item deployment.tar.gz | Select-Object Name, Length
-            
-            # 7zip can extract .tar.gz in two steps
-            Write-Host "Step 1: Extracting .tar.gz to temp directory..."
-            $step1Output = & $7zipPath x deployment.tar.gz -o"$env:TEMP" -y 2>&1
-            Write-Host "7-Zip Step 1 output:"
-            $step1Output | ForEach-Object { Write-Host $_ }
-            Write-Host "7-Zip Step 1 exit code: $LASTEXITCODE"
-            
-            if ($LASTEXITCODE -ne 0) {
-              Write-Error "Failed to extract .tar.gz (exit code: $LASTEXITCODE)"
-              exit 1
-            }
-            
-            $tarFile = "$env:TEMP\deployment.tar"
-            Write-Host "Checking for extracted .tar file at: $tarFile"
-            if (Test-Path $tarFile) {
-              Write-Host "Found .tar file, size: $((Get-Item $tarFile).Length) bytes"
-              Write-Host "Step 2: Extracting .tar archive to current directory..."
-              Write-Host "Extracting to: $(Get-Location)"
-              
-              # Use absolute path for output directory to avoid any path issues
-              $extractPath = (Get-Location).Path
-              Write-Host "Extracting to absolute path: $extractPath"
-              
-              $step2Output = & $7zipPath x $tarFile "-o$extractPath" -y 2>&1
-              Write-Host "7-Zip Step 2 output:"
-              $step2Output | ForEach-Object { Write-Host $_ }
-              $extractExitCode = $LASTEXITCODE
-              Write-Host "7-Zip Step 2 exit code: $extractExitCode"
-              
-              # Also try alternative extraction method if first fails
-              if ($extractExitCode -ne 0) {
-                Write-Host "First extraction attempt failed, trying alternative method..."
-                $step2AltOutput = & $7zipPath e $tarFile "-o$extractPath" -y 2>&1
-                Write-Host "7-Zip alternative output:"
-                $step2AltOutput | ForEach-Object { Write-Host $_ }
-                $extractExitCode = $LASTEXITCODE
-                Write-Host "7-Zip alternative exit code: $extractExitCode"
+            foreach ($excludeDir in $excludeDirs) {
+              if ($relativePath -like "$excludeDir*") {
+                $shouldExclude = $true
+                break
               }
-              
-              if ($extractExitCode -ne 0) {
-                Write-Error "Failed to extract .tar (exit code: $extractExitCode)"
-                Write-Host "Files after failed extraction:"
-                Get-ChildItem | Select-Object Name | Format-Table
-                exit 1
-              }
-              
-              Remove-Item $tarFile -Force -ErrorAction SilentlyContinue
-              Write-Host "Archive extracted successfully"
-              
-              # Verify extraction - list files and directories
-              Write-Host "Verifying extraction - files and folders in current directory:"
-              Get-ChildItem | Select-Object Name, Length, PSIsContainer | Format-Table
-              Write-Host "Total items: $((Get-ChildItem).Count)"
-              
-              # Check for specific expected files
-              Write-Host "Checking for expected files:"
-              $expectedFiles = @("package.json", "src", "exports", "next.config.ts", "public")
-              foreach ($file in $expectedFiles) {
-                if (Test-Path $file) {
-                  Write-Host "  [OK] Found: $file"
-                } else {
-                  Write-Host "  [MISSING] Not found: $file"
-                }
-              }
-            } else {
-              Write-Error "Could not find extracted .tar file at: $tarFile"
-              Write-Host "Files in temp directory:"
-              Get-ChildItem "$env:TEMP" -Filter "deployment*" | Select-Object Name, Length
-              Write-Host "All files in temp directory starting with 'deployment':"
-              Get-ChildItem "$env:TEMP" | Where-Object { $_.Name -like "deployment*" } | Select-Object Name, Length
-              exit 1
             }
-          } elseif (-not $7zipFound) {
-            # Fallback to tar only if 7-Zip is not available
-            Write-Host "7-Zip not found, trying tar as fallback..."
-            $tarFound = $false
-            $tarPaths = @("tar", "C:\Windows\System32\tar.exe", "C:\Program Files\Git\usr\bin\tar.exe")
-            foreach ($tarPath in $tarPaths) {
-              $tarCmd = Get-Command $tarPath -ErrorAction SilentlyContinue
-              if ($tarCmd) {
-                Write-Host "Found tar at: $($tarCmd.Source)"
-                Write-Host "Extracting to: $(Get-Location)"
-                
-                # Extract with tar
-                $tarOutput = & $tarPath -xzf deployment.tar.gz 2>&1
-                Write-Host "Tar extraction output:"
-                $tarOutput | ForEach-Object { Write-Host $_ }
-                Write-Host "Tar exit code: $LASTEXITCODE"
-                
-                if ($LASTEXITCODE -eq 0) {
-                  $tarFound = $true
-                  
-                  # Verify extraction
-                  Write-Host "Verifying extraction - files and folders in current directory:"
-                  Get-ChildItem | Select-Object Name, Length, PSIsContainer | Format-Table
-                  Write-Host "Total items: $((Get-ChildItem).Count)"
-                  
-                  # Check for specific expected files
-                  Write-Host "Checking for expected files:"
-                  $expectedFiles = @("package.json", "src", "exports", "next.config.ts", "public")
-                  foreach ($file in $expectedFiles) {
-                    if (Test-Path $file) {
-                      Write-Host "  [OK] Found: $file"
-                    } else {
-                      Write-Host "  [MISSING] Not found: $file"
-                    }
-                  }
+            
+            if (-not $shouldExclude) {
+              foreach ($excludeFile in $excludeFiles) {
+                if ($_.Name -like $excludeFile) {
+                  $shouldExclude = $true
                   break
-                } else {
-                  Write-Warning "Tar extraction failed (exit code: $LASTEXITCODE), will try next method..."
                 }
               }
             }
             
-            if (-not $tarFound) {
-              Write-Error "Neither 7-Zip nor tar extraction succeeded. Please ensure 7-Zip is installed at C:\Program Files\7-Zip\"
-              exit 1
+            -not $shouldExclude
+          } | ForEach-Object {
+            $relativePath = $_.FullName.Substring($workspacePath.Length + 1)
+            $destPath = Join-Path $projectPath $relativePath
+            $destDir = Split-Path -Parent $destPath
+            
+            if (-not (Test-Path $destDir)) {
+              New-Item -ItemType Directory -Path $destDir -Force | Out-Null
+            }
+            
+            if (-not $_.PSIsContainer) {
+              Copy-Item -Path $_.FullName -Destination $destPath -Force
             }
           }
           
-          # Remove the archive after extraction
-          Remove-Item -Path deployment.tar.gz -Force
+          Write-Host "Files copied successfully"
           
-          # Verify all expected files/folders are present
-          Write-Host "Verifying extracted files..."
+          # Verify expected files/folders are present
+          Write-Host "Verifying files..."
           $expectedItems = @("package.json", "src", "exports", "next.config.ts")
           foreach ($item in $expectedItems) {
             if (Test-Path $item) {
-              Write-Host "  Found: $item"
+              Write-Host "  [OK] Found: $item"
             } else {
-              Write-Warning "  Missing: $item"
+              Write-Warning "  [MISSING] Not found: $item"
             }
           }
-          
-          Write-Host "Extraction complete. Files in project directory:"
-          Get-ChildItem | Select-Object Name, Length, PSIsContainer | Format-Table
           
           # Create .env.local file with all environment variables
           Write-Host "Creating .env.local file..."
           $envLines = @(
-            "NEXT_PUBLIC_SUPABASE_URL=$NextPublicSupabaseUrl",
-            "NEXT_PUBLIC_SUPABASE_ANON_KEY=$NextPublicSupabaseAnonKey",
-            "NEXT_PUBLIC_GOOGLE_CLIENT_ID=$NextPublicGoogleClientId",
-            "SUPABASE_SERVICE_ROLE_KEY=$SupabaseServiceRoleKey",
-            "STRIPE_SECRET_KEY=$StripeSecretKey",
-            "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=$NextPublicStripePublishableKey",
-            "STRIPE_WEBHOOK_SECRET=$StripeWebhookSecret",
-            "NEXT_PUBLIC_APP_URL=$NextPublicAppUrl",
-            "CONVERSION_WORKER_POOL_SIZE=$ConversionWorkerPoolSize",
-            "CONVERSION_QUEUE_MAX_SIZE=$ConversionQueueMaxSize",
-            "CONVERSION_RATE_LIMIT_COOLDOWN=$ConversionRateLimitCooldown",
-            "KEEP_EXPORT_CSV_FILES=$KeepExportCsvFiles"
+            "NEXT_PUBLIC_SUPABASE_URL=$($env:NEXT_PUBLIC_SUPABASE_URL)",
+            "NEXT_PUBLIC_SUPABASE_ANON_KEY=$($env:NEXT_PUBLIC_SUPABASE_ANON_KEY)",
+            "NEXT_PUBLIC_GOOGLE_CLIENT_ID=$($env:NEXT_PUBLIC_GOOGLE_CLIENT_ID)",
+            "SUPABASE_SERVICE_ROLE_KEY=$($env:SUPABASE_SERVICE_ROLE_KEY)",
+            "STRIPE_SECRET_KEY=$($env:STRIPE_SECRET_KEY)",
+            "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=$($env:NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY)",
+            "STRIPE_WEBHOOK_SECRET=$($env:STRIPE_WEBHOOK_SECRET)",
+            "NEXT_PUBLIC_APP_URL=$($env:NEXT_PUBLIC_APP_URL)",
+            "CONVERSION_WORKER_POOL_SIZE=$($env:CONVERSION_WORKER_POOL_SIZE)",
+            "CONVERSION_QUEUE_MAX_SIZE=$($env:CONVERSION_QUEUE_MAX_SIZE)",
+            "CONVERSION_RATE_LIMIT_COOLDOWN=$($env:CONVERSION_RATE_LIMIT_COOLDOWN)",
+            "KEEP_EXPORT_CSV_FILES=$($env:KEEP_EXPORT_CSV_FILES)"
           )
           $envLines | Out-File -FilePath ".env.local" -Encoding utf8 -Force
           Write-Host ".env.local file created with environment variables"
@@ -442,6 +148,11 @@ jobs:
           # Install/update dependencies
           Write-Host "Installing dependencies..."
           npm install --production=false
+          
+          if ($LASTEXITCODE -ne 0) {
+            Write-Error "npm install failed! Exit code: $LASTEXITCODE"
+            exit 1
+          }
           
           # Build the application
           Write-Host "Building application..."
@@ -460,12 +171,6 @@ jobs:
           }
           Write-Host "Build verification: .next directory exists"
           
-          # Verify package.json exists
-          if (-not (Test-Path "package.json")) {
-            Write-Error "package.json not found!"
-            exit 1
-          }
-          
           # Check if port 3000 is in use (optional warning)
           $portCheck = Get-NetTCPConnection -LocalPort 3000 -ErrorAction SilentlyContinue
           if ($portCheck) {
@@ -476,6 +181,7 @@ jobs:
           
           # Restart PM2 process
           Write-Host "Checking PM2 process status..."
+          $Pm2AppName = $env:PM2_APP_NAME
           $pm2Status = pm2 describe $Pm2AppName 2>&1
           $pm2Exists = $LASTEXITCODE -eq 0
           
@@ -496,7 +202,6 @@ jobs:
                 Write-Host "Process is errored or stopped, deleting and recreating..."
                 pm2 delete $Pm2AppName
                 Start-Sleep -Seconds 1
-                # Will fall through to start new process below
                 $pm2Exists = $false
               } else {
                 Write-Host "Process exists but status is '$status', restarting..."
@@ -510,7 +215,6 @@ jobs:
           
           if (-not $pm2Exists) {
             Write-Host "PM2 process does not exist, starting new process..."
-            # Start PM2 process - we're already in the project directory
             Write-Host "Current directory: $(Get-Location)"
             
             # Verify we're in the right directory
@@ -531,7 +235,6 @@ jobs:
               pm2 start ecosystem.config.js --update-env
             } else {
               Write-Host "No ecosystem file found, starting PM2 directly with npm start..."
-              # PM2 start command for Next.js apps - use full path to avoid issues
               $currentPath = (Get-Location).Path
               pm2 start npm --name $Pm2AppName -- start --cwd "$currentPath" --update-env
             }
@@ -559,93 +262,10 @@ jobs:
             Write-Warning "PM2 process is not online. Status: $($appInfo.pm2_env.status)"
             Write-Warning "Restart count: $($appInfo.pm2_env.restart_time)"
             Write-Warning "Please check PM2 logs for errors: pm2 logs $Pm2AppName"
+            exit 1
           } else {
             Write-Host "PM2 process is running successfully"
           }
           
           Write-Host "Deployment completed successfully"
-          '''
-          
-          with open('deploy.ps1', 'w', encoding='utf-8', newline='\r\n') as f:
-              f.write(script_content)
-          
-          print("PowerShell script created successfully")
-          PYTHON_SCRIPT
-          
-          # Convert Windows path for SCP (use forward slashes)
-          SCP_PATH=$(echo "$VPS_DEPLOY_PATH" | sed 's|\\|/|g')
-          
-          # Transfer the PowerShell script to VPS
-          sshpass -p "$VPS_PASSWORD" scp -o StrictHostKeyChecking=no \
-            -o UserKnownHostsFile=/dev/null \
-            deploy.ps1 "${VPS_USER}@${VPS_HOST}:${SCP_PATH}/"
-          
-          # Create a base64-encoded JSON file with environment variables to avoid quote/special character issues
-          # This is safer than passing parameters directly via SSH
-          python3 << 'PYTHON_SCRIPT'
-          import json
-          import base64
-          import os
-          
-          env_vars = {
-              "DeployPath": os.environ.get("VPS_DEPLOY_PATH", ""),
-              "Pm2AppName": os.environ.get("PM2_APP_NAME", ""),
-              "NextPublicSupabaseUrl": os.environ.get("NEXT_PUBLIC_SUPABASE_URL", ""),
-              "NextPublicSupabaseAnonKey": os.environ.get("NEXT_PUBLIC_SUPABASE_ANON_KEY", ""),
-              "NextPublicGoogleClientId": os.environ.get("NEXT_PUBLIC_GOOGLE_CLIENT_ID", ""),
-              "SupabaseServiceRoleKey": os.environ.get("SUPABASE_SERVICE_ROLE_KEY", ""),
-              "StripeSecretKey": os.environ.get("STRIPE_SECRET_KEY", ""),
-              "NextPublicStripePublishableKey": os.environ.get("NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY", ""),
-              "StripeWebhookSecret": os.environ.get("STRIPE_WEBHOOK_SECRET", ""),
-              "NextPublicAppUrl": os.environ.get("NEXT_PUBLIC_APP_URL", ""),
-              "ConversionWorkerPoolSize": os.environ.get("CONVERSION_WORKER_POOL_SIZE", ""),
-              "ConversionQueueMaxSize": os.environ.get("CONVERSION_QUEUE_MAX_SIZE", ""),
-              "ConversionRateLimitCooldown": os.environ.get("CONVERSION_RATE_LIMIT_COOLDOWN", ""),
-              "KeepExportCsvFiles": os.environ.get("KEEP_EXPORT_CSV_FILES", "")
-          }
-          
-          json_str = json.dumps(env_vars)
-          encoded = base64.b64encode(json_str.encode('utf-8')).decode('utf-8')
-          
-          with open('env_vars.b64', 'w') as f:
-              f.write(encoded)
-          
-          print(f"Environment variables encoded: {len(encoded)} characters")
-          PYTHON_SCRIPT
-          
-          # Transfer the base64-encoded file to VPS
-          SCP_PATH=$(echo "$VPS_DEPLOY_PATH" | sed 's|\\|/|g')
-          sshpass -p "$VPS_PASSWORD" scp -o StrictHostKeyChecking=no \
-            -o UserKnownHostsFile=/dev/null \
-            env_vars.b64 "${VPS_USER}@${VPS_HOST}:${SCP_PATH}/"
-          
-          # Execute deployment commands on Windows VPS via SSH
-          # Decode and read environment variables from base64 file to avoid quote/special character issues
-          sshpass -p "$VPS_PASSWORD" ssh -o StrictHostKeyChecking=no \
-            -o UserKnownHostsFile=/dev/null \
-            "${VPS_USER}@${VPS_HOST}" \
-            "powershell -ExecutionPolicy Bypass -Command \"\$encoded = Get-Content '${VPS_DEPLOY_PATH}\\env_vars.b64' -Raw; \$json = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String(\$encoded.Trim())); \$envVars = \$json | ConvertFrom-Json; & '${VPS_DEPLOY_PATH}\\deploy.ps1' -DeployPath \$envVars.DeployPath -Pm2AppName \$envVars.Pm2AppName -NextPublicSupabaseUrl \$envVars.NextPublicSupabaseUrl -NextPublicSupabaseAnonKey \$envVars.NextPublicSupabaseAnonKey -NextPublicGoogleClientId \$envVars.NextPublicGoogleClientId -SupabaseServiceRoleKey \$envVars.SupabaseServiceRoleKey -StripeSecretKey \$envVars.StripeSecretKey -NextPublicStripePublishableKey \$envVars.NextPublicStripePublishableKey -StripeWebhookSecret \$envVars.StripeWebhookSecret -NextPublicAppUrl \$envVars.NextPublicAppUrl -ConversionWorkerPoolSize \$envVars.ConversionWorkerPoolSize -ConversionQueueMaxSize \$envVars.ConversionQueueMaxSize -ConversionRateLimitCooldown \$envVars.ConversionRateLimitCooldown -KeepExportCsvFiles \$envVars.KeepExportCsvFiles\""
-          
-          # Clean up base64 file from VPS
-          sshpass -p "$VPS_PASSWORD" ssh -o StrictHostKeyChecking=no \
-            -o UserKnownHostsFile=/dev/null \
-            "${VPS_USER}@${VPS_HOST}" \
-            "powershell -Command \"Remove-Item -Path '${VPS_DEPLOY_PATH}\\env_vars.b64' -Force -ErrorAction SilentlyContinue\""
-          
-          # Clean up local base64 file
-          rm -f env_vars.b64
-          
-          # Clean up the script from VPS
-          sshpass -p "$VPS_PASSWORD" ssh -o StrictHostKeyChecking=no \
-            -o UserKnownHostsFile=/dev/null \
-            "${VPS_USER}@${VPS_HOST}" \
-            "powershell -Command \"Remove-Item -Path '${VPS_DEPLOY_PATH}\\deploy.ps1' -Force -ErrorAction SilentlyContinue\""
-          
-          # Clean up local files
-          rm -f deploy.ps1 env_vars.b64
-
-      - name: Cleanup
-        if: always()
-        run: |
-          rm -f deployment.tar.gz
 
