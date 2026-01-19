@@ -2,8 +2,17 @@
 
 /**
  * PM2 wrapper script for Next.js
- * This script runs 'next start' by requiring the Next.js CLI directly
+ * This script runs pre-start checks, then starts the Next.js server
  */
+
+// Run pre-start checks first
+try {
+  const { runPreStartChecks } = require('./pre-start.js');
+  runPreStartChecks();
+} catch (error) {
+  console.error('[Start-server] Pre-start checks failed:', error.message);
+  process.exit(1);
+}
 
 // Set environment variables
 process.env.NODE_ENV = process.env.NODE_ENV || 'production';
