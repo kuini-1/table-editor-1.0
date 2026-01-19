@@ -498,11 +498,29 @@ async function workerLoop(workerIndex: number): Promise<void> {
         // Clean up temporary files
         try {
           if (job.outputDir && fs.existsSync(job.outputDir)) {
-            // Clean up user directory after processing
-            // Note: For exports, RDF is already uploaded to storage
-            // For imports, CSV is already processed into database
-            fs.rmSync(job.outputDir, { recursive: true, force: true });
-            console.log(`[Worker ${workerIndex}] Cleaned up directory: ${job.outputDir}`);
+            // Check if we should keep CSV files for testing (export jobs only)
+            const keepCsvFiles = process.env.KEEP_EXPORT_CSV_FILES === 'true' || process.env.KEEP_EXPORT_CSV_FILES === '1';
+            
+            if (keepCsvFiles && job.type === 'export' && job.filePath) {
+              // Keep CSV file for testing - only remove RDF and other files
+              console.log(`[Worker ${workerIndex}] Keeping CSV file for testing: ${job.filePath}`);
+              
+              // Remove RDF file if it exists, but keep CSV
+              const rdfPath = path.join(job.outputDir, `${job.tableName}.rdf`);
+              if (fs.existsSync(rdfPath)) {
+                fs.unlinkSync(rdfPath);
+                console.log(`[Worker ${workerIndex}] Removed RDF file: ${rdfPath}`);
+              }
+              
+              // Keep the directory and CSV file
+              console.log(`[Worker ${workerIndex}] CSV file preserved at: ${job.filePath}`);
+            } else {
+              // Normal cleanup - remove entire directory
+              // Note: For exports, RDF is already uploaded to storage
+              // For imports, CSV is already processed into database
+              fs.rmSync(job.outputDir, { recursive: true, force: true });
+              console.log(`[Worker ${workerIndex}] Cleaned up directory: ${job.outputDir}`);
+            }
           }
         } catch (cleanupError) {
           console.error(`[Worker ${workerIndex}] Error cleaning up files:`, cleanupError);
