@@ -241,7 +241,7 @@ jobs:
             $portCheck | Format-Table
           }
           
-          # Restart PM2 process
+          # Recreate PM2 process (delete then start)
           Write-Host "Checking PM2 process status..."
           $Pm2AppName = $env:PM2_APP_NAME
           
@@ -250,89 +250,34 @@ jobs:
           $pm2Exists = $LASTEXITCODE -eq 0
           
           if ($pm2Exists) {
-            Write-Host "PM2 process exists, checking status..."
-            
-            # Use pm2 status to get the status (more reliable format)
-            $pm2StatusOutput = pm2 status 2>&1 | Out-String
-            Write-Host "PM2 status output:"
-            Write-Host $pm2StatusOutput
-            
-            # Extract status from pm2 status output - look for the app name and its status
-            $status = "unknown"
-            $statusLines = $pm2StatusOutput -split "`n"
-            foreach ($line in $statusLines) {
-              if ($line -match "table-editor|$Pm2AppName") {
-                # PM2 table format: id │ name │ namespace │ version │ mode │ pid │ uptime │ ↺ │ status │ cpu │ mem │ user │ watching
-                # Status is the 9th column (after ↺). Split by │ and get the status column
-                $columns = $line -split '\|' | ForEach-Object { $_.Trim() }
-                if ($columns.Count -ge 9) {
-                  $potentialStatus = $columns[8].Trim()  # Status is at index 8 (9th column)
-                  if ($potentialStatus -match "online|stopped|errored|restarting") {
-                    $status = $potentialStatus
-                    break
-                  }
-                }
-                # Alternative: look for status pattern in the line
-                if ($line -match "\|\s+(online|stopped|errored|restarting)\s+\|") {
-                  $status = $matches[1]
-                  break
-                }
-              }
-            }
-            
-            # Fallback: use pm2 show if status still unknown
-            if ($status -eq "unknown") {
-              $pm2Show = pm2 show $Pm2AppName 2>&1 | Out-String
-              if ($pm2Show -match "status\s*[:\|]\s*(\w+)") {
-                $status = $matches[1]
-              }
-              # Also try to extract from pm2 show output more directly
-              if ($pm2Show -match "status.*?:\s*(\w+)") {
-                $status = $matches[1]
-              }
-            }
-            
-            Write-Host "Current status: $status"
-            
-            if ($status -eq "online") {
-              Write-Host "Process is running, reloading..."
-              pm2 reload $Pm2AppName --update-env
-            } elseif ($status -eq "errored" -or $status -eq "stopped") {
-              Write-Host "Process is errored or stopped, deleting and recreating..."
-              pm2 delete $Pm2AppName
-              Start-Sleep -Seconds 1
-              $pm2Exists = $false
-            } else {
-              Write-Host "Process exists but status is '$status', restarting..."
-              pm2 restart $Pm2AppName --update-env
-            }
+            Write-Host "PM2 process exists, deleting it before restart..."
+            pm2 delete $Pm2AppName
+            Start-Sleep -Seconds 1
           }
           
-          if (-not $pm2Exists) {
-            Write-Host "PM2 process does not exist, starting new process..."
-            Write-Host "Current directory: $(Get-Location)"
-            
-            # Verify we're in the right directory
-            if (-not (Test-Path "package.json")) {
-              Write-Error "package.json not found in current directory: $(Get-Location)"
-              exit 1
-            }
-            
-            # Verify .next directory exists (build completed)
-            if (-not (Test-Path ".next")) {
-              Write-Error ".next directory not found. Build may have failed."
-              exit 1
-            }
-            
-            # Check if ecosystem.config.js exists, use it if available
-            if (Test-Path "ecosystem.config.js") {
-              Write-Host "Found ecosystem.config.js, using it to start PM2..."
-              pm2 start ecosystem.config.js --update-env
-            } else {
-              Write-Host "No ecosystem file found, starting PM2 directly with npm start..."
-              $currentPath = (Get-Location).Path
-              pm2 start npm --name $Pm2AppName -- start --cwd "$currentPath" --update-env
-            }
+          Write-Host "Starting new PM2 process..."
+          Write-Host "Current directory: $(Get-Location)"
+          
+          # Verify we're in the right directory
+          if (-not (Test-Path "package.json")) {
+            Write-Error "package.json not found in current directory: $(Get-Location)"
+            exit 1
+          }
+          
+          # Verify .next directory exists (build completed)
+          if (-not (Test-Path ".next")) {
+            Write-Error ".next directory not found. Build may have failed."
+            exit 1
+          }
+          
+          # Check if ecosystem.config.js exists, use it if available
+          if (Test-Path "ecosystem.config.js") {
+            Write-Host "Found ecosystem.config.js, using it to start PM2..."
+            pm2 start ecosystem.config.js --update-env
+          } else {
+            Write-Host "No ecosystem file found, starting PM2 directly with npm start..."
+            $currentPath = (Get-Location).Path
+            pm2 start npm --name $Pm2AppName -- start --cwd "$currentPath" --update-env
           }
           
           # Wait a moment for PM2 to update and attempt to start
@@ -356,19 +301,9 @@ jobs:
           $finalStatus = "unknown"
           $statusLines = $pm2StatusCheck -split "`n"
           foreach ($line in $statusLines) {
-            if ($line -match "table-editor|$Pm2AppName") {
-              # PM2 table format: id │ name │ namespace │ version │ mode │ pid │ uptime │ ↺ │ status │ cpu │ mem │ user │ watching
-              # Status is the 9th column (after ↺). Split by │ and get the status column
-              $columns = $line -split '\|' | ForEach-Object { $_.Trim() }
-              if ($columns.Count -ge 9) {
-                $potentialStatus = $columns[8].Trim()  # Status is at index 8 (9th column)
-                if ($potentialStatus -match "online|stopped|errored|restarting") {
-                  $finalStatus = $potentialStatus
-                  break
-                }
-              }
-              # Alternative: look for status pattern in the line
-              if ($line -match "\|\s+(online|stopped|errored|restarting)\s+\|") {
+            # Match the process row only (avoid header/module rows)
+            if ($line -match "^\|\s*\d+\s*\|\s*($Pm2AppName|table-editor)\s*\|") {
+              if ($line -match "\|\s*(online|stopped|errored|restarting)\s*\|") {
                 $finalStatus = $matches[1]
                 break
               }
