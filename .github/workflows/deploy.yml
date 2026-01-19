@@ -57,14 +57,14 @@ jobs:
           CONVERSION_QUEUE_MAX_SIZE: ${{ secrets.CONVERSION_QUEUE_MAX_SIZE }}
           CONVERSION_RATE_LIMIT_COOLDOWN: ${{ secrets.CONVERSION_RATE_LIMIT_COOLDOWN }}
           KEEP_EXPORT_CSV_FILES: ${{ secrets.KEEP_EXPORT_CSV_FILES }}
-        shell: pwsh
+        shell: powershell
         run: |
           # Navigate to deployment directory
           $DeployPath = $env:DEPLOY_PATH
           Set-Location -Path $DeployPath
           Write-Host "Current directory: $(Get-Location)"
           
-          # Create project subfolder (e.g., table-editor)
+          # Create project subfolder
           $projectFolder = "table-editor"
           $projectPath = Join-Path $DeployPath $projectFolder
           Write-Host "Creating project folder: $projectPath"
