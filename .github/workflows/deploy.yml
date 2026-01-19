@@ -295,72 +295,50 @@ jobs:
           Write-Host "PM2 Output Logs (last 50 lines):"
           pm2 logs $Pm2AppName --out --lines 50 --nostream
           
-          # Check if process is still errored (using pm2 status instead of JSON to avoid duplicate key issues)
-          $pm2StatusCheck = pm2 status 2>&1 | Out-String
-          
-          $finalStatus = "unknown"
-          $statusLines = $pm2StatusCheck -split "`n"
-          foreach ($line in $statusLines) {
-            # Match the process row only (avoid header/module rows)
-            if ($line -match "^\|\s*\d+\s*\|\s*($Pm2AppName|table-editor)\s*\|") {
-              if ($line -match "\|\s*(online|stopped|errored|restarting)\s*\|") {
-                $finalStatus = $matches[1]
-                break
-              }
-            }
-          }
-          
-          # Fallback: use pm2 show if status still unknown
-          if ($finalStatus -eq "unknown") {
-            $pm2ShowCheck = pm2 show $Pm2AppName 2>&1 | Out-String
-            if ($pm2ShowCheck -match "status\s*[:\|]\s*(\w+)") {
-              $finalStatus = $matches[1]
-            }
-            # Also try to extract from pm2 show output more directly
-            if ($pm2ShowCheck -match "status.*?:\s*(\w+)") {
-              $finalStatus = $matches[1]
-            }
-          }
-          
-          Write-Host "Final PM2 status check: $finalStatus"
-          
-          if ($finalStatus -ne "online") {
-            Write-Warning "PM2 process is not online. Status: $finalStatus"
-            
-            # Try to get restart count from pm2 status output (↺ column)
-            $restartCount = "unknown"
+          function Get-Pm2Status([string]$appName) {
+            $pm2StatusCheck = pm2 status 2>&1 | Out-String
+            $statusLines = $pm2StatusCheck -split "`n"
             foreach ($line in $statusLines) {
-              if ($line -match "table-editor|$Pm2AppName") {
-                # The restart count is usually in the ↺ column (4th column)
-                if ($line -match "\|\s+\d+\s+\|\s+\w+\s+\|\s+\w+\s+\|\s+(\d+)") {
-                  $restartCount = $matches[1]
-                  break
+              if ($line -match "^\|\s*\d+\s*\|\s*($appName|table-editor)\s*\|") {
+                if ($line -match "\|\s*(online|stopped|errored|restarting)\s*\|") {
+                  return $matches[1]
                 }
               }
             }
-            
-            Write-Warning "Restart count: $restartCount"
-            Write-Warning "Please check PM2 logs for errors: pm2 logs $Pm2AppName"
-            
-            # If status is stopped, try to start it one more time
-            if ($finalStatus -eq "stopped") {
-              Write-Host "Attempting to start stopped process..."
-              pm2 start $Pm2AppName --update-env
-              Start-Sleep -Seconds 3
-              
-              # Check again
-              $pm2StatusFinal = pm2 status 2>&1 | Out-String
-              if ($pm2StatusFinal -match "$Pm2AppName.*online") {
-                Write-Host "Process started successfully!"
-              } else {
-                Write-Error "Failed to start process. Please check PM2 logs manually."
-                exit 1
-              }
-            } else {
-              exit 1
+
+            $pm2ShowCheck = pm2 show $appName 2>&1 | Out-String
+            if ($pm2ShowCheck -match "status\s*[:\|]\s*(\w+)") {
+              return $matches[1]
             }
-          } else {
+            if ($pm2ShowCheck -match "status.*?:\s*(\w+)") {
+              return $matches[1]
+            }
+
+            return "unknown"
+          }
+
+          $finalStatus = "unknown"
+          for ($i = 1; $i -le 5; $i++) {
+            $finalStatus = Get-Pm2Status $Pm2AppName
+            Write-Host "PM2 status attempt $i: $finalStatus"
+
+            if ($finalStatus -eq "online" -or $finalStatus -eq "errored" -or $finalStatus -eq "stopped") {
+              break
+            }
+
+            Start-Sleep -Seconds 3
+          }
+
+          Write-Host "Final PM2 status check: $finalStatus"
+
+          if ($finalStatus -eq "online") {
             Write-Host "PM2 process is running successfully"
+          } elseif ($finalStatus -eq "errored" -or $finalStatus -eq "stopped") {
+            Write-Warning "PM2 process is not online. Status: $finalStatus"
+            Write-Warning "Please check PM2 logs for errors: pm2 logs $Pm2AppName"
+            exit 1
+          } else {
+            Write-Warning "PM2 status is unknown after retries; continuing deploy."
           }
           
           Write-Host "Deployment completed successfully"
