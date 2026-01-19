@@ -346,10 +346,15 @@ async function processExportJob(job: ConversionJob, workerIndex: number): Promis
       },
     });
 
-    // Verify RDF file was created
-    const rdfPath = path.join(userDir, `${tableName}.rdf`);
+    // Verify RDF file was created (support legacy output path)
+    let rdfPath = path.join(userDir, `${tableName}.rdf`);
     if (!fs.existsSync(rdfPath)) {
-      throw new Error(`RDF file was not generated at expected path: ${rdfPath}`);
+      const legacyPath = path.join(process.cwd(), 'exports', job.userId, `${tableName}.rdf`);
+      if (fs.existsSync(legacyPath)) {
+        rdfPath = legacyPath;
+      } else {
+        throw new Error(`RDF file was not generated at expected path: ${rdfPath}`);
+      }
     }
 
     // Check file size to ensure it's not empty
