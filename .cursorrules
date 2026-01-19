@@ -42,12 +42,12 @@ Finally, you should always use the official documentation of the library you are
 
 # Scratchpad
 
-Current Task: Speed up Supabase CSV export (16k+ rows)
+Current Task: Host RDF downloads on server
 
 Task Description:
-Exporting ~16k rows via PostgREST caps at ~5k rows and is too slow. Implement server-side Postgres COPY stream to CSV, then keep existing queue/worker flow.
+Stop uploading RDF files to Supabase storage. Store RDF under exports/<userId>/<timestamp>/ and serve via Next.js route at https://editor.dbod.cc/<userId>/<timestamp>/<file>.rdf.
 
 Planned Steps:
-[X] Add pg COPY exporter helper (stream to CSV)
-[X] Wire export route to use COPY helper
-[X] Add DB URL env docs + guardrails
+[X] Write RDF into exports/ and return direct URL
+[X] Serve /<userId>/<timestamp>/<file> from exports
+[X] Remove Supabase storage upload for exports

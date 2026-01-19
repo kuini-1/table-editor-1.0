@@ -1,19 +1,10 @@
 import { createClient } from '@/lib/supabase/server';
-import { createClient as createServiceClient, SupabaseClient } from '@supabase/supabase-js';
+import { createClient as createServiceClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
 import { conversionQueue } from '@/lib/queue/conversion-queue';
 import '@/lib/queue/worker'; // Ensure workers are started
-
-interface StorageFile {
-  name: string;
-  id: string;
-  updated_at: string;
-  created_at: string;
-  last_accessed_at: string;
-  metadata: Record<string, unknown>;
-}
 
 function getServiceClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -26,64 +17,12 @@ function getServiceClient() {
   return createServiceClient(supabaseUrl, serviceRoleKey);
 }
 
-async function cleanupExistingFiles(supabase: SupabaseClient, userId: string, userDir: string) {
-  // Clean up local directory if it exists
-  if (fs.existsSync(userDir)) {
-    fs.rmSync(userDir, { recursive: true, force: true });
-  }
-
-  // List all files in the user's storage folder
-  const { data: files, error: listError } = await supabase.storage
-    .from('exports')
-    .list(userId);
-
-  if (listError) {
-    console.error('Error listing storage files:', listError);
+async function cleanupExistingFiles(userDir: string) {
+  if (!fs.existsSync(userDir)) {
     return;
   }
 
-  // Delete all files in the user's storage folder
-  if (files && files.length > 0) {
-    const filePaths = files.map((file: StorageFile) => `${userId}/${file.name}`);
-    const { error: deleteError } = await supabase.storage
-      .from('exports')
-      .remove(filePaths);
-
-    if (deleteError) {
-      console.error('Error deleting storage files:', deleteError);
-    }
-  }
-}
-
-async function ensureExportsBucket() {
-  try {
-    const serviceClient = getServiceClient();
-    
-    const { error: createError } = await serviceClient.storage.createBucket('exports', {
-      public: true,
-      fileSizeLimit: 50000000
-    });
-    
-    if (createError && 
-        !createError.message.includes('already exists') && 
-        !createError.message.includes('The resource already exists')) {
-      return false;
-    }
-
-    const { error: updateError } = await serviceClient.storage.updateBucket('exports', {
-      public: true,
-      fileSizeLimit: 50000000
-    });
-    
-    if (updateError) {
-      return false;
-    }
-    
-    return true;
-  } catch (error) {
-    console.error('Error ensuring exports bucket:', error);
-    return false;
-  }
+  fs.rmSync(userDir, { recursive: true, force: true });
 }
 
 export async function GET(req: Request) {
@@ -116,13 +55,6 @@ export async function GET(req: Request) {
   try {
     const supabase = createClient();
     
-    if (!await ensureExportsBucket()) {
-      return NextResponse.json({
-        error: 'Storage configuration error',
-        details: 'Failed to configure storage bucket'
-      }, { status: 500 });
-    }
-
     // Get authenticated user data instead of session
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     if (userError) {
@@ -147,10 +79,10 @@ export async function GET(req: Request) {
       }, { status: 429 });
     }
 
-    // Ensure exports directory exists
-    const userDir = path.join(process.cwd(), 'exports', user.id);
+    // Ensure temp export directory exists (don't delete existing downloads)
+    const userDir = path.join(process.cwd(), 'exports', 'tmp', user.id);
     try {
-      await cleanupExistingFiles(supabase, user.id, userDir);
+      await cleanupExistingFiles(userDir);
       fs.mkdirSync(userDir, { recursive: true });
     } catch (fsError: object | unknown) {
       console.error('File system error:', fsError);

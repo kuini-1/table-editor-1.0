@@ -10,6 +10,7 @@ import Papa from 'papaparse';
 const execAsync = promisify(exec);
 
 const WORKER_POOL_SIZE = parseInt(process.env.CONVERSION_WORKER_POOL_SIZE || '5', 10);
+const EXPORT_CLEANUP_DAYS = parseInt(process.env.EXPORT_CLEANUP_DAYS || '7', 10);
 
 /**
  * Get the executable path for a worker
@@ -305,59 +306,9 @@ async function processImportJob(job: ConversionJob, workerIndex: number): Promis
 }
 
 /**
- * Ensure exports bucket exists
- */
-async function ensureExportsBucket(): Promise<boolean> {
-  try {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    
-    if (!supabaseUrl || !serviceRoleKey) {
-      console.error('Missing Supabase service role credentials');
-      return false;
-    }
-
-    const { createClient: createServiceClient } = await import('@supabase/supabase-js');
-    const serviceClient = createServiceClient(supabaseUrl, serviceRoleKey);
-    
-    const { error: createError } = await serviceClient.storage.createBucket('exports', {
-      public: true,
-      fileSizeLimit: 50000000
-    });
-    
-    if (createError && 
-        !createError.message.includes('already exists') && 
-        !createError.message.includes('The resource already exists')) {
-      return false;
-    }
-
-    const { error: updateError } = await serviceClient.storage.updateBucket('exports', {
-      public: true,
-      fileSizeLimit: 50000000
-    });
-    
-    if (updateError) {
-      return false;
-    }
-    
-    return true;
-  } catch (error) {
-    console.error('Error ensuring exports bucket:', error);
-    return false;
-  }
-}
-
-/**
  * Process an export job
  */
 async function processExportJob(job: ConversionJob, workerIndex: number): Promise<string> {
-  const supabase = getSupabaseClient();
-  
-  // Ensure exports bucket exists
-  if (!await ensureExportsBucket()) {
-    throw new Error('Failed to ensure exports bucket exists');
-  }
-
   const exePath = getExecutablePath(workerIndex);
   const workingDir = path.join(process.cwd(), 'exports');
 
@@ -376,16 +327,9 @@ async function processExportJob(job: ConversionJob, workerIndex: number): Promis
   // Generate timestamp to create unique folder and prevent caching issues
   const timestamp = Date.now();
   
-  // Build storage path with optional folder
-  let storagePath: string;
-  if (job.folder) {
-    // Use folder structure: userId/folder/timestamp/tableName.rdf
-    const cleanedFolder = job.folder.trim().replace(/^\/+|\/+$/g, '');
-    storagePath = `${job.userId}/${cleanedFolder}/${timestamp}/${tableName}.rdf`;
-  } else {
-    // Default structure: userId/timestamp/tableName.rdf
-    storagePath = `${job.userId}/${timestamp}/${tableName}.rdf`;
-  }
+  const exportRoot = path.join(process.cwd(), 'exports');
+  const finalDir = path.join(exportRoot, job.userId, String(timestamp));
+  const finalPath = path.join(finalDir, `${tableName}.rdf`);
 
   try {
     // Execute conversion: Convert.exe tableName userId rdf
@@ -414,27 +358,13 @@ async function processExportJob(job: ConversionJob, workerIndex: number): Promis
       throw new Error('RDF file was generated but is empty');
     }
 
-    // Upload to storage
-    const rdfContent = fs.readFileSync(rdfPath);
-    
-    const { error: uploadError } = await supabase.storage
-      .from('exports')
-      .upload(storagePath, rdfContent, {
-        contentType: 'application/octet-stream',
-      });
+    fs.mkdirSync(finalDir, { recursive: true });
+    fs.renameSync(rdfPath, finalPath);
 
-    if (uploadError) {
-      throw uploadError;
-    }
-
-    // Get the public URL for the uploaded file
-    const { data: { publicUrl } } = supabase.storage
-      .from('exports')
-      .getPublicUrl(storagePath);
-
+    const publicUrl = `https://editor.dbod.cc/${job.userId}/${timestamp}/${tableName}.rdf`;
     console.log(`[Worker ${workerIndex}] Export completed successfully`);
     console.log(`[Worker ${workerIndex}] Public URL: ${publicUrl}`);
-    console.log(`[Worker ${workerIndex}] Storage path: ${storagePath}`);
+    console.log(`[Worker ${workerIndex}] Storage path: ${finalPath}`);
     
     if (!publicUrl) {
       throw new Error('Failed to get public URL for exported file');
@@ -501,23 +431,22 @@ async function workerLoop(workerIndex: number): Promise<void> {
             // Check if we should keep CSV files for testing (export jobs only)
             const keepCsvFiles = process.env.KEEP_EXPORT_CSV_FILES === 'true' || process.env.KEEP_EXPORT_CSV_FILES === '1';
             
-            if (keepCsvFiles && job.type === 'export' && job.filePath) {
-              // Keep CSV file for testing - only remove RDF and other files
-              console.log(`[Worker ${workerIndex}] Keeping CSV file for testing: ${job.filePath}`);
-              
-              // Remove RDF file if it exists, but keep CSV
-              const rdfPath = path.join(job.outputDir, `${job.tableName}.rdf`);
-              if (fs.existsSync(rdfPath)) {
-                fs.unlinkSync(rdfPath);
-                console.log(`[Worker ${workerIndex}] Removed RDF file: ${rdfPath}`);
+            if (job.type === 'export') {
+              if (!keepCsvFiles && job.filePath && fs.existsSync(job.filePath)) {
+                fs.unlinkSync(job.filePath);
+                console.log(`[Worker ${workerIndex}] Removed CSV file: ${job.filePath}`);
+              } else if (keepCsvFiles && job.filePath) {
+                console.log(`[Worker ${workerIndex}] Keeping CSV file for testing: ${job.filePath}`);
               }
-              
-              // Keep the directory and CSV file
-              console.log(`[Worker ${workerIndex}] CSV file preserved at: ${job.filePath}`);
+
+              const exportRoot = path.join(process.cwd(), 'exports');
+              const relativePath = path.relative(exportRoot, job.outputDir);
+              if (relativePath.startsWith(`tmp${path.sep}`)) {
+                fs.rmSync(job.outputDir, { recursive: true, force: true });
+                console.log(`[Worker ${workerIndex}] Cleaned up temp directory: ${job.outputDir}`);
+              }
             } else {
-              // Normal cleanup - remove entire directory
-              // Note: For exports, RDF is already uploaded to storage
-              // For imports, CSV is already processed into database
+              // Normal cleanup for import jobs
               fs.rmSync(job.outputDir, { recursive: true, force: true });
               console.log(`[Worker ${workerIndex}] Cleaned up directory: ${job.outputDir}`);
             }
@@ -533,6 +462,51 @@ async function workerLoop(workerIndex: number): Promise<void> {
       console.error(`[Worker ${workerIndex}] Worker error:`, error);
       await new Promise(resolve => setTimeout(resolve, 1000));
     }
+  }
+}
+
+function parseTimestampDir(dirName: string): number | null {
+  if (!/^\d+$/.test(dirName)) {
+    return null;
+  }
+  const value = Number(dirName);
+  return Number.isFinite(value) ? value : null;
+}
+
+function cleanupOldExports(): void {
+  if (!Number.isFinite(EXPORT_CLEANUP_DAYS) || EXPORT_CLEANUP_DAYS <= 0) {
+    return;
+  }
+
+  const exportRoot = path.join(process.cwd(), 'exports');
+  const cutoff = Date.now() - EXPORT_CLEANUP_DAYS * 24 * 60 * 60 * 1000;
+
+  try {
+    if (!fs.existsSync(exportRoot)) {
+      return;
+    }
+
+    const userDirs = fs.readdirSync(exportRoot, { withFileTypes: true })
+      .filter(entry => entry.isDirectory() && entry.name !== 'tmp');
+
+    for (const userDir of userDirs) {
+      const userPath = path.join(exportRoot, userDir.name);
+      const timestampDirs = fs.readdirSync(userPath, { withFileTypes: true })
+        .filter(entry => entry.isDirectory());
+
+      for (const timestampDir of timestampDirs) {
+        const timestamp = parseTimestampDir(timestampDir.name);
+        if (timestamp === null || timestamp >= cutoff) {
+          continue;
+        }
+
+        const targetPath = path.join(userPath, timestampDir.name);
+        fs.rmSync(targetPath, { recursive: true, force: true });
+        console.log(`[Cleanup] Removed old export directory: ${targetPath}`);
+      }
+    }
+  } catch (error) {
+    console.error('[Cleanup] Failed to remove old exports:', error);
   }
 }
 
@@ -555,5 +529,6 @@ export function startWorkers(): void {
 // Start workers when module is loaded (in Next.js API routes, this runs on server startup)
 if (typeof window === 'undefined') {
   startWorkers();
+  setInterval(cleanupOldExports, 60 * 60 * 1000);
 }
 
