@@ -3,7 +3,7 @@ name: Deploy to Windows VPS
 # This workflow deploys the application to a Windows VPS when a version tag is pushed
 # Requires a self-hosted Windows GitHub runner configured on the target machine
 # Required GitHub Secrets:
-#   DEPLOY_PATH: Deployment directory path (e.g., C:\xampp\htdocs)
+#   VPS_DEPLOY_PATH: Deployment directory path (e.g., C:\xampp\htdocs)
 #   PM2_APP_NAME: PM2 application name to restart
 #   NEXT_PUBLIC_SUPABASE_URL: Supabase project URL
 #   NEXT_PUBLIC_SUPABASE_ANON_KEY: Supabase anonymous key
@@ -43,7 +43,7 @@ jobs:
 
       - name: Deploy and restart application
         env:
-          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          DEPLOY_PATH: ${{ secrets.VPS_DEPLOY_PATH }}
           PM2_APP_NAME: ${{ secrets.PM2_APP_NAME }}
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
