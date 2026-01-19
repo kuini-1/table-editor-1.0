@@ -320,7 +320,7 @@ jobs:
           $finalStatus = "unknown"
           for ($i = 1; $i -le 5; $i++) {
             $finalStatus = Get-Pm2Status $Pm2AppName
-            Write-Host "PM2 status attempt $i: $finalStatus"
+            Write-Host "PM2 status attempt ${i}: $finalStatus"
 
             if ($finalStatus -eq "online" -or $finalStatus -eq "errored" -or $finalStatus -eq "stopped") {
               break
