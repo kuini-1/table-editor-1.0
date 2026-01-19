@@ -1,6 +1,6 @@
 name: Deploy to Windows VPS
 
-# This workflow deploys the application to a Windows VPS when a version tag is pushed
+# This workflow deploys the application to a Windows VPS on every push to main branch
 # Requires a self-hosted Windows GitHub runner configured on the target machine
 # Required GitHub Secrets:
 #   VPS_DEPLOY_PATH: Deployment directory path (e.g., C:\xampp\htdocs)
@@ -20,8 +20,8 @@ name: Deploy to Windows VPS
 
 on:
   push:
-    tags:
-      - 'v*'  # Triggers on tags like v1.0.0, v1.2.3, etc.
+    branches:
+      - main  # Triggers on every push to main branch
   workflow_dispatch:  # Allows manual triggering for testing
 
 jobs:
