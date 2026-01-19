@@ -59,14 +59,76 @@ jobs:
           KEEP_EXPORT_CSV_FILES: ${{ secrets.KEEP_EXPORT_CSV_FILES }}
         shell: powershell
         run: |
-          # Navigate to deployment directory
-          $DeployPath = $env:DEPLOY_PATH
+          # Debug: Show all environment variables starting with DEPLOY or PM2
+          Write-Host "=== Environment Variable Debug ==="
+          Write-Host "Checking environment variables..."
+          $deployVars = Get-ChildItem Env: | Where-Object { $_.Name -like "*DEPLOY*" -or $_.Name -like "*PM2*" }
+          if ($deployVars) {
+            $deployVars | Format-Table
+          } else {
+            Write-Host "No environment variables found matching '*DEPLOY*' or '*PM2*'"
+          }
+          
+          # Check DEPLOY_PATH specifically
+          Write-Host "`n=== Checking DEPLOY_PATH ==="
+          Write-Host "DEPLOY_PATH value: '$env:DEPLOY_PATH'"
+          Write-Host "DEPLOY_PATH type: $($env:DEPLOY_PATH.GetType().FullName)"
+          Write-Host "DEPLOY_PATH is null: $($null -eq $env:DEPLOY_PATH)"
+          Write-Host "DEPLOY_PATH is empty: $([string]::IsNullOrEmpty($env:DEPLOY_PATH))"
+          Write-Host "DEPLOY_PATH is whitespace: $([string]::IsNullOrWhiteSpace($env:DEPLOY_PATH))"
+          
+          # Validate environment variables with multiple checks
+          $DeployPath = $null
+          if ($env:DEPLOY_PATH) {
+            $DeployPath = $env:DEPLOY_PATH.Trim()
+          }
+          
+          if ([string]::IsNullOrWhiteSpace($DeployPath)) {
+            Write-Error "DEPLOY_PATH environment variable is not set or is empty!"
+            Write-Host "`nCurrent working directory: $(Get-Location)"
+            Write-Host "`nAll environment variables:"
+            Get-ChildItem Env: | Sort-Object Name | Format-Table -AutoSize
+            Write-Host "`nPlease ensure DEPLOY_PATH secret is set in GitHub repository secrets."
+            exit 1
+          }
+          
+          Write-Host "`n=== DEPLOY_PATH Validation Passed ==="
+          Write-Host "Deploy Path: '$DeployPath'"
+          Write-Host "Deploy Path length: $($DeployPath.Length)"
+          
+          if ([string]::IsNullOrWhiteSpace($env:PM2_APP_NAME)) {
+            Write-Error "PM2_APP_NAME environment variable is not set or is empty!"
+            exit 1
+          }
+          
+          if (-not (Test-Path $DeployPath)) {
+            Write-Error "Deployment path does not exist: '$DeployPath'"
+            Write-Host "Attempting to create directory..."
+            try {
+              New-Item -ItemType Directory -Path $DeployPath -Force | Out-Null
+              Write-Host "Directory created successfully"
+            } catch {
+              Write-Error "Failed to create directory: $_"
+              exit 1
+            }
+          }
+          
           Set-Location -Path $DeployPath
           Write-Host "Current directory: $(Get-Location)"
           
+          # Double-check DeployPath is still valid before using it
+          if ([string]::IsNullOrWhiteSpace($DeployPath)) {
+            Write-Error "DeployPath became empty after validation! This should not happen."
+            exit 1
+          }
+          
           # Create project subfolder
           $projectFolder = "table-editor"
+          Write-Host "`n=== Creating Project Path ==="
+          Write-Host "DeployPath: '$DeployPath'"
+          Write-Host "projectFolder: '$projectFolder'"
           $projectPath = Join-Path $DeployPath $projectFolder
+          Write-Host "projectPath: '$projectPath'"
           Write-Host "Creating project folder: $projectPath"
           New-Item -ItemType Directory -Path $projectPath -Force | Out-Null
           Set-Location -Path $projectPath
