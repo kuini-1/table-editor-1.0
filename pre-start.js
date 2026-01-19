@@ -26,13 +26,36 @@ function runPreStartChecks() {
     console.log(`[Pre-start] Logs directory exists: ${LOGS_DIR}`);
   }
 
-  // 2. Verify build directory exists
+  // 2. Verify build directory exists and is complete
   if (!fs.existsSync(BUILD_DIR)) {
     console.error(`[Pre-start] ERROR: Build directory not found: ${BUILD_DIR}`);
     console.error(`[Pre-start] Please run 'npm run build' before starting PM2`);
     throw new Error('Build directory not found');
   } else {
     console.log(`[Pre-start] Build directory exists: ${BUILD_DIR}`);
+    
+    // Verify critical build files exist
+    const criticalFiles = [
+      'prerender-manifest.json',
+      'server.js',
+      'server.js.map'
+    ];
+    
+    const missingFiles = [];
+    for (const file of criticalFiles) {
+      const filePath = path.join(BUILD_DIR, file);
+      if (!fs.existsSync(filePath)) {
+        missingFiles.push(file);
+      }
+    }
+    
+    if (missingFiles.length > 0) {
+      console.error(`[Pre-start] ERROR: Build appears incomplete. Missing files: ${missingFiles.join(', ')}`);
+      console.error(`[Pre-start] Please run 'npm run build' again to ensure a complete build`);
+      throw new Error(`Build incomplete: missing ${missingFiles.join(', ')}`);
+    } else {
+      console.log(`[Pre-start] Build verification: All critical files present`);
+    }
   }
 
   // Helper function for synchronous sleep (Node.js-based, cross-platform)
