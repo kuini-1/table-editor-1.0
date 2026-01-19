@@ -244,34 +244,37 @@ jobs:
           # Restart PM2 process
           Write-Host "Checking PM2 process status..."
           $Pm2AppName = $env:PM2_APP_NAME
-          $pm2Status = pm2 describe $Pm2AppName 2>&1
+          
+          # Check if PM2 process exists using describe command (more reliable than JSON parsing)
+          $pm2Describe = pm2 describe $Pm2AppName 2>&1
           $pm2Exists = $LASTEXITCODE -eq 0
           
           if ($pm2Exists) {
             Write-Host "PM2 process exists, checking status..."
-            $pm2Info = pm2 jlist | ConvertFrom-Json
-            $appInfo = $pm2Info | Where-Object { $_.name -eq $Pm2AppName }
             
-            if ($appInfo) {
-              $status = $appInfo.pm2_env.status
-              $restarts = $appInfo.pm2_env.restart_time
-              Write-Host "Current status: $status, Restarts: $restarts"
-              
-              if ($status -eq "online") {
-                Write-Host "Process is running, reloading..."
-                pm2 reload $Pm2AppName --update-env
-              } elseif ($status -eq "errored" -or $status -eq "stopped") {
-                Write-Host "Process is errored or stopped, deleting and recreating..."
-                pm2 delete $Pm2AppName
-                Start-Sleep -Seconds 1
-                $pm2Exists = $false
-              } else {
-                Write-Host "Process exists but status is '$status', restarting..."
-                pm2 restart $Pm2AppName --update-env
-              }
-            } else {
-              Write-Host "Process info not found, will start new process..."
+            # Use pm2 show instead of JSON parsing to avoid duplicate key issues
+            $pm2Show = pm2 show $Pm2AppName 2>&1
+            $pm2ShowOutput = $pm2Show | Out-String
+            
+            # Extract status from pm2 show output (avoids JSON parsing issues)
+            $status = "unknown"
+            if ($pm2ShowOutput -match "status\s+:\s+(\w+)") {
+              $status = $matches[1]
+            }
+            
+            Write-Host "Current status: $status"
+            
+            if ($status -eq "online") {
+              Write-Host "Process is running, reloading..."
+              pm2 reload $Pm2AppName --update-env
+            } elseif ($status -eq "errored" -or $status -eq "stopped") {
+              Write-Host "Process is errored or stopped, deleting and recreating..."
+              pm2 delete $Pm2AppName
+              Start-Sleep -Seconds 1
               $pm2Exists = $false
+            } else {
+              Write-Host "Process exists but status is '$status', restarting..."
+              pm2 restart $Pm2AppName --update-env
             }
           }
           
@@ -317,12 +320,24 @@ jobs:
           Write-Host "PM2 Output Logs (last 50 lines):"
           pm2 logs $Pm2AppName --out --lines 50 --nostream
           
-          # Check if process is still errored
-          $pm2Info = pm2 jlist | ConvertFrom-Json
-          $appInfo = $pm2Info | Where-Object { $_.name -eq $Pm2AppName }
-          if ($appInfo -and $appInfo.pm2_env.status -ne "online") {
-            Write-Warning "PM2 process is not online. Status: $($appInfo.pm2_env.status)"
-            Write-Warning "Restart count: $($appInfo.pm2_env.restart_time)"
+          # Check if process is still errored (using pm2 show instead of JSON to avoid duplicate key issues)
+          $pm2ShowCheck = pm2 show $Pm2AppName 2>&1
+          $pm2ShowCheckOutput = $pm2ShowCheck | Out-String
+          
+          $finalStatus = "unknown"
+          if ($pm2ShowCheckOutput -match "status\s+:\s+(\w+)") {
+            $finalStatus = $matches[1]
+          }
+          
+          if ($finalStatus -ne "online") {
+            Write-Warning "PM2 process is not online. Status: $finalStatus"
+            
+            # Try to get restart count from pm2 show output
+            $restartCount = "unknown"
+            if ($pm2ShowCheckOutput -match "restart time\s+:\s+(\d+)") {
+              $restartCount = $matches[1]
+            }
+            Write-Warning "Restart count: $restartCount"
             Write-Warning "Please check PM2 logs for errors: pm2 logs $Pm2AppName"
             exit 1
           } else {
