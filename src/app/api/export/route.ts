@@ -175,26 +175,102 @@ export async function GET(req: Request) {
       // Continue with export if check fails (don't block user)
     }
 
-    // Get CSV data
-    const { data: csvData, error: csvError } = await supabase
+    // Get CSV data - fetch all rows in batches to avoid Supabase's 1000 row limit
+    // Use service client for higher limits and better performance
+    const serviceClient = getServiceClient();
+    
+    let allRows: Record<string, unknown>[] = [];
+    const batchSize = 1000; // Supabase default limit per request
+    let offset = 0;
+    let hasMore = true;
+    
+    // Determine sort field (prefer tblidx if exists, otherwise id)
+    // First, check what columns exist by fetching one row
+    const { data: sampleRow } = await serviceClient
       .from(table)
       .select('*')
       .eq('table_id', tableId)
-      .csv();
-
-    if (csvError) {
-      console.error('CSV generation error:', csvError);
-      return NextResponse.json({
-        error: 'Failed to generate CSV',
-        details: csvError.message
-      }, { status: 500 });
+      .limit(1)
+      .single();
+    
+    const sortField = sampleRow && 'tblidx' in sampleRow ? 'tblidx' : 'id';
+    
+    console.log(`[Export] Fetching all rows for table ${table} with table_id ${tableId}, sorting by ${sortField}`);
+    
+    // Fetch all rows in batches
+    while (hasMore) {
+      const { data: batchData, error: batchError } = await serviceClient
+        .from(table)
+        .select('*')
+        .eq('table_id', tableId)
+        .order(sortField, { ascending: true })
+        .range(offset, offset + batchSize - 1);
+      
+      if (batchError) {
+        console.error('Batch fetch error:', batchError);
+        return NextResponse.json({
+          error: 'Failed to fetch data',
+          details: batchError.message
+        }, { status: 500 });
+      }
+      
+      if (!batchData || batchData.length === 0) {
+        hasMore = false;
+        break;
+      }
+      
+      allRows = allRows.concat(batchData);
+      offset += batchSize;
+      
+      // If we got fewer rows than requested, we've reached the end
+      if (batchData.length < batchSize) {
+        hasMore = false;
+      }
+      
+      console.log(`[Export] Fetched ${allRows.length} rows so far...`);
     }
-
-    if (!csvData) {
+    
+    if (allRows.length === 0) {
       return NextResponse.json({
         error: 'No data found',
         details: 'The query returned no results'
       }, { status: 404 });
+    }
+    
+    console.log(`[Export] Total rows fetched: ${allRows.length}`);
+    
+    // Convert to CSV manually
+    let csvData = '';
+    
+    if (allRows.length > 0) {
+      // Get headers from first row
+      const headers = Object.keys(allRows[0]);
+      csvData = headers.join(',') + '\n';
+      
+      // Convert each row to CSV
+      for (const row of allRows) {
+        const values = headers.map(header => {
+          const value = row[header];
+          // Handle null/undefined
+          if (value === null || value === undefined) {
+            return '';
+          }
+          // Convert boolean to 0/1
+          if (value === true || value === 'true') {
+            return '1';
+          }
+          if (value === false || value === 'false') {
+            return '0';
+          }
+          // Escape commas and quotes in string values
+          const stringValue = String(value);
+          if (stringValue.includes(',') || stringValue.includes('"') || stringValue.includes('\n')) {
+            return `"${stringValue.replace(/"/g, '""')}"`;
+          }
+          return stringValue;
+        });
+        csvData += values.join(',') + '\n';
+      }
     }
 
     // Track bandwidth usage for export (5MB per export)
