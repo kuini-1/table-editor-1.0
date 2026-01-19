@@ -18,6 +18,7 @@ name: Deploy to Windows VPS
 #   CONVERSION_WORKER_POOL_SIZE: Conversion worker pool size
 #   CONVERSION_QUEUE_MAX_SIZE: Conversion queue max size
 #   CONVERSION_RATE_LIMIT_COOLDOWN: Conversion rate limit cooldown
+#   KEEP_EXPORT_CSV_FILES: Set to 'true' or '1' to keep CSV files after export (for testing)
 
 on:
   push:
@@ -179,6 +180,7 @@ jobs:
           CONVERSION_WORKER_POOL_SIZE: ${{ secrets.CONVERSION_WORKER_POOL_SIZE }}
           CONVERSION_QUEUE_MAX_SIZE: ${{ secrets.CONVERSION_QUEUE_MAX_SIZE }}
           CONVERSION_RATE_LIMIT_COOLDOWN: ${{ secrets.CONVERSION_RATE_LIMIT_COOLDOWN }}
+          KEEP_EXPORT_CSV_FILES: ${{ secrets.KEEP_EXPORT_CSV_FILES }}
         run: |
           # Install sshpass if not already installed
           sudo apt-get update && sudo apt-get install -y sshpass
@@ -198,7 +200,8 @@ jobs:
             [string]$NextPublicAppUrl,
             [string]$ConversionWorkerPoolSize,
             [string]$ConversionQueueMaxSize,
-            [string]$ConversionRateLimitCooldown
+            [string]$ConversionRateLimitCooldown,
+            [string]$KeepExportCsvFiles
           )
           
           # Navigate to deployment directory
@@ -430,7 +433,8 @@ jobs:
             "NEXT_PUBLIC_APP_URL=$NextPublicAppUrl",
             "CONVERSION_WORKER_POOL_SIZE=$ConversionWorkerPoolSize",
             "CONVERSION_QUEUE_MAX_SIZE=$ConversionQueueMaxSize",
-            "CONVERSION_RATE_LIMIT_COOLDOWN=$ConversionRateLimitCooldown"
+            "CONVERSION_RATE_LIMIT_COOLDOWN=$ConversionRateLimitCooldown",
+            "KEEP_EXPORT_CSV_FILES=$KeepExportCsvFiles"
           )
           $envLines | Out-File -FilePath ".env.local" -Encoding utf8 -Force
           Write-Host ".env.local file created with environment variables"
@@ -596,7 +600,8 @@ jobs:
               "NextPublicAppUrl": os.environ.get("NEXT_PUBLIC_APP_URL", ""),
               "ConversionWorkerPoolSize": os.environ.get("CONVERSION_WORKER_POOL_SIZE", ""),
               "ConversionQueueMaxSize": os.environ.get("CONVERSION_QUEUE_MAX_SIZE", ""),
-              "ConversionRateLimitCooldown": os.environ.get("CONVERSION_RATE_LIMIT_COOLDOWN", "")
+              "ConversionRateLimitCooldown": os.environ.get("CONVERSION_RATE_LIMIT_COOLDOWN", ""),
+              "KeepExportCsvFiles": os.environ.get("KEEP_EXPORT_CSV_FILES", "")
           }
           
           json_str = json.dumps(env_vars)
@@ -619,7 +624,7 @@ jobs:
           sshpass -p "$VPS_PASSWORD" ssh -o StrictHostKeyChecking=no \
             -o UserKnownHostsFile=/dev/null \
             "${VPS_USER}@${VPS_HOST}" \
-            "powershell -ExecutionPolicy Bypass -Command \"\$encoded = Get-Content '${VPS_DEPLOY_PATH}\\env_vars.b64' -Raw; \$json = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String(\$encoded.Trim())); \$envVars = \$json | ConvertFrom-Json; & '${VPS_DEPLOY_PATH}\\deploy.ps1' -DeployPath \$envVars.DeployPath -Pm2AppName \$envVars.Pm2AppName -NextPublicSupabaseUrl \$envVars.NextPublicSupabaseUrl -NextPublicSupabaseAnonKey \$envVars.NextPublicSupabaseAnonKey -NextPublicGoogleClientId \$envVars.NextPublicGoogleClientId -SupabaseServiceRoleKey \$envVars.SupabaseServiceRoleKey -StripeSecretKey \$envVars.StripeSecretKey -NextPublicStripePublishableKey \$envVars.NextPublicStripePublishableKey -StripeWebhookSecret \$envVars.StripeWebhookSecret -NextPublicAppUrl \$envVars.NextPublicAppUrl -ConversionWorkerPoolSize \$envVars.ConversionWorkerPoolSize -ConversionQueueMaxSize \$envVars.ConversionQueueMaxSize -ConversionRateLimitCooldown \$envVars.ConversionRateLimitCooldown\""
+            "powershell -ExecutionPolicy Bypass -Command \"\$encoded = Get-Content '${VPS_DEPLOY_PATH}\\env_vars.b64' -Raw; \$json = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String(\$encoded.Trim())); \$envVars = \$json | ConvertFrom-Json; & '${VPS_DEPLOY_PATH}\\deploy.ps1' -DeployPath \$envVars.DeployPath -Pm2AppName \$envVars.Pm2AppName -NextPublicSupabaseUrl \$envVars.NextPublicSupabaseUrl -NextPublicSupabaseAnonKey \$envVars.NextPublicSupabaseAnonKey -NextPublicGoogleClientId \$envVars.NextPublicGoogleClientId -SupabaseServiceRoleKey \$envVars.SupabaseServiceRoleKey -StripeSecretKey \$envVars.StripeSecretKey -NextPublicStripePublishableKey \$envVars.NextPublicStripePublishableKey -StripeWebhookSecret \$envVars.StripeWebhookSecret -NextPublicAppUrl \$envVars.NextPublicAppUrl -ConversionWorkerPoolSize \$envVars.ConversionWorkerPoolSize -ConversionQueueMaxSize \$envVars.ConversionQueueMaxSize -ConversionRateLimitCooldown \$envVars.ConversionRateLimitCooldown -KeepExportCsvFiles \$envVars.KeepExportCsvFiles\""
           
           # Clean up base64 file from VPS
           sshpass -p "$VPS_PASSWORD" ssh -o StrictHostKeyChecking=no \
