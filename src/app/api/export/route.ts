@@ -175,30 +175,46 @@ export async function GET(req: Request) {
       // Continue with export if check fails (don't block user)
     }
 
-    // Get CSV data - fetch all rows in batches to avoid Supabase's 1000 row limit
+    // Get CSV data - fetch all rows efficiently using parallel batches
     // Use service client for higher limits and better performance
     const serviceClient = getServiceClient();
     
-    let allRows: Record<string, unknown>[] = [];
-    const batchSize = 1000; // Supabase default limit per request
-    let offset = 0;
-    let hasMore = true;
-    
     // Determine sort field (prefer tblidx if exists, otherwise id)
-    // First, check what columns exist by fetching one row
-    const { data: sampleRow } = await serviceClient
+    // First, check what columns exist by fetching one row and get total count
+    const { data: sampleRow, count: totalCount, error: countError } = await serviceClient
       .from(table)
-      .select('*')
+      .select('*', { count: 'exact', head: false })
       .eq('table_id', tableId)
-      .limit(1)
-      .single();
+      .limit(1);
     
-    const sortField = sampleRow && 'tblidx' in sampleRow ? 'tblidx' : 'id';
+    if (countError) {
+      console.error('Count query error:', countError);
+      return NextResponse.json({
+        error: 'Failed to count rows',
+        details: countError.message
+      }, { status: 500 });
+    }
     
-    console.log(`[Export] Fetching all rows for table ${table} with table_id ${tableId}, sorting by ${sortField}`);
+    if (!sampleRow || sampleRow.length === 0) {
+      return NextResponse.json({
+        error: 'No data found',
+        details: 'The query returned no results'
+      }, { status: 404 });
+    }
     
-    // Fetch all rows in batches
-    while (hasMore) {
+    const sortField = sampleRow[0] && 'tblidx' in sampleRow[0] ? 'tblidx' : 'id';
+    const totalRows = totalCount || 0;
+    
+    console.log(`[Export] Fetching ${totalRows} rows for table ${table} with table_id ${tableId}, sorting by ${sortField}`);
+    
+    // Use larger batch size and parallel fetching for better performance
+    const batchSize = 5000; // Larger batches reduce number of requests
+    const numBatches = Math.ceil(totalRows / batchSize);
+    const maxConcurrent = 5; // Fetch up to 5 batches in parallel
+    
+    // Fetch all batches in parallel (with concurrency limit)
+    const fetchBatch = async (batchIndex: number): Promise<Record<string, unknown>[]> => {
+      const offset = batchIndex * batchSize;
       const { data: batchData, error: batchError } = await serviceClient
         .from(table)
         .select('*')
@@ -207,27 +223,32 @@ export async function GET(req: Request) {
         .range(offset, offset + batchSize - 1);
       
       if (batchError) {
-        console.error('Batch fetch error:', batchError);
+        throw new Error(`Batch ${batchIndex} fetch error: ${batchError.message}`);
+      }
+      
+      return batchData || [];
+    };
+    
+    // Fetch batches with concurrency control
+    const allRows: Record<string, unknown>[] = [];
+    for (let i = 0; i < numBatches; i += maxConcurrent) {
+      const batchPromises = [];
+      for (let j = 0; j < maxConcurrent && i + j < numBatches; j++) {
+        batchPromises.push(fetchBatch(i + j));
+      }
+      
+      try {
+        const batchResults = await Promise.all(batchPromises);
+        const batchRows = batchResults.flat();
+        allRows.push(...batchRows);
+        console.log(`[Export] Fetched ${allRows.length}/${totalRows} rows (${Math.min(i + maxConcurrent, numBatches)}/${numBatches} batches)...`);
+      } catch (error) {
+        console.error('Parallel batch fetch error:', error);
         return NextResponse.json({
           error: 'Failed to fetch data',
-          details: batchError.message
+          details: error instanceof Error ? error.message : 'Unknown error'
         }, { status: 500 });
       }
-      
-      if (!batchData || batchData.length === 0) {
-        hasMore = false;
-        break;
-      }
-      
-      allRows = allRows.concat(batchData);
-      offset += batchSize;
-      
-      // If we got fewer rows than requested, we've reached the end
-      if (batchData.length < batchSize) {
-        hasMore = false;
-      }
-      
-      console.log(`[Export] Fetched ${allRows.length} rows so far...`);
     }
     
     if (allRows.length === 0) {
@@ -239,39 +260,44 @@ export async function GET(req: Request) {
     
     console.log(`[Export] Total rows fetched: ${allRows.length}`);
     
-    // Convert to CSV manually
-    let csvData = '';
+    // Convert to CSV efficiently using array operations
+    const headers = Object.keys(allRows[0]);
+    const csvLines: string[] = [];
     
-    if (allRows.length > 0) {
-      // Get headers from first row
-      const headers = Object.keys(allRows[0]);
-      csvData = headers.join(',') + '\n';
-      
-      // Convert each row to CSV
-      for (const row of allRows) {
-        const values = headers.map(header => {
-          const value = row[header];
-          // Handle null/undefined
-          if (value === null || value === undefined) {
-            return '';
-          }
-          // Convert boolean to 0/1
-          if (value === true || value === 'true') {
-            return '1';
-          }
-          if (value === false || value === 'false') {
-            return '0';
-          }
-          // Escape commas and quotes in string values
-          const stringValue = String(value);
-          if (stringValue.includes(',') || stringValue.includes('"') || stringValue.includes('\n')) {
-            return `"${stringValue.replace(/"/g, '""')}"`;
-          }
-          return stringValue;
-        });
-        csvData += values.join(',') + '\n';
-      }
+    // Add header row
+    csvLines.push(headers.join(','));
+    
+    // Process rows in chunks to avoid memory issues with very large datasets
+    const processRow = (row: Record<string, unknown>): string => {
+      const values = headers.map(header => {
+        const value = row[header];
+        // Handle null/undefined
+        if (value === null || value === undefined) {
+          return '';
+        }
+        // Convert boolean to 0/1
+        if (value === true || value === 'true') {
+          return '1';
+        }
+        if (value === false || value === 'false') {
+          return '0';
+        }
+        // Escape commas and quotes in string values
+        const stringValue = String(value);
+        if (stringValue.includes(',') || stringValue.includes('"') || stringValue.includes('\n')) {
+          return `"${stringValue.replace(/"/g, '""')}"`;
+        }
+        return stringValue;
+      });
+      return values.join(',');
+    };
+    
+    // Process all rows and build CSV string efficiently
+    for (const row of allRows) {
+      csvLines.push(processRow(row));
     }
+    
+    const csvData = csvLines.join('\n') + '\n';
 
     // Track bandwidth usage for export (5MB per export)
     // Use immediate flush for server-side operations to ensure updates are applied
