@@ -7,11 +7,32 @@
 
 // Handle uncaught errors
 process.on('uncaughtException', (error) => {
+  // Ignore known non-fatal errors on Windows (e.g., /bin/sh spawn errors from Next.js)
+  if (error.code === 'ENOENT' && error.syscall === 'spawn' && error.path === '/bin/sh') {
+    console.warn('[Start-server] Ignoring non-fatal shell spawn error (Windows compatibility):', error.message);
+    return;
+  }
+  
+  // Ignore errors that are likely from Next.js internal operations
+  if (error.message && error.message.includes('spawn') && error.message.includes('/bin/sh')) {
+    console.warn('[Start-server] Ignoring non-fatal shell spawn error:', error.message);
+    return;
+  }
+  
   console.error('[Start-server] Uncaught exception:', error);
   process.exit(1);
 });
 
 process.on('unhandledRejection', (reason, promise) => {
+  // Ignore shell-related rejections on Windows
+  if (reason && typeof reason === 'object' && 'code' in reason) {
+    const err = reason as { code?: string; syscall?: string; path?: string };
+    if (err.code === 'ENOENT' && err.syscall === 'spawn' && err.path === '/bin/sh') {
+      console.warn('[Start-server] Ignoring non-fatal shell spawn rejection (Windows compatibility)');
+      return;
+    }
+  }
+  
   console.error('[Start-server] Unhandled rejection at:', promise, 'reason:', reason);
   process.exit(1);
 });

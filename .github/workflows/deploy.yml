@@ -262,16 +262,18 @@ jobs:
             $statusLines = $pm2StatusOutput -split "`n"
             foreach ($line in $statusLines) {
               if ($line -match "table-editor|$Pm2AppName") {
-                # Match the status column (usually the 5th column in the table)
-                if ($line -match "\|\s+(\w+)\s+\|") {
-                  $potentialStatus = $matches[1]
+                # PM2 table format: id │ name │ namespace │ version │ mode │ pid │ uptime │ ↺ │ status │ cpu │ mem │ user │ watching
+                # Status is the 9th column (after ↺). Split by │ and get the status column
+                $columns = $line -split '\|' | ForEach-Object { $_.Trim() }
+                if ($columns.Count -ge 9) {
+                  $potentialStatus = $columns[8].Trim()  # Status is at index 8 (9th column)
                   if ($potentialStatus -match "online|stopped|errored|restarting") {
                     $status = $potentialStatus
                     break
                   }
                 }
-                # Alternative: look for status pattern with colons
-                if ($line -match "status\s*[:\|]\s*(\w+)") {
+                # Alternative: look for status pattern in the line
+                if ($line -match "\|\s+(online|stopped|errored|restarting)\s+\|") {
                   $status = $matches[1]
                   break
                 }
@@ -282,6 +284,10 @@ jobs:
             if ($status -eq "unknown") {
               $pm2Show = pm2 show $Pm2AppName 2>&1 | Out-String
               if ($pm2Show -match "status\s*[:\|]\s*(\w+)") {
+                $status = $matches[1]
+              }
+              # Also try to extract from pm2 show output more directly
+              if ($pm2Show -match "status.*?:\s*(\w+)") {
                 $status = $matches[1]
               }
             }
@@ -351,13 +357,20 @@ jobs:
           $statusLines = $pm2StatusCheck -split "`n"
           foreach ($line in $statusLines) {
             if ($line -match "table-editor|$Pm2AppName") {
-              # Match the status column from the table
-              if ($line -match "\|\s+(\w+)\s+\|") {
-                $potentialStatus = $matches[1]
+              # PM2 table format: id │ name │ namespace │ version │ mode │ pid │ uptime │ ↺ │ status │ cpu │ mem │ user │ watching
+              # Status is the 9th column (after ↺). Split by │ and get the status column
+              $columns = $line -split '\|' | ForEach-Object { $_.Trim() }
+              if ($columns.Count -ge 9) {
+                $potentialStatus = $columns[8].Trim()  # Status is at index 8 (9th column)
                 if ($potentialStatus -match "online|stopped|errored|restarting") {
                   $finalStatus = $potentialStatus
                   break
                 }
+              }
+              # Alternative: look for status pattern in the line
+              if ($line -match "\|\s+(online|stopped|errored|restarting)\s+\|") {
+                $finalStatus = $matches[1]
+                break
               }
             }
           }
@@ -366,6 +379,10 @@ jobs:
           if ($finalStatus -eq "unknown") {
             $pm2ShowCheck = pm2 show $Pm2AppName 2>&1 | Out-String
             if ($pm2ShowCheck -match "status\s*[:\|]\s*(\w+)") {
+              $finalStatus = $matches[1]
+            }
+            # Also try to extract from pm2 show output more directly
+            if ($pm2ShowCheck -match "status.*?:\s*(\w+)") {
               $finalStatus = $matches[1]
             }
           }
