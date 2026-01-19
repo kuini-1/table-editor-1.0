@@ -9,3 +9,8 @@ The Table Editor is a robust platform designed for managing and editing over 60 
 - **60+ Game Tables:** Owners can manage over 60 different game tables, all with CRUD capabilities.
 - **Stripe Integration:** Secure access to premium features through Stripe subscription.
 - **Sub Owner Management:** Owners can create and manage Sub Owners to delegate table access.
+
+## Environment Variables
+- `NEXT_PUBLIC_SUPABASE_URL`: Supabase project URL.
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`: Supabase anon key for client usage.
+- `SUPABASE_SERVICE_ROLE_KEY`: Service role key for server-side operations.

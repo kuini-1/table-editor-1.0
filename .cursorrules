@@ -42,47 +42,12 @@ Finally, you should always use the official documentation of the library you are
 
 # Scratchpad
 
-Current Task: Fix Stripe Subscription Display Issue - COMPLETED
+Current Task: Speed up Supabase CSV export (16k+ rows)
 
 Task Description:
-User reported that their owner profile has a customer ID but the subscription page shows "no active subscription", even though there's a free trial active in Stripe.
+Exporting ~16k rows via PostgREST caps at ~5k rows and is too slow. Implement server-side Postgres COPY stream to CSV, then keep existing queue/worker flow.
 
-Root Cause:
-The GET endpoint in `/api/stripe/route.ts` only checked for `stripe_subscription_id` in the profile. If a subscription exists in Stripe but isn't linked to the profile (e.g., webhook failed or subscription created manually), it would return null.
-
-Solution:
-Updated the GET endpoint to:
-1. Check Stripe for subscriptions when `stripe_customer_id` exists but `stripe_subscription_id` doesn't
-2. Find active/trialing subscriptions and link them to the profile
-3. Update subscription status in profile to keep it in sync with Stripe
-4. Include `items` property in response for full frontend compatibility
-
-Completed:
-[X] Updated GET endpoint to check Stripe for subscriptions when customer ID exists
-[X] Added logic to find and link active/trialing subscriptions
-[X] Added subscription status sync to keep database updated
-[X] Updated response format to include items property
-[X] Added error handling for Stripe API calls
-
-Previous Task: Redesign Landing Page for Dragon Ball Online - COMPLETED
-
-Task Description:
-Redesign the landing page to clearly represent a table editor made specifically for Dragon Ball Online (DBO). The page should:
-- Keep the same color theme (indigo/purple)
-- Make it clear this is for DBO table file editing
-- Target private server owners
-- Showcase DBO-specific features and table types
-- Use DBO-themed examples and imagery
-
-Completed:
-[X] Updated hero section with DBO branding and messaging
-[X] Updated example table data to be DBO-specific (items like Power Pole, Dragon Ball, Senzu Bean)
-[X] Updated features section to highlight DBO-specific table types (items, skills, NPCs, quests, dragon balls, vehicles)
-[X] Updated copy throughout to target private server owners
-[X] Added DBO-themed visual elements (emojis and branding)
-[X] Updated branding/name to "DBO Table Editor" throughout
-[X] Updated all feature descriptions to mention DBO-specific use cases
-[X] Updated "How It Works" section with DBO context
-[X] Updated CTA section with DBO messaging
-
-Previous Task: Add Related Table Edit Functionality - COMPLETED
+Planned Steps:
+[X] Add pg COPY exporter helper (stream to CSV)
+[X] Wire export route to use COPY helper
+[X] Add DB URL env docs + guardrails

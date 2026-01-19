@@ -175,23 +175,22 @@ export async function GET(req: Request) {
       // Continue with export if check fails (don't block user)
     }
 
-    // Get CSV data - fetch all rows efficiently using parallel batches
+    // Get CSV data in a single query (max rows now increased in Supabase)
     // Use service client for higher limits and better performance
     const serviceClient = getServiceClient();
     
     // Determine sort field (prefer tblidx if exists, otherwise id)
-    // First, check what columns exist by fetching one row and get total count
-    const { data: sampleRow, count: totalCount, error: countError } = await serviceClient
+    const { data: sampleRow, error: sampleError } = await serviceClient
       .from(table)
-      .select('*', { count: 'exact', head: false })
+      .select('*')
       .eq('table_id', tableId)
       .limit(1);
     
-    if (countError) {
-      console.error('Count query error:', countError);
+    if (sampleError) {
+      console.error('Sample query error:', sampleError);
       return NextResponse.json({
-        error: 'Failed to count rows',
-        details: countError.message
+        error: 'Failed to read sample row',
+        details: sampleError.message
       }, { status: 500 });
     }
     
@@ -203,72 +202,23 @@ export async function GET(req: Request) {
     }
     
     const sortField = sampleRow[0] && 'tblidx' in sampleRow[0] ? 'tblidx' : 'id';
-    const totalRows = totalCount || 0;
+    console.log(`[Export] Fetching rows for table ${table} with table_id ${tableId}, sorting by ${sortField}`);
     
-    console.log(`[Export] Fetching ${totalRows} rows for table ${table} with table_id ${tableId}, sorting by ${sortField}`);
+    const { data: allRows, error: fetchError } = await serviceClient
+      .from(table)
+      .select('*')
+      .eq('table_id', tableId)
+      .order(sortField, { ascending: true });
     
-    // Use larger batch size and parallel fetching for better performance
-    // Adjust concurrency based on dataset size to avoid overwhelming Supabase or connection pools
-    const batchSize = 5000; // Larger batches reduce number of requests
-    const numBatches = Math.ceil(totalRows / batchSize);
-    // Limit concurrency: smaller datasets can use more parallelism, larger ones need to be more conservative
-    // This prevents connection pool exhaustion and Supabase rate limiting
-    const maxConcurrent = totalRows < 10000 ? 5 : totalRows < 50000 ? 3 : 2;
-    
-    // Fetch all batches in parallel (with concurrency limit)
-    const fetchBatch = async (batchIndex: number): Promise<Record<string, unknown>[]> => {
-      const offset = batchIndex * batchSize;
-      const { data: batchData, error: batchError } = await serviceClient
-        .from(table)
-        .select('*')
-        .eq('table_id', tableId)
-        .order(sortField, { ascending: true })
-        .range(offset, offset + batchSize - 1);
-      
-      if (batchError) {
-        throw new Error(`Batch ${batchIndex} fetch error: ${batchError.message}`);
-      }
-      
-      return batchData || [];
-    };
-    
-    // Fetch batches with concurrency control and error handling
-    const allRows: Record<string, unknown>[] = [];
-    for (let i = 0; i < numBatches; i += maxConcurrent) {
-      const batchPromises = [];
-      for (let j = 0; j < maxConcurrent && i + j < numBatches; j++) {
-        batchPromises.push(fetchBatch(i + j));
-      }
-      
-      try {
-        const batchResults = await Promise.all(batchPromises);
-        const batchRows = batchResults.flat();
-        allRows.push(...batchRows);
-        console.log(`[Export] Fetched ${allRows.length}/${totalRows} rows (${Math.min(i + maxConcurrent, numBatches)}/${numBatches} batches, ${maxConcurrent} concurrent)...`);
-        
-        // Small delay between batch groups to avoid overwhelming Supabase
-        // Only add delay if we have more batches to fetch
-        if (i + maxConcurrent < numBatches) {
-          await new Promise(resolve => setTimeout(resolve, 50)); // 50ms delay between batch groups
-        }
-      } catch (error) {
-        console.error('Parallel batch fetch error:', error);
-        // Check if it's a rate limit error
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        if (errorMessage.includes('rate limit') || errorMessage.includes('429')) {
-          return NextResponse.json({
-            error: 'Rate limit exceeded',
-            details: 'Supabase rate limit reached. Please try again in a moment.'
-          }, { status: 429 });
-        }
-        return NextResponse.json({
-          error: 'Failed to fetch data',
-          details: errorMessage
-        }, { status: 500 });
-      }
+    if (fetchError) {
+      console.error('Fetch error:', fetchError);
+      return NextResponse.json({
+        error: 'Failed to fetch data',
+        details: fetchError.message
+      }, { status: 500 });
     }
     
-    if (allRows.length === 0) {
+    if (!allRows || allRows.length === 0) {
       return NextResponse.json({
         error: 'No data found',
         details: 'The query returned no results'
