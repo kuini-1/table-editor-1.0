@@ -25,6 +25,10 @@ async function cleanupExistingFiles(userDir: string) {
   fs.rmSync(userDir, { recursive: true, force: true });
 }
 
+function getExportsRoot(): string {
+  return 'C:\\xampp\\htdocs\\table-editor\\exports';
+}
+
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const table = searchParams.get('table');
@@ -80,7 +84,7 @@ export async function GET(req: Request) {
     }
 
     // Ensure temp export directory exists (don't delete existing downloads)
-    const userDir = path.join(process.cwd(), 'exports', 'tmp', user.id);
+    const userDir = path.join(getExportsRoot(), 'tmp', user.id);
     try {
       await cleanupExistingFiles(userDir);
       fs.mkdirSync(userDir, { recursive: true });

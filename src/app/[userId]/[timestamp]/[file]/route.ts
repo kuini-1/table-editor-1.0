@@ -22,6 +22,10 @@ function isSafeFile(value: string): boolean {
   return /^[a-zA-Z0-9._-]+\.rdf$/i.test(value) && !value.includes('..');
 }
 
+function getExportsRoot(): string {
+  return 'C:\\xampp\\htdocs\\table-editor\\exports';
+}
+
 export async function GET(_req: Request, { params }: RouteParams) {
   const { userId, timestamp, file } = params;
 
@@ -29,7 +33,7 @@ export async function GET(_req: Request, { params }: RouteParams) {
     return new Response('Invalid file request', { status: 400 });
   }
 
-  const exportRoot = path.join(process.cwd(), 'exports');
+  const exportRoot = getExportsRoot();
   const filePath = path.join(exportRoot, userId, timestamp, file);
 
   try {
@@ -47,6 +51,7 @@ export async function GET(_req: Request, { params }: RouteParams) {
         'Content-Type': 'application/octet-stream',
         'Content-Length': stats.size.toString(),
         'Content-Disposition': `attachment; filename="${file}"`,
+        'Cache-Control': 'private, max-age=0, must-revalidate',
       },
     });
   } catch {

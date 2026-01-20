@@ -38,6 +38,10 @@ function verifyExecutable(workerIndex: number): boolean {
   }
 }
 
+function getExportsRoot(): string {
+  return 'C:\\xampp\\htdocs\\table-editor\\exports';
+}
+
 function resolveFolderName(outputDir: string | undefined, workingDir: string, fallback: string): string {
   if (!outputDir) {
     return fallback;
@@ -71,7 +75,7 @@ function getSupabaseClient() {
 async function processImportJob(job: ConversionJob, workerIndex: number): Promise<void> {
   const supabase = getSupabaseClient();
   const exePath = getExecutablePath(workerIndex);
-  const workingDir = path.join(process.cwd(), 'exports');
+  const workingDir = getExportsRoot();
   const folderName = resolveFolderName(job.outputDir, workingDir, job.userId);
 
   if (!verifyExecutable(workerIndex)) {
@@ -324,7 +328,7 @@ async function processImportJob(job: ConversionJob, workerIndex: number): Promis
  */
 async function processExportJob(job: ConversionJob, workerIndex: number): Promise<string> {
   const exePath = getExecutablePath(workerIndex);
-  const workingDir = path.join(process.cwd(), 'exports');
+  const workingDir = getExportsRoot();
   const folderName = resolveFolderName(job.outputDir, workingDir, job.userId);
 
   if (!verifyExecutable(workerIndex)) {
@@ -342,7 +346,7 @@ async function processExportJob(job: ConversionJob, workerIndex: number): Promis
   // Generate timestamp to create unique folder and prevent caching issues
   const timestamp = Date.now();
   
-  const exportRoot = path.join(process.cwd(), 'exports');
+  const exportRoot = getExportsRoot();
   const finalDir = path.join(exportRoot, job.userId, String(timestamp));
   const finalPath = path.join(finalDir, `${tableName}.rdf`);
 
@@ -364,7 +368,7 @@ async function processExportJob(job: ConversionJob, workerIndex: number): Promis
     // Verify RDF file was created (support legacy output path)
     let rdfPath = path.join(userDir, `${tableName}.rdf`);
     if (!fs.existsSync(rdfPath)) {
-      const legacyPath = path.join(process.cwd(), 'exports', job.userId, `${tableName}.rdf`);
+      const legacyPath = path.join(getExportsRoot(), job.userId, `${tableName}.rdf`);
       if (fs.existsSync(legacyPath)) {
         rdfPath = legacyPath;
       } else {
@@ -459,7 +463,7 @@ async function workerLoop(workerIndex: number): Promise<void> {
                 console.log(`[Worker ${workerIndex}] Keeping CSV file for testing: ${job.filePath}`);
               }
 
-              const exportRoot = path.join(process.cwd(), 'exports');
+              const exportRoot = getExportsRoot();
               const relativePath = path.relative(exportRoot, job.outputDir);
               if (relativePath.startsWith(`tmp${path.sep}`)) {
                 fs.rmSync(job.outputDir, { recursive: true, force: true });
@@ -498,7 +502,7 @@ function cleanupOldExports(): void {
     return;
   }
 
-  const exportRoot = path.join(process.cwd(), 'exports');
+  const exportRoot = getExportsRoot();
   const cutoff = Date.now() - EXPORT_CLEANUP_DAYS * 24 * 60 * 60 * 1000;
 
   try {
