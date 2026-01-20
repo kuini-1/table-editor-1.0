@@ -38,6 +38,19 @@ function verifyExecutable(workerIndex: number): boolean {
   }
 }
 
+function resolveFolderName(outputDir: string | undefined, workingDir: string, fallback: string): string {
+  if (!outputDir) {
+    return fallback;
+  }
+
+  const relative = path.relative(workingDir, outputDir);
+  if (!relative || relative.startsWith('..') || path.isAbsolute(relative)) {
+    return fallback;
+  }
+
+  return relative.split(path.sep).join('/');
+}
+
 /**
  * Get Supabase service client for workers
  */
@@ -59,6 +72,7 @@ async function processImportJob(job: ConversionJob, workerIndex: number): Promis
   const supabase = getSupabaseClient();
   const exePath = getExecutablePath(workerIndex);
   const workingDir = path.join(process.cwd(), 'exports');
+  const folderName = resolveFolderName(job.outputDir, workingDir, job.userId);
 
   if (!verifyExecutable(workerIndex)) {
     throw new Error(`Conversion executable not found for worker ${workerIndex}`);
@@ -73,8 +87,8 @@ async function processImportJob(job: ConversionJob, workerIndex: number): Promis
   const tableName = job.tableName;
 
   try {
-    // Execute conversion: Convert.exe tableName userId csv
-    const command = `"${exePath}" "${tableName}" "${job.userId}" "csv"`;
+    // Execute conversion: Convert.exe tableName folderName csv
+    const command = `"${exePath}" "${tableName}" "${folderName}" "csv"`;
     console.log(`[Worker ${workerIndex}] Processing import: ${command}`);
 
     const { stdout, stderr } = await execAsync(command, {
@@ -311,6 +325,7 @@ async function processImportJob(job: ConversionJob, workerIndex: number): Promis
 async function processExportJob(job: ConversionJob, workerIndex: number): Promise<string> {
   const exePath = getExecutablePath(workerIndex);
   const workingDir = path.join(process.cwd(), 'exports');
+  const folderName = resolveFolderName(job.outputDir, workingDir, job.userId);
 
   if (!verifyExecutable(workerIndex)) {
     throw new Error(`Conversion executable not found for worker ${workerIndex}`);
@@ -332,8 +347,8 @@ async function processExportJob(job: ConversionJob, workerIndex: number): Promis
   const finalPath = path.join(finalDir, `${tableName}.rdf`);
 
   try {
-    // Execute conversion: Convert.exe tableName userId rdf
-    const command = `"${exePath}" "${tableName}" "${job.userId}" "rdf"`;
+    // Execute conversion: Convert.exe tableName folderName rdf
+    const command = `"${exePath}" "${tableName}" "${folderName}" "rdf"`;
     console.log(`[Worker ${workerIndex}] Processing export: ${command}`);
 
     await execAsync(command, {
