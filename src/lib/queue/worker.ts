@@ -385,7 +385,7 @@ async function processExportJob(job: ConversionJob, workerIndex: number): Promis
     fs.mkdirSync(finalDir, { recursive: true });
     fs.renameSync(rdfPath, finalPath);
 
-    const publicUrl = `https://editor.dbod.cc/${job.userId}/${timestamp}/${tableName}.rdf`;
+    const publicUrl = `https://files.dbod.cc/${job.userId}/${timestamp}/${tableName}.rdf`;
     console.log(`[Worker ${workerIndex}] Export completed successfully`);
     console.log(`[Worker ${workerIndex}] Public URL: ${publicUrl}`);
     console.log(`[Worker ${workerIndex}] Storage path: ${finalPath}`);
