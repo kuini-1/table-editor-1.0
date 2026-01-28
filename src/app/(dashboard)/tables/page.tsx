@@ -186,6 +186,8 @@ export default function TablesPage() {
   const [isLoadingMoreLogs, setIsLoadingMoreLogs] = useState(false);
   const [hasMoreLogs, setHasMoreLogs] = useState(true);
   const activityLogRef = useRef<HTMLDivElement>(null);
+  const fetchingLogsRef = useRef<string | null>(null); // Track which table is currently being fetched
+  const lastFetchedTableRef = useRef<string | null>(null); // Track last fetched table to prevent duplicate calls
   const [importDialogTable, setImportDialogTable] = useState<{ id: string; name: string } | null>(null);
   const [exportDialogTable, setExportDialogTable] = useState<{ id: string; name: string } | null>(null);
 
@@ -225,18 +227,114 @@ export default function TablesPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Only run once on mount
 
-  useEffect(() => {
-    if (selectedTable) {
-      const cachedLogs = cachedTables?.activityLogs?.[selectedTable.id];
-      if (cachedLogs && Date.now() - cachedLogs.timestamp < CACHE_DURATION.ACTIVITY_LOGS) {
-        setActivityLogs(cachedLogs.logs);
-      } else {
-        fetchActivityLogs(selectedTable.id);
+  const fetchActivityLogs = useCallback(async (tableId: string, isLoadMore: boolean = false, forceRefresh: boolean = false) => {
+    try {
+      setIsLoadingMoreLogs(isLoadMore);
+      // Set ref to track which table is being fetched (only for initial loads, not pagination)
+      if (!isLoadMore) {
+        fetchingLogsRef.current = tableId;
       }
-    } else {
-      setActivityLogs([]);
+      
+      // Use functional update to get latest activityLogs without including it in dependencies
+      setActivityLogs(currentLogs => {
+        const logsToUse = isLoadMore ? currentLogs : [];
+        const limit = 10;
+        const offset = logsToUse.length;
+        
+        // Make the API call
+        supabase.rpc('get_activity_logs', {
+          p_table_id: tableId,
+          p_limit: limit,
+          p_offset: offset
+        }).then(({ data: logsData, error }) => {
+          if (error) throw error;
+
+          // Format the logs
+          const formattedLogs = (logsData || []).map((log: any) => ({
+            id: log.id,
+            action: log.action as 'POST' | 'PUT' | 'DELETE',
+            details: log.details,
+            user_id: log.user_id,
+            created_at: log.created_at,
+            table_id: log.table_id,
+            user: {
+              profile: {
+                full_name: log.profile_full_name || null,
+                email: log.profile_email
+              }
+            }
+          }));
+
+          setHasMoreLogs(formattedLogs.length === 10);
+          setActivityLogs(prevLogs => isLoadMore ? [...prevLogs, ...formattedLogs] : formattedLogs);
+
+          // Update cache using functional update
+          setCachedTables(prevCache => {
+            if (!prevCache) return prevCache;
+            const currentTableLogs = prevCache.activityLogs?.[tableId]?.logs || [];
+            return {
+              ...prevCache,
+              activityLogs: {
+                ...prevCache.activityLogs,
+                [tableId]: {
+                  logs: isLoadMore ? [...currentTableLogs, ...formattedLogs] : formattedLogs,
+                  timestamp: Date.now()
+                }
+              }
+            };
+          });
+          
+          setIsLoadingMoreLogs(false);
+          fetchingLogsRef.current = null;
+          lastFetchedTableRef.current = tableId;
+        }).catch((err) => {
+          console.error('Error fetching activity logs:', err);
+          setIsLoadingMoreLogs(false);
+          fetchingLogsRef.current = null;
+          // Don't set lastFetchedTableRef on error so we can retry
+        });
+        
+        return logsToUse;
+      });
+    } catch (err) {
+      console.error('Error fetching activity logs:', err);
+      setIsLoadingMoreLogs(false);
+      fetchingLogsRef.current = null;
+      // Don't set lastFetchedTableRef on error so we can retry
     }
-  }, [selectedTable]);
+  }, [supabase]);
+
+  useEffect(() => {
+    if (!selectedTable) {
+      // Only clear if we have logs (avoid unnecessary state updates)
+      setActivityLogs(prevLogs => prevLogs.length > 0 ? [] : prevLogs);
+      fetchingLogsRef.current = null;
+      lastFetchedTableRef.current = null;
+      return;
+    }
+
+    // Skip if we already fetched this table (prevent duplicate calls on re-renders)
+    if (lastFetchedTableRef.current === selectedTable.id) {
+      return;
+    }
+
+    const cachedLogs = cachedTables?.activityLogs?.[selectedTable.id];
+    const isCurrentlyFetching = fetchingLogsRef.current === selectedTable.id;
+    
+    // Use cached logs if available and fresh
+    if (cachedLogs && Date.now() - cachedLogs.timestamp < CACHE_DURATION.ACTIVITY_LOGS) {
+      setActivityLogs(cachedLogs.logs);
+      lastFetchedTableRef.current = selectedTable.id;
+      return;
+    }
+    
+    // Fetch if not currently fetching this table
+    if (!isCurrentlyFetching) {
+      lastFetchedTableRef.current = selectedTable.id;
+      fetchActivityLogs(selectedTable.id, false, false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedTable?.id]); // Only depend on selectedTable.id to avoid infinite loops
 
   const fetchUserAndTables = async () => {
     try {
@@ -328,51 +426,9 @@ export default function TablesPage() {
           }));
       }
 
-      // Fetch activity logs for all tables in a single query
-      const { data: logsData, error: logsError } = await supabase
-        .from('activity_logs')
-        .select(`
-          id,
-          action,
-          details,
-          user_id,
-          created_at,
-          table_id,
-          profile:profiles (
-            full_name,
-            email
-          )
-        `)
-        .in('table_id', formattedTables.map(t => t.id))
-        .order('created_at', { ascending: false });
-
-      if (logsError) throw logsError;
-
-      // Group logs by table
+      // Initialize activity logs map - don't pre-fetch logs to avoid unnecessary API calls
+      // Logs will be fetched on-demand when a table is selected (much more efficient)
       const activityLogsMap: { [key: string]: { logs: ActivityLog[], timestamp: number } } = {};
-      const logs = logsData as unknown as ActivityLogResponse[];
-      logs?.forEach(log => {
-        if (!activityLogsMap[log.table_id]) {
-          activityLogsMap[log.table_id] = {
-            logs: [],
-            timestamp: Date.now()
-          };
-        }
-        activityLogsMap[log.table_id].logs.push({
-          id: log.id,
-          action: log.action,
-          details: log.details,
-          user_id: log.user_id,
-          created_at: log.created_at,
-          table_id: log.table_id,
-          user: {
-            profile: {
-              full_name: log.profile?.full_name,
-              email: log.profile?.email
-            }
-          }
-        });
-      });
 
       // Update cache and state
       setCachedTables({
@@ -524,70 +580,6 @@ export default function TablesPage() {
       setError('Failed to update permission. Please try again.');
     }
   };
-
-  const fetchActivityLogs = useCallback(async (tableId: string, isLoadMore: boolean = false) => {
-    try {
-      setIsLoadingMoreLogs(isLoadMore);
-      const currentLogs = isLoadMore ? activityLogs : [];
-      
-      const { data: logsData, error } = await supabase
-        .from('activity_logs')
-        .select(`
-          id,
-          action,
-          details,
-          user_id,
-          created_at,
-          table_id,
-          profile:profiles!activity_logs_user_id_fkey (
-            full_name,
-            email
-          )
-        `)
-        .eq('table_id', tableId)
-        .order('created_at', { ascending: false })
-        .range(currentLogs.length, currentLogs.length + 9);
-
-      if (error) throw error;
-
-      const logs = logsData as unknown as ActivityLogResponse[];
-      const formattedLogs = logs?.map(log => ({
-        id: log.id,
-        action: log.action as 'POST' | 'PUT' | 'DELETE',
-        details: log.details,
-        user_id: log.user_id,
-        created_at: log.created_at,
-        table_id: log.table_id,
-        user: {
-          profile: {
-            full_name: log.profile?.full_name || null,
-            email: log.profile?.email
-          }
-        }
-      })) || [];
-
-      setHasMoreLogs(formattedLogs.length === 10);
-      setActivityLogs([...currentLogs, ...formattedLogs]);
-
-      // Update cache
-      if (cachedTables) {
-        setCachedTables({
-          ...cachedTables,
-          activityLogs: {
-            ...cachedTables.activityLogs,
-            [tableId]: {
-              logs: [...currentLogs, ...formattedLogs],
-              timestamp: Date.now()
-            }
-          }
-        });
-      }
-    } catch (err) {
-      console.error('Error fetching activity logs:', err);
-    } finally {
-      setIsLoadingMoreLogs(false);
-    }
-  }, [activityLogs, cachedTables, supabase]);
 
   // Add scroll handler for infinite scrolling
   const handleActivityLogScroll = useCallback(() => {
@@ -821,7 +813,16 @@ export default function TablesPage() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => fetchActivityLogs(selectedTable.id)}
+                        onClick={() => {
+                          // Clear cache and force refresh
+                          if (cachedTables?.activityLogs?.[selectedTable.id]) {
+                            const updatedCache = { ...cachedTables };
+                            delete updatedCache.activityLogs[selectedTable.id];
+                            setCachedTables(updatedCache);
+                          }
+                          fetchActivityLogs(selectedTable.id, false, true);
+                        }}
+                        disabled={isLoadingMoreLogs}
                         className="h-8 w-8 p-0"
                       >
                         <RefreshCcw className="h-4 w-4" />
