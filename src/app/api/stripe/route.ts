@@ -2,12 +2,26 @@ import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-02-24.acacia',
-});
+function getStripeClient(): Stripe | null {
+  const secretKey = process.env.STRIPE_SECRET_KEY;
+  if (!secretKey) {
+    return null;
+  }
+  return new Stripe(secretKey, {
+    apiVersion: '2025-02-24.acacia',
+  });
+}
 
 export async function GET() {
   try {
+    const stripe = getStripeClient();
+    if (!stripe) {
+      return NextResponse.json(
+        { error: 'Server misconfiguration', details: 'Missing STRIPE_SECRET_KEY' },
+        { status: 500 }
+      );
+    }
+
     const supabase = createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
@@ -225,6 +239,14 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
+    const stripe = getStripeClient();
+    if (!stripe) {
+      return NextResponse.json(
+        { error: 'Server misconfiguration', details: 'Missing STRIPE_SECRET_KEY' },
+        { status: 500 }
+      );
+    }
+
     const supabase = createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 

@@ -1,5 +1,3 @@
-import Stripe from 'stripe';
-
 // Profile type based on what we query from Supabase
 type Profile = {
   id: string;
@@ -8,9 +6,15 @@ type Profile = {
   role?: 'owner' | 'sub_owner';
 };
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-02-24.acacia',
-});
+async function getStripeClient() {
+  const secretKey = process.env.STRIPE_SECRET_KEY;
+  if (!secretKey) return null;
+
+  const { default: Stripe } = await import('stripe');
+  return new Stripe(secretKey, {
+    apiVersion: '2025-02-24.acacia',
+  });
+}
 
 /**
  * Get the owner's profile for a sub_owner user
@@ -121,6 +125,11 @@ export async function checkSubscriptionAccess(profile: Profile | null, userId?: 
   }
 
   try {
+    const stripe = await getStripeClient();
+    if (!stripe) {
+      return { hasAccess: false, reason: 'Missing Stripe configuration' };
+    }
+
     // Get subscription details from Stripe to get accurate status
     const subscription = await stripe.subscriptions.retrieve(
       profileToCheck.stripe_subscription_id

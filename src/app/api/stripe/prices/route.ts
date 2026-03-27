@@ -1,9 +1,15 @@
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-02-24.acacia',
-});
+function getStripeClient(): Stripe | null {
+  const secretKey = process.env.STRIPE_SECRET_KEY;
+  if (!secretKey) {
+    return null;
+  }
+  return new Stripe(secretKey, {
+    apiVersion: '2025-02-24.acacia',
+  });
+}
 
 const PRODUCT_IDS = {
   BASIC: 'prod_S2h3imHCUbra01',
@@ -12,6 +18,14 @@ const PRODUCT_IDS = {
 
 export async function GET() {
   try {
+    const stripe = getStripeClient();
+    if (!stripe) {
+      return NextResponse.json(
+        { error: 'Server misconfiguration', details: 'Missing STRIPE_SECRET_KEY' },
+        { status: 500 }
+      );
+    }
+
     // Fetch prices for both products
     const [basicPrices, proPrices] = await Promise.all([
       stripe.prices.list({
