@@ -1,24 +1,32 @@
 import { NextResponse } from 'next/server';
-import Stripe from 'stripe';
-import { stripe } from '@/lib/stripe';
 import { createClient as createServiceClient } from '@supabase/supabase-js';
+import type Stripe from 'stripe';
 
-const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
+function getSupabaseAdmin() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!supabaseUrl || !serviceRoleKey) return null;
 
-// Create a Supabase client with service role to bypass RLS
-const supabase = createServiceClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  {
+  return createServiceClient(supabaseUrl, serviceRoleKey, {
     auth: {
       autoRefreshToken: false,
-      persistSession: false
-    }
-  }
-);
+      persistSession: false,
+    },
+  });
+}
+
+async function getStripeClient() {
+  const secretKey = process.env.STRIPE_SECRET_KEY;
+  if (!secretKey) return null;
+
+  const { default: Stripe } = await import('stripe');
+  return new Stripe(secretKey, {
+    apiVersion: '2025-02-24.acacia',
+  });
+}
 
 // Helper function to get bandwidth limit based on price ID and subscription status
-async function getBandwidthLimit(priceId: string, subscriptionStatus?: string): Promise<number> {
+async function getBandwidthLimit(stripe: Stripe, priceId: string, subscriptionStatus?: string): Promise<number> {
   // If subscription is in trial, use trial limit (50MB)
   if (subscriptionStatus === 'trialing') {
     return 50 * 1024 * 1024; // 50MB in bytes
@@ -67,6 +75,30 @@ export async function POST(request: Request) {
   let event: Stripe.Event | null = null;
   
   try {
+    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+    if (!webhookSecret) {
+      return NextResponse.json(
+        { error: 'Server misconfiguration', details: 'Missing STRIPE_WEBHOOK_SECRET' },
+        { status: 500 }
+      );
+    }
+
+    const stripe = await getStripeClient();
+    if (!stripe) {
+      return NextResponse.json(
+        { error: 'Server misconfiguration', details: 'Missing STRIPE_SECRET_KEY' },
+        { status: 500 }
+      );
+    }
+
+    const supabase = getSupabaseAdmin();
+    if (!supabase) {
+      return NextResponse.json(
+        { error: 'Server misconfiguration', details: 'Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY' },
+        { status: 500 }
+      );
+    }
+
     const body = await request.text();
     const signature = request.headers.get('stripe-signature');
 
@@ -116,7 +148,7 @@ export async function POST(request: Request) {
         console.log('Retrieved invoice:', invoice);
 
         // Calculate bandwidth limit based on subscription tier
-        const bandwidthLimit = await getBandwidthLimit(priceId, subscription.status);
+        const bandwidthLimit = await getBandwidthLimit(stripe, priceId, subscription.status);
         
         // Extract billing cycle start day from current_period_start (Unix timestamp)
         // Convert to date and get day of month (1-31)
@@ -173,7 +205,7 @@ export async function POST(request: Request) {
           
           // Always calculate bandwidth limit based on subscription status and price ID
           // This ensures limits match subscription tiers correctly
-          const bandwidthLimit: number = await getBandwidthLimit(priceId, subscription.status);
+          const bandwidthLimit: number = await getBandwidthLimit(stripe, priceId, subscription.status);
           
           // Extract billing cycle start day from current_period_start (Unix timestamp)
           // Convert to date and get day of month (1-31)
