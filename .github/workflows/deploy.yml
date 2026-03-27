@@ -58,7 +58,7 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT || 22 }}
           script: |
-            mkdir -p /var/www/dbod-web
+            mkdir -p /var/www/table-editor
 
       - name: Upload standalone to VPS
         uses: appleboy/scp-action@v0.1.7
@@ -68,7 +68,7 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT || 22 }}
           source: ".next/standalone/*"
-          target: "/var/www/dbod-web"
+          target: "/var/www/table-editor"
           strip_components: 2
 
       - name: Restart with PM2
@@ -108,7 +108,7 @@ jobs:
           envs: PORT,NODE_ENV,NEXT_PUBLIC_SUPABASE_URL,NEXT_PUBLIC_SUPABASE_ANON_KEY,NEXT_PUBLIC_GOOGLE_CLIENT_ID,SUPABASE_SERVICE_ROLE_KEY,NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY,STRIPE_SECRET_KEY,STRIPE_WEBHOOK_SECRET,NEXT_PUBLIC_APP_URL,CONVERSION_WORKER_POOL_SIZE,CONVERSION_QUEUE_MAX_SIZE,CONVERSION_RATE_LIMIT_COOLDOWN,KEEP_EXPORT_CSV_FILES,CASHSHOP_TABLE_ID,DB_ACC_HOST,DB_ACC_USER,DB_ACC_PASSWORD,DB_ACC_NAME,DB_CHAR_HOST,DB_CHAR_USER,DB_CHAR_PASSWORD,DB_CHAR_NAME,JWT_TOKEN,WEB_BRIDGE_URL,WPS_FILES_PATH
           script: |
             set -e
-            cd /var/www/dbod-web
+            cd /var/www/table-editor
             cat > .env.local <<EOF
             NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
             NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
@@ -139,7 +139,7 @@ jobs:
               corepack pnpm add --prod --strict-peer-dependencies=false mysql2 sequelize pg-hstore
             fi
             export PORT="${PORT:-3001}"
-            pm2 describe dbod-web >/dev/null 2>&1 \
-              && pm2 reload dbod-web --update-env \
-              || PORT="$PORT" pm2 start server.js --name dbod-web
+            pm2 describe table-editor >/dev/null 2>&1 \
+              && pm2 reload table-editor --update-env \
+              || PORT="$PORT" pm2 start server.js --name table-editor
 
