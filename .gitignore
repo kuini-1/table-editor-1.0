@@ -44,3 +44,4 @@ pm2-*.log
 *.tsbuildinfo
 next-env.d.ts
 supabase/migrations/20260127000001_add_activity_logs_indexes.sql
+/.pnpm

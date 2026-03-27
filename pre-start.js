@@ -130,7 +130,7 @@ function runPreStartChecks() {
                     timeout: 3000 
                   });
                   console.log(`[Pre-start] Successfully terminated process ${pid} using port ${port}`);
-                } catch (gracefulError) {
+                } catch {
                   // If graceful fails, try force kill
                   try {
                     execSync(`taskkill /PID ${pid} /F /T`, { 
@@ -160,7 +160,7 @@ function runPreStartChecks() {
           // If we get here, port is not in LISTENING state (might be ESTABLISHED connections)
           console.log(`[Pre-start] Port ${port} is not in LISTENING state (may have established connections)`);
           return false;
-        } catch (netstatError) {
+        } catch {
           // Port might not be in use, which is fine
           console.log(`[Pre-start] Port ${port} is not in use (or netstat check failed)`);
           return false;
@@ -199,7 +199,7 @@ function runPreStartChecks() {
               return true;
             }
           }
-        } catch (lsofError) {
+        } catch {
           // Port might not be in use, which is fine
           console.log(`[Pre-start] Port ${port} is not in use`);
           return false;

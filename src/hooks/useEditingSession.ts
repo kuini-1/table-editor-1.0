@@ -230,7 +230,7 @@ export function useEditingSession({
         isDeletingRef.current = false;
       }, 1000);
     }
-  }, [supabase, tableId, rowId, sessionType]);
+  }, [supabase, tableId, rowId, sessionType, enabled]);
 
   // Set user info from props or fetch if not provided
   useEffect(() => {
@@ -351,7 +351,7 @@ export function useEditingSession({
       isUnmountingRef.current = true;
       deleteSession(false);
     };
-  }, [deleteSession]);
+  }, [deleteSession, createOrUpdateSession, enabled, tableId]);
 
   // Initial session creation
   useEffect(() => {

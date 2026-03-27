@@ -196,7 +196,7 @@ export function useTableData<T extends { id: string }>({ config, tableId, userId
       console.error('Error checking permission:', error);
       return false;
     }
-  }, [tableId, supabase, providedGetPermission, providedUserId, storePermissions]);
+  }, [tableId, supabase, providedGetPermission, providedUserId, storePermissions, PERMISSION_CACHE_DURATION, USER_CACHE_DURATION]);
 
   const handleError = (err: object | unknown) => {
     let errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred';
@@ -379,7 +379,7 @@ export function useTableData<T extends { id: string }>({ config, tableId, userId
       setLoading(false);
       setIsFiltering(false);
     }
-  }, [filters, tableId, checkPermission, page, pageSize]);
+  }, [filters, tableId, checkPermission, page, pageSize, providedUserId, supabase]);
 
   const handleAddRow = useCallback(async (formData: Omit<T, 'id'>) => {
     try {

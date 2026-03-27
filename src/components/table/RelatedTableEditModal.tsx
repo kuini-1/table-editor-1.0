@@ -150,11 +150,11 @@ export function RelatedTableEditModal({
       
       getCorrectTableId();
     }
-  }, [isOpen, config.relatedTableType, userProfile, fetchUserProfile]);
+  }, [isOpen, config.relatedTableType, userProfile, fetchUserProfile, TABLE_ID_CACHE_DURATION]);
   
   // Sync internal state with prop
   useEffect(() => {
-    console.log('=== SYNCING INTERNAL STATE ===', { isOpen, internalIsOpen });
+    console.log('=== SYNCING INTERNAL STATE ===', { isOpen });
     if (isOpen) {
       setInternalIsOpen(true);
     }
@@ -414,7 +414,7 @@ export function RelatedTableEditModal({
       fetchedRowIdRef.current = null;
       fetchInProgressRef.current = false;
     }
-  }, [isOpen, rowId, config.relatedTableName, config.relatedTableIdField, config.relatedTableType]); // Removed correctTableId from deps
+  }, [isOpen, rowId, rowData, correctTableId, config.relatedTableName, config.relatedTableIdField, config.relatedTableType]);
   
   const handleSubmit = useCallback(async (data: Record<string, unknown>) => {
     console.log('=== RELATED TABLE SUBMIT STARTED ===');
@@ -529,7 +529,7 @@ export function RelatedTableEditModal({
       toast.error(err instanceof Error ? err.message : 'Failed to update row');
       setSaving(false);
     }
-  }, [rowData, config, relatedTableId, onSave, onClose]);
+  }, [rowData, config, relatedTableId, correctTableId, onSave, onClose]);
   
   // Get the specific form component for this table type
   const FormComponent = hasFormComponentForTableType(config.relatedTableType)

@@ -16,19 +16,6 @@ import { useStore } from '@/lib/store';
 import { TableListSkeleton } from '@/components/ui/TableListSkeleton';
 import { getFolderNameForType } from '@/lib/tableTypeMapping';
 
-interface ActivityLogResponse {
-  id: string;
-  action: 'POST' | 'PUT' | 'DELETE';
-  details: string;
-  user_id: string;
-  created_at: string;
-  table_id: string;
-  profile: {
-    email: string;
-    full_name: string;
-  };
-}
-
 interface TableResponse {
   id: string;
   name: string;
@@ -58,6 +45,17 @@ interface ActivityLog {
       email: string;
     };
   };
+}
+
+interface RpcActivityLog {
+  id: string;
+  action: 'POST' | 'PUT' | 'DELETE';
+  details: string;
+  user_id: string;
+  created_at: string;
+  table_id: string;
+  profile_full_name: string | null;
+  profile_email: string;
 }
 
 export interface Table {
@@ -227,7 +225,7 @@ export default function TablesPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Only run once on mount
 
-  const fetchActivityLogs = useCallback(async (tableId: string, isLoadMore: boolean = false, forceRefresh: boolean = false) => {
+  const fetchActivityLogs = useCallback(async (tableId: string, isLoadMore: boolean = false) => {
     try {
       setIsLoadingMoreLogs(isLoadMore);
       // Set ref to track which table is being fetched (only for initial loads, not pagination)
@@ -250,7 +248,7 @@ export default function TablesPage() {
           if (error) throw error;
 
           // Format the logs
-          const formattedLogs = (logsData || []).map((log: any) => ({
+          const formattedLogs = (logsData as RpcActivityLog[] | null || []).map((log) => ({
             id: log.id,
             action: log.action as 'POST' | 'PUT' | 'DELETE',
             details: log.details,
@@ -287,7 +285,7 @@ export default function TablesPage() {
           setIsLoadingMoreLogs(false);
           fetchingLogsRef.current = null;
           lastFetchedTableRef.current = tableId;
-        }).catch((err) => {
+        }, (err: unknown) => {
           console.error('Error fetching activity logs:', err);
           setIsLoadingMoreLogs(false);
           fetchingLogsRef.current = null;
@@ -331,7 +329,7 @@ export default function TablesPage() {
     // Fetch if not currently fetching this table
     if (!isCurrentlyFetching) {
       lastFetchedTableRef.current = selectedTable.id;
-      fetchActivityLogs(selectedTable.id, false, false);
+      fetchActivityLogs(selectedTable.id, false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedTable?.id]); // Only depend on selectedTable.id to avoid infinite loops
@@ -820,7 +818,7 @@ export default function TablesPage() {
                             delete updatedCache.activityLogs[selectedTable.id];
                             setCachedTables(updatedCache);
                           }
-                          fetchActivityLogs(selectedTable.id, false, true);
+                          fetchActivityLogs(selectedTable.id, false);
                         }}
                         disabled={isLoadingMoreLogs}
                         className="h-8 w-8 p-0"
