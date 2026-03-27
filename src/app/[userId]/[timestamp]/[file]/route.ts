@@ -3,11 +3,11 @@ import path from 'path';
 import { Readable } from 'stream';
 
 interface RouteParams {
-  params: {
+  params: Promise<{
     userId: string;
     timestamp: string;
     file: string;
-  };
+  }>;
 }
 
 function isSafeUserId(value: string): boolean {
@@ -27,7 +27,7 @@ function getExportsRoot(): string {
 }
 
 export async function GET(_req: Request, { params }: RouteParams) {
-  const { userId, timestamp, file } = params;
+  const { userId, timestamp, file } = await params;
 
   if (!isSafeUserId(userId) || !isSafeTimestamp(timestamp) || !isSafeFile(file)) {
     return new Response('Invalid file request', { status: 400 });
