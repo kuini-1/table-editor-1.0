@@ -29,7 +29,7 @@ function runPreStartChecks() {
   // 2. Verify build directory exists and is complete
   if (!fs.existsSync(BUILD_DIR)) {
     console.error(`[Pre-start] ERROR: Build directory not found: ${BUILD_DIR}`);
-    console.error(`[Pre-start] Please run 'npm run build' before starting PM2`);
+    console.error(`[Pre-start] Please run 'pnpm build' before starting PM2`);
     throw new Error('Build directory not found');
   } else {
     console.log(`[Pre-start] Build directory exists: ${BUILD_DIR}`);
@@ -59,7 +59,7 @@ function runPreStartChecks() {
     
     if (missingCriticalFiles.length > 0) {
       console.error(`[Pre-start] ERROR: Build appears incomplete. Missing critical files: ${missingCriticalFiles.join(', ')}`);
-      console.error(`[Pre-start] Please run 'npm run build' again to ensure a complete build`);
+      console.error(`[Pre-start] Please run 'pnpm build' again to ensure a complete build`);
       throw new Error(`Build incomplete: missing ${missingCriticalFiles.join(', ')}`);
     }
     

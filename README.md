@@ -14,3 +14,25 @@ The Table Editor is a robust platform designed for managing and editing over 60 
 - `NEXT_PUBLIC_SUPABASE_URL`: Supabase project URL.
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`: Supabase anon key for client usage.
 - `SUPABASE_SERVICE_ROLE_KEY`: Service role key for server-side operations.
+
+## Local Development (pnpm)
+
+### Prerequisites
+- Node.js 20+
+- Corepack enabled (`corepack enable`)
+
+### Install
+```bash
+pnpm install
+```
+
+### Run
+```bash
+pnpm dev
+```
+
+### Build and Start
+```bash
+pnpm build
+pnpm start
+```

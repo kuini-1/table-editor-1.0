@@ -1,345 +1,145 @@
-name: Deploy to Windows VPS
-
-# This workflow deploys the application to a Windows VPS on every push to main branch
-# Requires a self-hosted Windows GitHub runner configured on the target machine
-# Required GitHub Secrets:
-#   VPS_DEPLOY_PATH: Deployment directory path (e.g., C:\xampp\htdocs)
-#   PM2_APP_NAME: PM2 application name to restart
-#   NEXT_PUBLIC_SUPABASE_URL: Supabase project URL
-#   NEXT_PUBLIC_SUPABASE_ANON_KEY: Supabase anonymous key
-#   NEXT_PUBLIC_GOOGLE_CLIENT_ID: Google OAuth client ID
-#   SUPABASE_SERVICE_ROLE_KEY: Supabase service role key
-#   STRIPE_SECRET_KEY: Stripe secret key
-#   NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: Stripe publishable key
-#   STRIPE_WEBHOOK_SECRET: Stripe webhook secret
-#   NEXT_PUBLIC_APP_URL: Application base URL (e.g., https://editor.dbod.cc)
-#   CONVERSION_WORKER_POOL_SIZE: Conversion worker pool size
-#   CONVERSION_QUEUE_MAX_SIZE: Conversion queue max size
-#   CONVERSION_RATE_LIMIT_COOLDOWN: Conversion rate limit cooldown
-#   KEEP_EXPORT_CSV_FILES: Set to 'true' or '1' to keep CSV files after export (for testing)
+name: Deploy Next.js (Standalone) to VPS
 
 on:
   push:
     branches:
-      - main  # Triggers on every push to main branch
-  workflow_dispatch:  # Allows manual triggering for testing
+      - main
+  workflow_dispatch:
 
 jobs:
   deploy:
-    name: Deploy to Windows VPS
-    runs-on: self-hosted
-    
+    runs-on: ubuntu-latest
+    env:
+      PORT: ${{ secrets.PORT || '3001' }}
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
-      - name: Set up Node.js
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: "20"
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
 
-      - name: Deploy and restart application
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --strict-peer-dependencies=false
+
+      - name: Approve build scripts (e.g. sharp)
+        run: pnpm approve-builds --all
+
+      - name: Build
         env:
-          DEPLOY_PATH: ${{ secrets.VPS_DEPLOY_PATH }}
-          PM2_APP_NAME: ${{ secrets.PM2_APP_NAME }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${{ secrets.NEXT_PUBLIC_GOOGLE_CLIENT_ID }}
+          NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}
+          NEXT_PUBLIC_APP_URL: ${{ secrets.NEXT_PUBLIC_APP_URL }}
+        run: pnpm exec next build --webpack
+
+      - name: Prepare standalone assets
+        run: |
+          set -e
+          mkdir -p .next/standalone/public
+          cp -r public/* .next/standalone/public/
+          mkdir -p .next/standalone/.next
+          cp -r .next/static .next/standalone/.next/
+
+      - name: Ensure VPS deploy directory exists
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_IP }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          script: |
+            mkdir -p /var/www/dbod-web
+
+      - name: Upload standalone to VPS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_IP }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          source: ".next/standalone/*"
+          target: "/var/www/dbod-web"
+          strip_components: 2
+
+      - name: Restart with PM2
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          PORT: ${{ env.PORT }}
+          NODE_ENV: production
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
           NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${{ secrets.NEXT_PUBLIC_GOOGLE_CLIENT_ID }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
           NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
           STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
           NEXT_PUBLIC_APP_URL: ${{ secrets.NEXT_PUBLIC_APP_URL }}
           CONVERSION_WORKER_POOL_SIZE: ${{ secrets.CONVERSION_WORKER_POOL_SIZE }}
           CONVERSION_QUEUE_MAX_SIZE: ${{ secrets.CONVERSION_QUEUE_MAX_SIZE }}
           CONVERSION_RATE_LIMIT_COOLDOWN: ${{ secrets.CONVERSION_RATE_LIMIT_COOLDOWN }}
           KEEP_EXPORT_CSV_FILES: ${{ secrets.KEEP_EXPORT_CSV_FILES }}
-        shell: powershell
-        run: |
-          # Debug: Show all environment variables starting with DEPLOY or PM2
-          Write-Host "=== Environment Variable Debug ==="
-          Write-Host "Checking environment variables..."
-          $deployVars = Get-ChildItem Env: | Where-Object { $_.Name -like "*DEPLOY*" -or $_.Name -like "*PM2*" }
-          if ($deployVars) {
-            $deployVars | Format-Table
-          } else {
-            Write-Host "No environment variables found matching '*DEPLOY*' or '*PM2*'"
-          }
-          
-          # Check DEPLOY_PATH specifically
-          Write-Host "`n=== Checking DEPLOY_PATH ==="
-          Write-Host "DEPLOY_PATH value: '$env:DEPLOY_PATH'"
-          Write-Host "DEPLOY_PATH type: $($env:DEPLOY_PATH.GetType().FullName)"
-          Write-Host "DEPLOY_PATH is null: $($null -eq $env:DEPLOY_PATH)"
-          Write-Host "DEPLOY_PATH is empty: $([string]::IsNullOrEmpty($env:DEPLOY_PATH))"
-          Write-Host "DEPLOY_PATH is whitespace: $([string]::IsNullOrWhiteSpace($env:DEPLOY_PATH))"
-          
-          # Validate environment variables with multiple checks
-          $DeployPath = $null
-          if ($env:DEPLOY_PATH) {
-            $DeployPath = $env:DEPLOY_PATH.Trim()
-          }
-          
-          if ([string]::IsNullOrWhiteSpace($DeployPath)) {
-            Write-Error "DEPLOY_PATH environment variable is not set or is empty!"
-            Write-Host "`nCurrent working directory: $(Get-Location)"
-            Write-Host "`nAll environment variables:"
-            Get-ChildItem Env: | Sort-Object Name | Format-Table -AutoSize
-            Write-Host "`nPlease ensure DEPLOY_PATH secret is set in GitHub repository secrets."
-            exit 1
-          }
-          
-          Write-Host "`n=== DEPLOY_PATH Validation Passed ==="
-          Write-Host "Deploy Path: '$DeployPath'"
-          Write-Host "Deploy Path length: $($DeployPath.Length)"
-          
-          if ([string]::IsNullOrWhiteSpace($env:PM2_APP_NAME)) {
-            Write-Error "PM2_APP_NAME environment variable is not set or is empty!"
-            exit 1
-          }
-          
-          if (-not (Test-Path $DeployPath)) {
-            Write-Error "Deployment path does not exist: '$DeployPath'"
-            Write-Host "Attempting to create directory..."
-            try {
-              New-Item -ItemType Directory -Path $DeployPath -Force | Out-Null
-              Write-Host "Directory created successfully"
-            } catch {
-              Write-Error "Failed to create directory: $_"
-              exit 1
-            }
-          }
-          
-          Set-Location -Path $DeployPath
-          Write-Host "Current directory: $(Get-Location)"
-          
-          # Double-check DeployPath is still valid before using it
-          if ([string]::IsNullOrWhiteSpace($DeployPath)) {
-            Write-Error "DeployPath became empty after validation! This should not happen."
-            exit 1
-          }
-          
-          # Create project subfolder
-          $projectFolder = "table-editor"
-          Write-Host "`n=== Creating Project Path ==="
-          Write-Host "DeployPath: '$DeployPath'"
-          Write-Host "projectFolder: '$projectFolder'"
-          $projectPath = Join-Path $DeployPath $projectFolder
-          Write-Host "projectPath: '$projectPath'"
-          Write-Host "Creating project folder: $projectPath"
-          New-Item -ItemType Directory -Path $projectPath -Force | Out-Null
-          Set-Location -Path $projectPath
-          Write-Host "Changed to project directory: $(Get-Location)"
-          
-          # Copy files from runner workspace to project directory (excluding node_modules, .next, .git)
-          Write-Host "Copying files to project directory..."
-          $workspacePath = $env:GITHUB_WORKSPACE
-          $excludeDirs = @('node_modules', '.next', '.git', '.github', 'logs')
-          $excludeFiles = @('*.log', '.env*')
-          
-          Get-ChildItem -Path $workspacePath -Recurse | Where-Object {
-            $relativePath = $_.FullName.Substring($workspacePath.Length + 1)
-            $shouldExclude = $false
-            
-            foreach ($excludeDir in $excludeDirs) {
-              if ($relativePath -like "$excludeDir*") {
-                $shouldExclude = $true
-                break
-              }
-            }
-            
-            if (-not $shouldExclude) {
-              foreach ($excludeFile in $excludeFiles) {
-                if ($_.Name -like $excludeFile) {
-                  $shouldExclude = $true
-                  break
-                }
-              }
-            }
-            
-            -not $shouldExclude
-          } | ForEach-Object {
-            $relativePath = $_.FullName.Substring($workspacePath.Length + 1)
-            $destPath = Join-Path $projectPath $relativePath
-            $destDir = Split-Path -Parent $destPath
-            
-            if (-not (Test-Path $destDir)) {
-              New-Item -ItemType Directory -Path $destDir -Force | Out-Null
-            }
-            
-            if (-not $_.PSIsContainer) {
-              Copy-Item -Path $_.FullName -Destination $destPath -Force
-            }
-          }
-          
-          Write-Host "Files copied successfully"
-          
-          # Verify expected files/folders are present
-          Write-Host "Verifying files..."
-          $expectedItems = @("package.json", "src", "exports", "next.config.ts")
-          foreach ($item in $expectedItems) {
-            if (Test-Path $item) {
-              Write-Host "  [OK] Found: $item"
-            } else {
-              Write-Warning "  [MISSING] Not found: $item"
-            }
-          }
-          
-          # Create .env.local file with all environment variables
-          Write-Host "Creating .env.local file..."
-          $envLines = @(
-            "NEXT_PUBLIC_SUPABASE_URL=$($env:NEXT_PUBLIC_SUPABASE_URL)",
-            "NEXT_PUBLIC_SUPABASE_ANON_KEY=$($env:NEXT_PUBLIC_SUPABASE_ANON_KEY)",
-            "NEXT_PUBLIC_GOOGLE_CLIENT_ID=$($env:NEXT_PUBLIC_GOOGLE_CLIENT_ID)",
-            "SUPABASE_SERVICE_ROLE_KEY=$($env:SUPABASE_SERVICE_ROLE_KEY)",
-            "STRIPE_SECRET_KEY=$($env:STRIPE_SECRET_KEY)",
-            "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=$($env:NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY)",
-            "STRIPE_WEBHOOK_SECRET=$($env:STRIPE_WEBHOOK_SECRET)",
-            "NEXT_PUBLIC_APP_URL=$($env:NEXT_PUBLIC_APP_URL)",
-            "CONVERSION_WORKER_POOL_SIZE=$($env:CONVERSION_WORKER_POOL_SIZE)",
-            "CONVERSION_QUEUE_MAX_SIZE=$($env:CONVERSION_QUEUE_MAX_SIZE)",
-            "CONVERSION_RATE_LIMIT_COOLDOWN=$($env:CONVERSION_RATE_LIMIT_COOLDOWN)",
-            "KEEP_EXPORT_CSV_FILES=$($env:KEEP_EXPORT_CSV_FILES)"
-          )
-          $envLines | Out-File -FilePath ".env.local" -Encoding utf8 -Force
-          Write-Host ".env.local file created with environment variables"
-          
-          # Install/update dependencies
-          Write-Host "Installing dependencies..."
-          npm install --production=false
-          
-          if ($LASTEXITCODE -ne 0) {
-            Write-Error "npm install failed! Exit code: $LASTEXITCODE"
-            exit 1
-          }
-          
-          # Build the application
-          Write-Host "Building application..."
-          npm run build
-          
-          # Verify build was successful
-          if ($LASTEXITCODE -ne 0) {
-            Write-Error "Build failed! Exit code: $LASTEXITCODE"
-            exit 1
-          }
-          
-          # Verify .next directory exists
-          if (-not (Test-Path ".next")) {
-            Write-Error ".next directory not found after build!"
-            exit 1
-          }
-          Write-Host "Build verification: .next directory exists"
-          
-          # Check if port 3000 is in use (optional warning)
-          $portCheck = Get-NetTCPConnection -LocalPort 3000 -ErrorAction SilentlyContinue
-          if ($portCheck) {
-            Write-Warning "Port 3000 appears to be in use. This may cause PM2 to fail."
-            Write-Host "Port 3000 connections:"
-            $portCheck | Format-Table
-          }
-          
-          # Recreate PM2 process (delete then start)
-          Write-Host "Checking PM2 process status..."
-          $Pm2AppName = $env:PM2_APP_NAME
-          
-          # Check if PM2 process exists using describe command (more reliable than JSON parsing)
-          $pm2Describe = pm2 describe $Pm2AppName 2>&1
-          $pm2Exists = $LASTEXITCODE -eq 0
-          
-          if ($pm2Exists) {
-            Write-Host "PM2 process exists, deleting it before restart..."
-            pm2 delete $Pm2AppName
-            Start-Sleep -Seconds 1
-          }
-          
-          Write-Host "Starting new PM2 process..."
-          Write-Host "Current directory: $(Get-Location)"
-          
-          # Verify we're in the right directory
-          if (-not (Test-Path "package.json")) {
-            Write-Error "package.json not found in current directory: $(Get-Location)"
-            exit 1
-          }
-          
-          # Verify .next directory exists (build completed)
-          if (-not (Test-Path ".next")) {
-            Write-Error ".next directory not found. Build may have failed."
-            exit 1
-          }
-          
-          # Check if ecosystem.config.js exists, use it if available
-          if (Test-Path "ecosystem.config.js") {
-            Write-Host "Found ecosystem.config.js, using it to start PM2..."
-            pm2 start ecosystem.config.js --update-env
-          } else {
-            Write-Host "No ecosystem file found, starting PM2 directly with npm start..."
-            $currentPath = (Get-Location).Path
-            pm2 start npm --name $Pm2AppName -- start --cwd "$currentPath" --update-env
-          }
-          
-          # Wait a moment for PM2 to update and attempt to start
-          Write-Host "Waiting for PM2 process to initialize..."
-          Start-Sleep -Seconds 5
-          
-          # Show PM2 status
-          Write-Host "PM2 Status:"
-          pm2 status
-          
-          # Show PM2 logs for the app (last 50 lines) to help diagnose errors
-          Write-Host "PM2 Error Logs (last 50 lines):"
-          pm2 logs $Pm2AppName --err --lines 50 --nostream
-          
-          Write-Host "PM2 Output Logs (last 50 lines):"
-          pm2 logs $Pm2AppName --out --lines 50 --nostream
-          
-          function Get-Pm2Status([string]$appName) {
-            $pm2StatusCheck = pm2 status 2>&1 | Out-String
-            $statusLines = $pm2StatusCheck -split "`n"
-            foreach ($line in $statusLines) {
-              if ($line -match "^\|\s*\d+\s*\|\s*($appName|table-editor)\s*\|") {
-                if ($line -match "\|\s*(online|stopped|errored|restarting)\s*\|") {
-                  return $matches[1]
-                }
-              }
-            }
-
-            $pm2ShowCheck = pm2 show $appName 2>&1 | Out-String
-            if ($pm2ShowCheck -match "status\s*[:\|]\s*(\w+)") {
-              return $matches[1]
-            }
-            if ($pm2ShowCheck -match "status.*?:\s*(\w+)") {
-              return $matches[1]
-            }
-
-            return "unknown"
-          }
-
-          $finalStatus = "unknown"
-          for ($i = 1; $i -le 5; $i++) {
-            $finalStatus = Get-Pm2Status $Pm2AppName
-            Write-Host "PM2 status attempt ${i}: $finalStatus"
-
-            if ($finalStatus -eq "online" -or $finalStatus -eq "errored" -or $finalStatus -eq "stopped") {
-              break
-            }
-
-            Start-Sleep -Seconds 3
-          }
-
-          Write-Host "Final PM2 status check: $finalStatus"
-
-          if ($finalStatus -eq "online") {
-            Write-Host "PM2 process is running successfully"
-          } elseif ($finalStatus -eq "errored" -or $finalStatus -eq "stopped") {
-            Write-Warning "PM2 process is not online. Status: $finalStatus"
-            Write-Warning "Please check PM2 logs for errors: pm2 logs $Pm2AppName"
-            exit 1
-          } else {
-            Write-Warning "PM2 status is unknown after retries; continuing deploy."
-          }
-          
-          Write-Host "Deployment completed successfully"
+          CASHSHOP_TABLE_ID: ${{ secrets.CASHSHOP_TABLE_ID }}
+          DB_ACC_HOST: ${{ secrets.DB_ACC_HOST }}
+          DB_ACC_USER: ${{ secrets.DB_ACC_USER }}
+          DB_ACC_PASSWORD: ${{ secrets.DB_ACC_PASSWORD }}
+          DB_ACC_NAME: ${{ secrets.DB_ACC_NAME }}
+          DB_CHAR_HOST: ${{ secrets.DB_CHAR_HOST }}
+          DB_CHAR_USER: ${{ secrets.DB_CHAR_USER }}
+          DB_CHAR_PASSWORD: ${{ secrets.DB_CHAR_PASSWORD }}
+          DB_CHAR_NAME: ${{ secrets.DB_CHAR_NAME }}
+          JWT_TOKEN: ${{ secrets.JWT_TOKEN }}
+          WEB_BRIDGE_URL: ${{ secrets.WEB_BRIDGE_URL }}
+          WPS_FILES_PATH: ${{ secrets.WPS_FILES_PATH }}
+        with:
+          host: ${{ secrets.VPS_IP }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          envs: PORT,NODE_ENV,NEXT_PUBLIC_SUPABASE_URL,NEXT_PUBLIC_SUPABASE_ANON_KEY,NEXT_PUBLIC_GOOGLE_CLIENT_ID,SUPABASE_SERVICE_ROLE_KEY,NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY,STRIPE_SECRET_KEY,STRIPE_WEBHOOK_SECRET,NEXT_PUBLIC_APP_URL,CONVERSION_WORKER_POOL_SIZE,CONVERSION_QUEUE_MAX_SIZE,CONVERSION_RATE_LIMIT_COOLDOWN,KEEP_EXPORT_CSV_FILES,CASHSHOP_TABLE_ID,DB_ACC_HOST,DB_ACC_USER,DB_ACC_PASSWORD,DB_ACC_NAME,DB_CHAR_HOST,DB_CHAR_USER,DB_CHAR_PASSWORD,DB_CHAR_NAME,JWT_TOKEN,WEB_BRIDGE_URL,WPS_FILES_PATH
+          script: |
+            set -e
+            cd /var/www/dbod-web
+            cat > .env.local <<EOF
+            NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+            NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+            NEXT_PUBLIC_GOOGLE_CLIENT_ID=${NEXT_PUBLIC_GOOGLE_CLIENT_ID}
+            SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+            STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
+            NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=${NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY}
+            STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET}
+            NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
+            CONVERSION_WORKER_POOL_SIZE=${CONVERSION_WORKER_POOL_SIZE}
+            CONVERSION_QUEUE_MAX_SIZE=${CONVERSION_QUEUE_MAX_SIZE}
+            CONVERSION_RATE_LIMIT_COOLDOWN=${CONVERSION_RATE_LIMIT_COOLDOWN}
+            KEEP_EXPORT_CSV_FILES=${KEEP_EXPORT_CSV_FILES}
+            CASHSHOP_TABLE_ID=${CASHSHOP_TABLE_ID}
+            DB_ACC_HOST=${DB_ACC_HOST}
+            DB_ACC_USER=${DB_ACC_USER}
+            DB_ACC_PASSWORD=${DB_ACC_PASSWORD}
+            DB_ACC_NAME=${DB_ACC_NAME}
+            DB_CHAR_HOST=${DB_CHAR_HOST}
+            DB_CHAR_USER=${DB_CHAR_USER}
+            DB_CHAR_PASSWORD=${DB_CHAR_PASSWORD}
+            DB_CHAR_NAME=${DB_CHAR_NAME}
+            JWT_TOKEN=${JWT_TOKEN}
+            WEB_BRIDGE_URL=${WEB_BRIDGE_URL}
+            WPS_FILES_PATH=${WPS_FILES_PATH}
+            EOF
+            if [ ! -d node_modules/mysql2 ]; then
+              corepack pnpm add --prod --strict-peer-dependencies=false mysql2 sequelize pg-hstore
+            fi
+            export PORT="${PORT:-3001}"
+            pm2 describe dbod-web >/dev/null 2>&1 \
+              && pm2 reload dbod-web --update-env \
+              || PORT="$PORT" pm2 start server.js --name dbod-web
 
