@@ -14,4 +14,4 @@ export const config = {
     '/register',
     '/', // Include root path
   ],
-}; 
+};  
