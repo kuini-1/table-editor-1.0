@@ -29,6 +29,18 @@ function verifyExecutable(workerIndex: number): boolean {
     console.error(`Executable not found for worker ${workerIndex}: ${exePath}`);
     return false;
   }
+
+  // On Linux, we'll run the Windows .exe via `wine`, so executable bit isn't required.
+  if (process.platform !== 'win32') {
+    try {
+      fs.accessSync(exePath, fs.constants.R_OK);
+      return true;
+    } catch (error) {
+      console.error(`Executable not readable for worker ${workerIndex}:`, error);
+      return false;
+    }
+  }
+
   try {
     fs.accessSync(exePath, fs.constants.X_OK);
     return true;
@@ -39,7 +51,23 @@ function verifyExecutable(workerIndex: number): boolean {
 }
 
 function getExportsRoot(): string {
-  return 'C:\\xampp\\htdocs\\table-editor\\exports';
+  return path.join(process.cwd(), 'exports');
+}
+
+function buildConvertCommand(args: {
+  exePath: string;
+  tableName: string;
+  folderName: string;
+  outputType: 'csv' | 'rdf';
+}): string {
+  const { exePath, tableName, folderName, outputType } = args;
+
+  if (process.platform === 'win32') {
+    return `"${exePath}" "${tableName}" "${folderName}" "${outputType}"`;
+  }
+
+  const wineCommand = process.env.WINE_COMMAND || 'wine';
+  return `${wineCommand} "${exePath}" "${tableName}" "${folderName}" "${outputType}"`;
 }
 
 function resolveFolderName(outputDir: string | undefined, workingDir: string, fallback: string): string {
@@ -92,14 +120,19 @@ async function processImportJob(job: ConversionJob, workerIndex: number): Promis
 
   try {
     // Execute conversion: Convert.exe tableName folderName csv
-    const command = `"${exePath}" "${tableName}" "${folderName}" "csv"`;
+    const command = buildConvertCommand({
+      exePath,
+      tableName,
+      folderName,
+      outputType: 'csv',
+    });
     console.log(`[Worker ${workerIndex}] Processing import: ${command}`);
 
     const { stdout, stderr } = await execAsync(command, {
       cwd: workingDir,
       env: {
         ...process.env,
-        PATH: `${workingDir};${process.env.PATH}`,
+        PATH: `${workingDir}${path.delimiter}${process.env.PATH || ''}`,
         RDF_PATH: rdfPath,
         OUTPUT_DIR: userDir,
       },
@@ -352,14 +385,19 @@ async function processExportJob(job: ConversionJob, workerIndex: number): Promis
 
   try {
     // Execute conversion: Convert.exe tableName folderName rdf
-    const command = `"${exePath}" "${tableName}" "${folderName}" "rdf"`;
+    const command = buildConvertCommand({
+      exePath,
+      tableName,
+      folderName,
+      outputType: 'rdf',
+    });
     console.log(`[Worker ${workerIndex}] Processing export: ${command}`);
 
     await execAsync(command, {
       cwd: workingDir,
       env: {
         ...process.env,
-        PATH: `${workingDir};${process.env.PATH}`,
+        PATH: `${workingDir}${path.delimiter}${process.env.PATH || ''}`,
         CSV_PATH: csvPath,
         OUTPUT_DIR: userDir,
       },

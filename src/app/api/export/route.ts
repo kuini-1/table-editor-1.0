@@ -26,7 +26,7 @@ async function cleanupExistingFiles(userDir: string) {
 }
 
 function getExportsRoot(): string {
-  return 'C:\\xampp\\htdocs\\table-editor\\exports';
+  return path.join(process.cwd(), 'exports');
 }
 
 export async function GET(req: Request) {
